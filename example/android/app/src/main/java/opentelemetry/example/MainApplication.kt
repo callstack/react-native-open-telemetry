@@ -11,6 +11,7 @@ import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.facebook.react.defaults.DefaultReactNativeHost
 import com.facebook.react.soloader.OpenSourceMergedSoMapping
 import com.facebook.soloader.SoLoader
+import com.opentelemetry.OpenTelemetry
 
 class MainApplication : Application(), ReactApplication {
 
@@ -35,6 +36,20 @@ class MainApplication : Application(), ReactApplication {
 
   override fun onCreate() {
     super.onCreate()
+
+    // SDK native init call
+      OpenTelemetry.init(this) {
+        name = "hello-my-native-sdk"
+        version = "0.0.1-alpha"
+        environment = "production"
+    }
+
+    // SDK native usage
+    val sdk = OpenTelemetry.get()
+    val nativeInitMeter = sdk.getMeter("native-scope-name")
+    val counter = nativeInitMeter.counterBuilder("native-counter").build()
+    counter.add(14)
+
     SoLoader.init(this, OpenSourceMergedSoMapping)
     if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {
       // If you opted-in for the New Architecture, we load the native entry point for this app.
