@@ -91,6 +91,11 @@ def kotlin_version = getExtOrDefault("kotlinVersion")
 dependencies {
   implementation "com.facebook.react:react-android"
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+  // TODO restrict to a specific version
+  api "io.opentelemetry:opentelemetry-api:latest.release"
+  api "io.opentelemetry:opentelemetry-sdk:latest.release"
+  api "io.opentelemetry:opentelemetry-exporter-logging:latest.release"
+  api "io.opentelemetry:opentelemetry-exporter-otlp:latest.release"
 }
 
 react {
