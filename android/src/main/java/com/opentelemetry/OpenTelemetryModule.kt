@@ -1,5 +1,7 @@
 package com.opentelemetry
 
+import android.util.Log
+import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.module.annotations.ReactModule
 
@@ -11,10 +13,12 @@ class OpenTelemetryModule(reactContext: ReactApplicationContext) :
     return NAME
   }
 
-  // Example method
-  // See https://reactnative.dev/docs/native-modules-android
-  override fun multiply(a: Double, b: Double): Double {
-    return a * b
+  override fun exportTraces(spans: ReadableArray) {
+      Log.d(NAME, "Spans size: ${spans.size()}")
+  }
+
+  override fun exportMetrics(metrics: ReadableArray) {
+      Log.d(NAME, "Metrics size: ${metrics.size()}")
   }
 
   companion object {
