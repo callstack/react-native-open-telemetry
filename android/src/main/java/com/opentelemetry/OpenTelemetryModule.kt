@@ -14,6 +14,13 @@ import io.opentelemetry.api.trace.TraceFlags
 import io.opentelemetry.api.trace.TraceState
 import io.opentelemetry.sdk.common.InstrumentationLibraryInfo
 import io.opentelemetry.sdk.common.InstrumentationScopeInfo
+import io.opentelemetry.sdk.metrics.data.AggregationTemporality
+import io.opentelemetry.sdk.metrics.data.Data
+import io.opentelemetry.sdk.metrics.data.SumData
+import io.opentelemetry.sdk.metrics.data.LongExemplarData
+import io.opentelemetry.sdk.metrics.data.LongPointData
+import io.opentelemetry.sdk.metrics.data.MetricData
+import io.opentelemetry.sdk.metrics.data.MetricDataType
 import io.opentelemetry.sdk.trace.data.EventData
 import io.opentelemetry.sdk.trace.data.LinkData
 import io.opentelemetry.sdk.trace.data.SpanData
@@ -138,7 +145,130 @@ class OpenTelemetryModule(reactContext: ReactApplicationContext) :
   }
 
   override fun exportMetrics(metrics: ReadableArray) {
-      Log.d(NAME, "Metrics size: ${metrics.size()}")
+    Log.d(NAME, "Metrics size: ${metrics.size()}")
+
+    val metricDataList = ArrayList<MetricData>()
+
+    for (i in 0 until metrics.size()) {
+      val metricMap = metrics.getMap(i) ?: continue
+      val rawScope = metricMap.getMap("scope") ?: continue
+      val rawMetrics = metricMap.getArray("metrics") ?: continue
+
+      for (y in 0 until rawMetrics.size()) {
+        val rawMetric = rawMetrics.getMap(i) ?: continue
+        val metricData = createMetricData(rawMetric, rawScope)
+        metricDataList.add(metricData)
+      }
+    }
+
+    OpenTelemetry.logMetricExporter?.export(metricDataList)
+    OpenTelemetry.otlpMetricExporter?.export(metricDataList)
+  }
+
+  private fun createMetricData(rawMetric: ReadableMap, rawScope: ReadableMap): MetricData {
+    return object : MetricData {
+      override fun getResource() = OpenTelemetry.sdkResource
+
+      override fun getInstrumentationScopeInfo(): InstrumentationScopeInfo {
+        val name = rawScope.getString("name") ?: "unknown"
+        val builder = InstrumentationScopeInfo.builder(name)
+        rawScope.getString("version")?.let { builder.setVersion(it) }
+        return builder.build()
+      }
+
+      override fun getName(): String {
+        val descriptor = rawMetric.getMap("descriptor")
+        return descriptor?.getString("name") ?: "unknown"
+      }
+
+      override fun getDescription(): String {
+        val descriptor = rawMetric.getMap("descriptor")
+        return descriptor?.getString("description") ?: ""
+      }
+
+      override fun getUnit(): String {
+        val descriptor = rawMetric.getMap("descriptor")
+        return descriptor?.getString("unit") ?: ""
+      }
+
+      override fun getType(): MetricDataType {
+        // TODO: look into the `valueType` on the descriptor, we might need to support long/double types properly
+        return when (rawMetric.getInt("dataPointType")) {
+          0 -> MetricDataType.HISTOGRAM
+          1 -> MetricDataType.EXPONENTIAL_HISTOGRAM
+          2 -> MetricDataType.LONG_GAUGE
+          3 -> MetricDataType.LONG_SUM
+          else -> MetricDataType.SUMMARY
+        }
+      }
+
+      override fun getData(): Data<*> {
+        val dataPoints = rawMetric.getArray("dataPoints")
+        val isMonotonic = rawMetric.getBoolean("isMonotonic")
+        val aggregationTemporality = when (rawMetric.getInt("aggregationTemporality")) {
+          0 -> AggregationTemporality.DELTA
+          1 -> AggregationTemporality.CUMULATIVE
+          else -> AggregationTemporality.CUMULATIVE
+        }
+
+        when (type) {
+          MetricDataType.HISTOGRAM -> TODO()
+          MetricDataType.LONG_GAUGE -> TODO()
+          MetricDataType.DOUBLE_GAUGE -> TODO()
+          MetricDataType.LONG_SUM -> {
+            return object : SumData<LongPointData> {
+              override fun getPoints(): MutableCollection<LongPointData> {
+                val points = mutableListOf<LongPointData>()
+                if (dataPoints == null) return points
+
+                for (i in 0 until dataPoints.size()) {
+                  val point = dataPoints.getMap(i) ?: continue
+                  points.add(createLongPointData(point))
+                }
+
+                return points
+              }
+
+              override fun isMonotonic() = isMonotonic
+
+              override fun getAggregationTemporality() = aggregationTemporality
+            }
+          }
+          MetricDataType.DOUBLE_SUM -> TODO()
+          MetricDataType.SUMMARY -> TODO()
+          MetricDataType.EXPONENTIAL_HISTOGRAM -> TODO()
+        }
+      }
+    }
+  }
+
+  private fun createLongPointData(point: ReadableMap): LongPointData {
+    return object : LongPointData {
+      override fun getValue(): Long {
+        return point.getDouble("value").toLong()
+      }
+
+      override fun getAttributes(): Attributes {
+        val attributes = point.getMap("attributes")
+        return attributes?.toOpenTelemetryAttributes() ?: Attributes.empty()
+      }
+
+      override fun getStartEpochNanos(): Long {
+        val startTime = point.getArray("startTime") ?: return 0
+        return startTime.hrTimeToNanoseconds()
+      }
+
+      override fun getEpochNanos(): Long {
+        val endTime = point.getArray("endTime") ?: return 0
+        return endTime.hrTimeToNanoseconds()
+      }
+
+      // Implement any other required methods from LongPointData
+      override fun getExemplars(): List<LongExemplarData> {
+        // Return empty list if you don't have exemplars
+        return emptyList()
+      }
+    }
   }
 
   companion object {
