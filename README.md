@@ -1,6 +1,13 @@
 # react-native-open-telemetry
 
-Observability SDK for React Native
+Best in class oservability brought to React Native.
+
+* **Open Telemetry** is a collection of APIs, SDKs, and tools developed by [OpenTelemetry](https://opentelemetry.io/) to instrument, generate, collect, and export telemetry data. See [github/open-telemetry](https://github.com/open-telemetry) for more information.
+* **react-native-open-telemetry** is a library that allows you to easily use **OpenTelemetry's** JS and Native bindings inside your React Native app.
+
+## Features
+
+* **Android** support (experimental) with **iOS** and **Web** coming next
 
 ## Installation
 
