@@ -6,18 +6,16 @@ We want this community to be friendly and respectful to each other. Please follo
 
 ## Development workflow
 
-This project is a monorepo managed using [Yarn workspaces](https://yarnpkg.com/features/workspaces). It contains the following packages:
+This project is managed using [Bun](https://bun.sh/). It contains:
 
 - The library package in the root directory.
 - An example app in the `example/` directory.
 
-To get started with the project, run `yarn` in the root directory to install the required dependencies for each package:
+To get started with the project, install required dependencies in the root directory:
 
 ```sh
-yarn
+bun install
 ```
-
-> Since the project relies on Yarn workspaces, you cannot use [`npm`](https://github.com/npm/cli) for development.
 
 The [example app](/example/) demonstrates usage of the library. You need to run it to test any changes you make.
 
@@ -27,24 +25,24 @@ If you want to use Android Studio or XCode to edit the native code, you can open
 
 To edit the Java or Kotlin files, open `example/android` in Android studio and find the source files at `react-native-open-telemetry` under `Android`.
 
-You can use various commands from the root directory to work with the project.
+To work on the example app, navigate to the `/example` directory. From there you can use various commands to work with the project.
 
 To start the packager:
 
 ```sh
-yarn example start
+bun run start
 ```
 
 To run the example app on Android:
 
 ```sh
-yarn example android
+bun run android
 ```
 
 To run the example app on iOS:
 
 ```sh
-yarn example ios
+bun run ios
 ```
 
 To confirm that the app is running with the new architecture, you can check the Metro logs for a message like this:
@@ -58,21 +56,11 @@ Note the `"fabric":true` and `"concurrentRoot":true` properties.
 Make sure your code passes TypeScript and ESLint. Run the following to verify:
 
 ```sh
-yarn typecheck
-yarn lint
+bun typecheck
+bun lint
 ```
 
-To fix formatting errors, run the following:
-
-```sh
-yarn lint --fix
-```
-
-Remember to add tests for your change if possible. Run the unit tests by:
-
-```sh
-yarn test
-```
+Please see [this oxlint doc](https://oxc.rs/docs/guide/usage/linter/automatic-fixes.html#automatic-fixes) for applying formatting fixes automatically.
 
 ### Commit message convention
 
@@ -85,37 +73,21 @@ We follow the [conventional commits specification](https://www.conventionalcommi
 - `test`: adding or updating tests, e.g. add integration tests using detox.
 - `chore`: tooling changes, e.g. change CI config.
 
-Our pre-commit hooks verify that your commit message matches this format when committing.
+### Linting
 
-### Linting and tests
+We use [TypeScript](https://www.typescriptlang.org/) for type checking and [OXLint](https://oxc.rs/docs/guide/usage/linter.html) for linting and formatting the code.
 
-[ESLint](https://eslint.org/), [Prettier](https://prettier.io/), [TypeScript](https://www.typescriptlang.org/)
+### Publishing to npm 🚧
 
-We use [TypeScript](https://www.typescriptlang.org/) for type checking, [ESLint](https://eslint.org/) with [Prettier](https://prettier.io/) for linting and formatting the code, and [Jest](https://jestjs.io/) for testing.
-
-Our pre-commit hooks verify that the linter and tests pass when committing.
-
-### Publishing to npm
-
-We use [release-it](https://github.com/release-it/release-it) to make it easier to publish new versions. It handles common tasks like bumping version based on semver, creating tags and releases etc.
-
-To publish new versions, run the following:
-
-```sh
-yarn release
-```
+We use [changesets](https://github.com/changesets/changesets) for managing versions, though this is a manual process for now in the experimental phase.
 
 ### Scripts
 
 The `package.json` file contains various scripts for common tasks:
 
-- `yarn`: setup project by installing dependencies.
-- `yarn typecheck`: type-check files with TypeScript.
-- `yarn lint`: lint files with ESLint.
-- `yarn test`: run unit tests with Jest.
-- `yarn example start`: start the Metro server for the example app.
-- `yarn example android`: run the example app on Android.
-- `yarn example ios`: run the example app on iOS.
+- `bun i`: setup project by installing dependencies.
+- `bun typecheck`: type-check files with TypeScript.
+- `bun lint`: lint files with Oxlint.
 
 ### Sending a pull request
 
