@@ -55,6 +55,7 @@
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
+    "lint": "oxlint",
     "prepare": "bob build",
     "codegen": "react-native codegen"
   },
@@ -69,6 +70,7 @@
     "@changesets/cli": "^2.28.1",
     "@react-native-community/cli": "15.0.1",
     "@types/react": "^19.0.0",
+    "oxlint": "^0.16.3",
     "react": "19.0.0",
     "react-native": "0.78.1",
     "react-native-builder-bob": "^0.36.0",

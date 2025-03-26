@@ -27,5 +27,8 @@ jobs:
       - name: Typecheck files
         run: bun typecheck
         
+      - name: Lint files
+        run: bun lint
+        
       - name: Build package
         run: bun prepare
