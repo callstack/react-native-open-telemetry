@@ -12,6 +12,7 @@ PODS:
     - DoubleConversion
     - glog
     - hermes-engine
+    - OpenTelemetry-Swift-Sdk
     - RCT-Folly (= 2024.11.18.00)
     - RCTRequired
     - RCTTypeSafety
@@ -29,6 +30,9 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
+  - OpenTelemetry-Swift-Api (1.13.0)
+  - OpenTelemetry-Swift-Sdk (1.13.0):
+    - OpenTelemetry-Swift-Api (= 1.13.0)
   - RCT-Folly (2024.11.18.00):
     - boost
     - DoubleConversion
@@ -1622,6 +1626,8 @@ DEPENDENCIES:
 
 SPEC REPOS:
   trunk:
+    - OpenTelemetry-Swift-Api
+    - OpenTelemetry-Swift-Sdk
     - SocketRocket
 
 EXTERNAL SOURCES:
@@ -1769,7 +1775,9 @@ SPEC CHECKSUMS:
   fmt: a40bb5bd0294ea969aaaba240a927bd33d878cdd
   glog: eb93e2f488219332457c3c4eafd2738ddc7e80b8
   hermes-engine: f493b0a600aed5dc06532141603688a30a5b2f61
-  OpenTelemetry: 5aa2d9a1829823691a04760356936624f866dc48
+  OpenTelemetry: 1e2984f42a1834ec146913be0d682693d31ba8f7
+  OpenTelemetry-Swift-Api: d3fc1f4a47b85efd0320a48b7f8dd011ee66d9ff
+  OpenTelemetry-Swift-Sdk: d693e2d291f96b51ebc4d8f6d17e49392ccbc48f
   RCT-Folly: 36fe2295e44b10d831836cc0d1daec5f8abcf809
   RCTDeprecation: 082fbc90409015eac1366795a0b90f8b5cb28efe
   RCTRequired: ca966f4da75b62ce3ea8c538d82cb5ecbb06f12a
