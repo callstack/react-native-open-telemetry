@@ -6,6 +6,7 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.ReadableType
 import com.facebook.react.module.annotations.ReactModule
+import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.trace.SpanContext
 import io.opentelemetry.api.trace.SpanKind
@@ -21,6 +22,7 @@ import io.opentelemetry.sdk.metrics.data.LongExemplarData
 import io.opentelemetry.sdk.metrics.data.LongPointData
 import io.opentelemetry.sdk.metrics.data.MetricData
 import io.opentelemetry.sdk.metrics.data.MetricDataType
+import io.opentelemetry.sdk.trace.ReadableSpan
 import io.opentelemetry.sdk.trace.data.EventData
 import io.opentelemetry.sdk.trace.data.LinkData
 import io.opentelemetry.sdk.trace.data.SpanData
@@ -37,16 +39,35 @@ class OpenTelemetryModule(reactContext: ReactApplicationContext) :
   override fun exportTraces(spans: ReadableArray) {
     Log.d(NAME, "Spans size: ${spans.size()}")
 
-    val spanDataList = ArrayList<SpanData>()
-
     for (i in 0 until spans.size()) {
       val spanMap = spans.getMap(i) ?: continue
-      val spanData = createSpanData(spanMap)
-      spanDataList.add(spanData)
+      val span = createReadableSpan(spanMap)
+      OpenTelemetry.spanProcessor?.onEnd(span)
     }
+  }
 
-    OpenTelemetry.logSpanExporter?.export(spanDataList)
-    OpenTelemetry.otlpSpanExporter?.export(spanDataList)
+  private fun createReadableSpan(rawSpan: ReadableMap): ReadableSpan {
+    val spanData = createSpanData(rawSpan)
+
+    return object : ReadableSpan {
+      override fun getSpanContext() = spanData.spanContext
+
+      override fun getParentSpanContext() = spanData.parentSpanContext
+
+      override fun getName() = spanData.name
+
+      override fun toSpanData() = spanData
+
+      override fun getInstrumentationLibraryInfo() = spanData.instrumentationLibraryInfo
+
+      override fun hasEnded() = spanData.hasEnded()
+
+      override fun getKind() = spanData.kind
+
+      override fun <T> getAttribute(key: AttributeKey<T>) = spanData.attributes.get(key)
+
+      override fun getLatencyNanos() = spanData.endEpochNanos - spanData.startEpochNanos
+    }
   }
 
   private fun createSpanData(rawSpan: ReadableMap): SpanData {

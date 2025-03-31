@@ -15,15 +15,15 @@ import io.opentelemetry.sdk.metrics.export.MetricExporter
 import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader
 import io.opentelemetry.sdk.resources.Resource
 import io.opentelemetry.sdk.trace.SdkTracerProvider
+import io.opentelemetry.sdk.trace.SpanProcessor
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor
 import io.opentelemetry.sdk.trace.export.SpanExporter
 
 class OpenTelemetry {
     companion object {
         var sdkResource: Resource = Resource.getDefault()
-        var logSpanExporter: SpanExporter? = null
+        var spanProcessor: SpanProcessor? = null
         var logMetricExporter: MetricExporter? = null
-        var otlpSpanExporter: OtlpGrpcSpanExporter? = null
         var otlpMetricExporter: OtlpGrpcMetricExporter? = null
 
         fun get(): OpenTelemetry = GlobalOpenTelemetry.get()
@@ -46,28 +46,23 @@ class OpenTelemetry {
                 ),
             )
 
-            if (options.debug) {
-                logSpanExporter = LoggingSpanExporter.create()
-                logMetricExporter = LoggingMetricExporter.create()
-            }
-
-            otlpSpanExporter =
+            val logSpanExporter = if (options.debug) LoggingSpanExporter.create() else null
+            val otlpSpanExporter =
                 options.url?.let { OtlpGrpcSpanExporter.builder().setEndpoint(it).build() }
-            otlpMetricExporter =
-                options.url?.let { OtlpGrpcMetricExporter.builder().setEndpoint(it).build() }
-
-            val logSpanProcessor = logSpanExporter?.let { BatchSpanProcessor.builder(it).build() }
-            val logMetricReader = logMetricExporter?.let { PeriodicMetricReader.create(it) }
-
-            val otlpSpanProcessor = otlpSpanExporter?.let { BatchSpanProcessor.builder(it).build() }
-            val otlpMetricReader = otlpMetricExporter?.let { PeriodicMetricReader.create(it) }
-
+            val spanExporter = SpanExporter.composite(listOfNotNull(logSpanExporter, otlpSpanExporter))
+            spanProcessor = BatchSpanProcessor.builder(spanExporter).build()
             val tracerProviderBuilder = SdkTracerProvider.builder()
             tracerProviderBuilder.setResource(sdkResource)
-            logSpanProcessor?.let { tracerProviderBuilder.addSpanProcessor(it) }
-            otlpSpanProcessor?.let { tracerProviderBuilder.addSpanProcessor(it) }
+            spanProcessor?.let { tracerProviderBuilder.addSpanProcessor(it) }
             val tracerProvider = tracerProviderBuilder.build()
 
+            if (options.debug) {
+                logMetricExporter = LoggingMetricExporter.create()
+            }
+            otlpMetricExporter =
+                options.url?.let { OtlpGrpcMetricExporter.builder().setEndpoint(it).build() }
+            val logMetricReader = logMetricExporter?.let { PeriodicMetricReader.create(it) }
+            val otlpMetricReader = otlpMetricExporter?.let { PeriodicMetricReader.create(it) }
             val meterProviderBuilder = SdkMeterProvider.builder()
             meterProviderBuilder.setResource(sdkResource)
             logMetricReader?.let { meterProviderBuilder.registerMetricReader(it) }
