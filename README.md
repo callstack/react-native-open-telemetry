@@ -24,7 +24,7 @@ npm install react-native-open-telemetry
 
 **Android**
 
-See [OpenTelemetry's Android documentation](https://opentelemetry.io/docs/languages/java/api/#tracerprovider) for more information on available APIs.
+See OpenTelemetry's Android documentation on [Traces](https://opentelemetry.io/docs/languages/java/api/#tracerprovider) and [Metrics](https://opentelemetry.io/docs/languages/java/api/#meterprovider) for more information on available APIs.
 
 ```kt
 import com.opentelemetry.OpenTelemetry
@@ -55,7 +55,7 @@ class MainApplication : Application(), ReactApplication {
 
 ### 2. Start the JS SDK
 
-See [OpenTelemetry's JS documentation](https://opentelemetry.io/docs/languages/js/instrumentation/#acquiring-a-tracer) for more information on available APIs.
+See OpenTelemetry's JS documentation on [Traces](https://opentelemetry.io/docs/languages/js/instrumentation/#acquiring-a-tracer) and [Metrics](https://opentelemetry.io/docs/languages/js/instrumentation/#acquiring-a-meter) for more information on available APIs.
 
 ```js
 import { observability } from 'react-native-open-telemetry';
