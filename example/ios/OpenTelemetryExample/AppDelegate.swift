@@ -2,10 +2,17 @@ import UIKit
 import React
 import React_RCTAppDelegate
 import ReactAppDependencyProvider
+import OpenTelemetry
 
 @main
 class AppDelegate: RCTAppDelegate {
   override func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+    OpenTelemetryConfiguration.start(
+        name: "hello-my-native-sdk",
+        version: "1.0.0-alpha",
+        environment: "development"
+    )
+
     self.moduleName = "OpenTelemetryExample"
     self.dependencyProvider = RCTAppDependencyProvider()
 
