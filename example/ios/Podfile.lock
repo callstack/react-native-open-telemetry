@@ -1775,7 +1775,7 @@ SPEC CHECKSUMS:
   fmt: a40bb5bd0294ea969aaaba240a927bd33d878cdd
   glog: eb93e2f488219332457c3c4eafd2738ddc7e80b8
   hermes-engine: f493b0a600aed5dc06532141603688a30a5b2f61
-  OpenTelemetry: c025ceef161a38d0d194c7c61b36655c45e99107
+  OpenTelemetry: 7d784fb41c20e459bd1d3cc00e833b5dcb072b84
   OpenTelemetry-Swift-Api: d3fc1f4a47b85efd0320a48b7f8dd011ee66d9ff
   OpenTelemetry-Swift-Sdk: d693e2d291f96b51ebc4d8f6d17e49392ccbc48f
   RCT-Folly: e78785aa9ba2ed998ea4151e314036f6c49e6d82
@@ -1839,6 +1839,6 @@ SPEC CHECKSUMS:
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   Yoga: b94ff2d7559cb66837c97a3f394ddb817faad4d6
 
-PODFILE CHECKSUM: 1edb4adee0e94c82092b6583a27e562ade1ad01d
+PODFILE CHECKSUM: 9b6620be1eecc1142fc637062870e851bdd0af0f
 
 COCOAPODS: 1.16.2
