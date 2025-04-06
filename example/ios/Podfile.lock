@@ -13,6 +13,7 @@ PODS:
     - glog
     - hermes-engine
     - OpenTelemetry-Swift-Sdk
+    - OpenTelemetry-Swift-StdoutExporter
     - RCT-Folly (= 2024.11.18.00)
     - RCTRequired
     - RCTTypeSafety
@@ -33,6 +34,9 @@ PODS:
   - OpenTelemetry-Swift-Api (1.13.0)
   - OpenTelemetry-Swift-Sdk (1.13.0):
     - OpenTelemetry-Swift-Api (= 1.13.0)
+  - OpenTelemetry-Swift-StdoutExporter (1.13.0):
+    - OpenTelemetry-Swift-Api (= 1.13.0)
+    - OpenTelemetry-Swift-Sdk (= 1.13.0)
   - RCT-Folly (2024.11.18.00):
     - boost
     - DoubleConversion
@@ -1628,6 +1632,7 @@ SPEC REPOS:
   trunk:
     - OpenTelemetry-Swift-Api
     - OpenTelemetry-Swift-Sdk
+    - OpenTelemetry-Swift-StdoutExporter
     - SocketRocket
 
 EXTERNAL SOURCES:
@@ -1775,9 +1780,10 @@ SPEC CHECKSUMS:
   fmt: a40bb5bd0294ea969aaaba240a927bd33d878cdd
   glog: eb93e2f488219332457c3c4eafd2738ddc7e80b8
   hermes-engine: f493b0a600aed5dc06532141603688a30a5b2f61
-  OpenTelemetry: 7d784fb41c20e459bd1d3cc00e833b5dcb072b84
+  OpenTelemetry: 165499943eef8062af3f15a54eea240d23ce406c
   OpenTelemetry-Swift-Api: d3fc1f4a47b85efd0320a48b7f8dd011ee66d9ff
   OpenTelemetry-Swift-Sdk: d693e2d291f96b51ebc4d8f6d17e49392ccbc48f
+  OpenTelemetry-Swift-StdoutExporter: 2f42b89827233ce297b90f33d49fdbbd7185baf8
   RCT-Folly: e78785aa9ba2ed998ea4151e314036f6c49e6d82
   RCTDeprecation: 082fbc90409015eac1366795a0b90f8b5cb28efe
   RCTRequired: ca966f4da75b62ce3ea8c538d82cb5ecbb06f12a
