@@ -18,7 +18,7 @@ Best in class observability brought to React Native.
 npm install react-native-open-telemetry
 ```
 
-## Usage 
+## Usage
 
 ### 1. Start the native SDK
 
@@ -32,7 +32,7 @@ import com.opentelemetry.OpenTelemetry
 class MainApplication : Application(), ReactApplication {
     override fun onCreate() {
         super.onCreate()
-        
+
         // Start the SDK
         OpenTelemetry.init(this) {
             debug = true
@@ -41,9 +41,9 @@ class MainApplication : Application(), ReactApplication {
             version = "1.0.0"
             environment = "production"
         }
-        
+
         // ..
-        
+
         // Use available APIs
         val sdk = OpenTelemetry.get()
         val meter = sdk.getMeter("native-scope-name")
@@ -58,16 +58,16 @@ class MainApplication : Application(), ReactApplication {
 See OpenTelemetry's JS documentation on [Traces](https://opentelemetry.io/docs/languages/js/instrumentation/#acquiring-a-tracer) and [Metrics](https://opentelemetry.io/docs/languages/js/instrumentation/#acquiring-a-meter) for more information on available APIs.
 
 ```js
-import { observability } from 'react-native-open-telemetry';
+import { openTelemetrySDK } from 'react-native-open-telemetry';
 
 // Start the SDK
-const sdk = observability();
+const sdk = openTelemetrySDK();
 
 // Use available APIs
 const meter = sdk.metrics.getMeter("my-js-meter", "1.0");
 
-const promoCounter = meter.createCounter("my-promo-counter", { 
-  description: "A counter metric for my promo section" 
+const promoCounter = meter.createCounter("my-promo-counter", {
+  description: "A counter metric for my promo section"
 });
 
 function App() {

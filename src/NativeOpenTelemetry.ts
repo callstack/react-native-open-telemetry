@@ -10,6 +10,7 @@ export interface Options {
   environment?: string;
   url?: string;
   debug?: boolean;
+  native?: boolean;
 }
 
 export interface Spec extends TurboModule {
