@@ -1,5 +1,5 @@
 import * as api from "@opentelemetry/api";
-import { Resource } from "@opentelemetry/resources";
+import { resourceFromAttributes } from "@opentelemetry/resources";
 import {
   MeterProvider,
   PeriodicExportingMetricReader,
@@ -19,7 +19,7 @@ import { NativeMetricExporter } from "./native-metric-exporter";
 export function observability(options: Options = {}) {
   console.log("SDK", { options });
 
-  const resource = new Resource({
+  const resource = resourceFromAttributes({
     [ATTR_SERVICE_NAME]: options.name,
     [ATTR_SERVICE_VERSION]: options.version,
     environment: options.environment,

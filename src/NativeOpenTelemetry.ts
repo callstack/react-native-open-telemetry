@@ -24,7 +24,7 @@ export interface Spec extends TurboModule {
       attributes: Attributes;
       parentSpanId?: string;
       ended: boolean;
-      instrumentationLibrary: InstrumentationScope;
+      instrumentationScope: InstrumentationScope;
     }[],
   ): void;
   exportMetrics(metrics: ScopeMetrics[]): void;

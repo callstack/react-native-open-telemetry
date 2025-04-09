@@ -6,17 +6,17 @@ export class NativeTraceExporter implements SpanExporter {
   export(spans: ReadableSpan[], callback: (result: ExportResult) => void) {
     console.log("Offloading traces to the native SDK");
     NATIVE.exportTraces(
-      spans.map(span => ({ 
-        name: span.name, 
+      spans.map(span => ({
+        name: span.name,
         kind: span.kind,
         status: span.status,
         attributes: span.attributes,
         spanContext: span.spanContext(),
-        parentSpanId: span.parentSpanId,
+        parentSpanId: span.parentSpanContext?.spanId,
         startTime: span.startTime,
         endTime: span.endTime,
         ended: span.ended,
-        instrumentationLibrary: span.instrumentationLibrary,
+        instrumentationScope: span.instrumentationScope,
       }))
     );
     callback({ code: 0 });

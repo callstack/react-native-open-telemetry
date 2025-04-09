@@ -148,7 +148,7 @@ class OpenTelemetryModule(reactContext: ReactApplicationContext) :
       override fun getTotalAttributeCount() = getAttributes().size()
 
       override fun getInstrumentationScopeInfo(): InstrumentationScopeInfo {
-        val instrumentation = rawSpan.getMap("instrumentationLibrary")
+        val instrumentation = rawSpan.getMap("instrumentationScope")
         val name = instrumentation?.getString("name") ?: "unknown"
         val builder = InstrumentationScopeInfo.builder(name)
         instrumentation?.getString("version")?.let { builder.setSchemaUrl(it) }
@@ -157,7 +157,7 @@ class OpenTelemetryModule(reactContext: ReactApplicationContext) :
       }
 
       override fun getInstrumentationLibraryInfo(): InstrumentationLibraryInfo {
-        val instrumentation = rawSpan.getMap("instrumentationLibrary")
+        val instrumentation = rawSpan.getMap("instrumentationScope")
         val name = instrumentation?.getString("name") ?: "unknown"
         val version = instrumentation?.getString("version") ?: "unknown"
         return InstrumentationLibraryInfo.create(name, version)
