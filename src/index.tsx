@@ -16,7 +16,7 @@ import {
   ATTR_SERVICE_NAME,
   ATTR_SERVICE_VERSION,
 } from "@opentelemetry/semantic-conventions";
-import type { Options } from "./NativeOpenTelemetry";
+import type { Options } from "./types";
 import { NativeTraceExporter } from "./native-trace-exporter";
 import { NativeMetricExporter } from "./native-metric-exporter";
 
@@ -33,31 +33,31 @@ export function openTelemetrySDK(options: Options = {}) {
 
   // Traces
 
-    const logSpanProcessor = options.debug
-      ? new BatchSpanProcessor(new ConsoleSpanExporter())
-      : null;
-    const nativeSpanProcessor = options.native
-      ? new BatchSpanProcessor(new NativeTraceExporter())
-      : null;
-    const otlpSpanProcessor = options.url
-      ? new BatchSpanProcessor(
-          new OTLPTraceExporter({
-            url: options.url,
-            headers: {
-              "Content-Type": "application/json",
-            },
-          })
-        )
-      : null;
+  const logSpanProcessor = options.debug
+    ? new BatchSpanProcessor(new ConsoleSpanExporter())
+    : null;
+  const nativeSpanProcessor = options.native
+    ? new BatchSpanProcessor(new NativeTraceExporter())
+    : null;
+  const otlpSpanProcessor = options.url
+    ? new BatchSpanProcessor(
+        new OTLPTraceExporter({
+          url: options.url,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+      )
+    : null;
 
-    const tracerProvider = new BasicTracerProvider({
-      resource,
-      spanProcessors: [
-        logSpanProcessor,
-        otlpSpanProcessor,
-        nativeSpanProcessor,
-      ].filter((processor) => processor !== null),
-    });
+  const tracerProvider = new BasicTracerProvider({
+    resource,
+    spanProcessors: [
+      logSpanProcessor,
+      otlpSpanProcessor,
+      nativeSpanProcessor,
+    ].filter((processor) => processor !== null),
+  });
 
   // Metrics
 
@@ -84,7 +84,7 @@ export function openTelemetrySDK(options: Options = {}) {
 
   const meterProvider = new MeterProvider({
     resource,
-    readers: [logMetricReader, otlpMetricReader, nativeMetricReader].filter(
+    readers: [logMetricReader, nativeMetricReader, otlpMetricReader].filter(
       (reader) => reader !== null
     ),
   });

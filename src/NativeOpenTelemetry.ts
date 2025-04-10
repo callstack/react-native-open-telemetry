@@ -4,15 +4,6 @@ import type { ScopeMetrics } from "@opentelemetry/sdk-metrics";
 import type { TurboModule } from "react-native";
 import { TurboModuleRegistry } from "react-native";
 
-export interface Options {
-  version?: string;
-  name?: string;
-  environment?: string;
-  url?: string;
-  debug?: boolean;
-  native?: boolean;
-}
-
 export interface Spec extends TurboModule {
   exportTraces(
     spans: {
