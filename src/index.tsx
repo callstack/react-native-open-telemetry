@@ -1,5 +1,8 @@
 import * as api from "@opentelemetry/api";
-import { resourceFromAttributes } from "@opentelemetry/resources";
+import {
+  defaultResource,
+  resourceFromAttributes,
+} from "@opentelemetry/resources";
 import {
   MeterProvider,
   PeriodicExportingMetricReader,
@@ -25,11 +28,13 @@ export function openTelemetrySDK(options: Options = {}) {
 
   // Resource
 
-  const resource = resourceFromAttributes({
-    [ATTR_SERVICE_NAME]: options.name,
-    [ATTR_SERVICE_VERSION]: options.version,
-    environment: options.environment,
-  });
+  const resource = defaultResource().merge(
+    resourceFromAttributes({
+      [ATTR_SERVICE_NAME]: options.name,
+      [ATTR_SERVICE_VERSION]: options.version,
+      environment: options.environment,
+    })
+  );
 
   // Traces
 
