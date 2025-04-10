@@ -30,6 +30,7 @@ import { openTelemetrySDK } from 'react-native-open-telemetry';
 // Start the SDK
 const sdk = openTelemetrySDK({
   debug: true,
+  url: "https://my-collector.com:4317",
   name: "my-app",
   version: "1.0.0-alpha",
   environment: "development",
