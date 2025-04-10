@@ -31,8 +31,6 @@ export default {
     alias: {
       "react-native": "react-native-web",
       [pkg.name]: path.resolve(root, pkg.source),
-      // TODO: Better support for web extensions
-      "./NativeOpenTelemetry": "./NativeOpenTelemetry.web.ts",
     },
   },
 };
