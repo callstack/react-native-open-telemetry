@@ -20,7 +20,7 @@ npm install react-native-open-telemetry
 
 ## Usage
 
-### 2. Start the JS SDK
+### 1. Start the JS SDK
 
 See OpenTelemetry's JS documentation on [Traces](https://opentelemetry.io/docs/languages/js/instrumentation/#acquiring-a-tracer) and [Metrics](https://opentelemetry.io/docs/languages/js/instrumentation/#acquiring-a-meter) for more information on available APIs.
 
