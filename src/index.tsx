@@ -9,10 +9,10 @@ import {
   ConsoleMetricExporter,
 } from "@opentelemetry/sdk-metrics";
 import {
-  BasicTracerProvider,
   BatchSpanProcessor,
   ConsoleSpanExporter,
 } from "@opentelemetry/sdk-trace-base";
+import { WebTracerProvider } from "@opentelemetry/sdk-trace-web";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import {
@@ -55,7 +55,7 @@ export function openTelemetrySDK(options: Options = {}) {
       )
     : null;
 
-  const tracerProvider = new BasicTracerProvider({
+  const tracerProvider = new WebTracerProvider({
     resource,
     spanProcessors: [
       logSpanProcessor,

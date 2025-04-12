@@ -2,8 +2,8 @@ import { Text, View, StatusBar, Pressable } from "react-native";
 import { openTelemetrySDK } from "react-native-open-telemetry";
 
 const sdk = openTelemetrySDK({
-  // url: "http://localhost:4317", // Mobile
-  url: "http://localhost:4318", // Web
+  // Use '10.0.2.2' instead of 'localhost' on Android emulators
+  url: "http://localhost:4318",
   debug: true,
   name: "MyExampleApp",
   version: "1.0.0-alpha",
