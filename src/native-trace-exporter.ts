@@ -1,26 +1,8 @@
-import type { ExportResult } from "@opentelemetry/core";
-import type { ReadableSpan, SpanExporter } from "@opentelemetry/sdk-trace-base";
-import NATIVE from "./NativeOpenTelemetry";
+import type { SpanExporter } from "@opentelemetry/sdk-trace-base";
 
+/* Noop implementation for Web */
 export class NativeTraceExporter implements SpanExporter {
-  export(spans: ReadableSpan[], callback: (result: ExportResult) => void) {
-    console.log("Offloading traces to the native SDK");
-    NATIVE.exportTraces(
-      spans.map(span => ({ 
-        name: span.name, 
-        kind: span.kind,
-        status: span.status,
-        attributes: span.attributes,
-        spanContext: span.spanContext(),
-        parentSpanId: span.parentSpanId,
-        startTime: span.startTime,
-        endTime: span.endTime,
-        ended: span.ended,
-        instrumentationLibrary: span.instrumentationLibrary,
-      }))
-    );
-    callback({ code: 0 });
-  }
+  export() {}
 
   forceFlush() {
     return Promise.resolve();

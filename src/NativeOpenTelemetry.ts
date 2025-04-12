@@ -1,16 +1,7 @@
 import type { Attributes, HrTime, SpanContext, SpanKind, SpanStatus } from "@opentelemetry/api";
 import type { InstrumentationScope } from '@opentelemetry/core';
 import type { ScopeMetrics } from "@opentelemetry/sdk-metrics";
-import type { TurboModule } from "react-native";
-import { TurboModuleRegistry } from "react-native";
-
-export interface Options {
-  version?: string;
-  name?: string;
-  environment?: string;
-  url?: string;
-  debug?: boolean;
-}
+import { TurboModuleRegistry, type TurboModule } from "react-native";
 
 export interface Spec extends TurboModule {
   exportTraces(
@@ -24,7 +15,7 @@ export interface Spec extends TurboModule {
       attributes: Attributes;
       parentSpanId?: string;
       ended: boolean;
-      instrumentationLibrary: InstrumentationScope;
+      instrumentationScope: InstrumentationScope;
     }[],
   ): void;
   exportMetrics(metrics: ScopeMetrics[]): void;
