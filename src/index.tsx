@@ -19,10 +19,7 @@ import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import {
   ATTR_SERVICE_NAME,
   ATTR_SERVICE_VERSION,
-  ATTR_OS_NAME,
-  ATTR_OS_VERSION,
-  ATTR_DEPLOYMENT_ENVIRONMENT_NAME,
-} from "@opentelemetry/semantic-conventions/incubating";
+} from "@opentelemetry/semantic-conventions";
 import type { Options } from "./types";
 import { NativeTraceExporter } from "./native-trace-exporter";
 import { NativeMetricExporter } from "./native-metric-exporter";
@@ -36,10 +33,10 @@ export function openTelemetrySDK(options: Options = {}) {
     resourceFromAttributes({
       [ATTR_SERVICE_NAME]: options.name,
       [ATTR_SERVICE_VERSION]: options.version,
-      [ATTR_DEPLOYMENT_ENVIRONMENT_NAME]:
-        options.environment ?? process.env.NODE_ENV,
-      [ATTR_OS_NAME]: Platform.OS,
-      [ATTR_OS_VERSION]: Platform.Version,
+      "deployment.environment.name":
+        options.environment ?? process.env.NODE_ENV, // ATTR_DEPLOYMENT_ENVIRONMENT_NAME
+      "os.name": Platform.OS, // ATTR_OS_NAME
+      "os.version": Platform.Version, // ATTR_OS_VERSION
     })
   );
 
