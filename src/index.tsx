@@ -1,3 +1,4 @@
+import { Platform } from "react-native";
 import * as api from "@opentelemetry/api";
 import {
   defaultResource,
@@ -18,7 +19,10 @@ import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import {
   ATTR_SERVICE_NAME,
   ATTR_SERVICE_VERSION,
-} from "@opentelemetry/semantic-conventions";
+  ATTR_OS_NAME,
+  ATTR_OS_VERSION,
+  ATTR_DEPLOYMENT_ENVIRONMENT_NAME,
+} from "@opentelemetry/semantic-conventions/incubating";
 import type { Options } from "./types";
 import { NativeTraceExporter } from "./native-trace-exporter";
 import { NativeMetricExporter } from "./native-metric-exporter";
@@ -32,7 +36,10 @@ export function openTelemetrySDK(options: Options = {}) {
     resourceFromAttributes({
       [ATTR_SERVICE_NAME]: options.name,
       [ATTR_SERVICE_VERSION]: options.version,
-      environment: options.environment,
+      [ATTR_DEPLOYMENT_ENVIRONMENT_NAME]:
+        options.environment ?? process.env.NODE_ENV,
+      [ATTR_OS_NAME]: Platform.OS,
+      [ATTR_OS_VERSION]: Platform.Version,
     })
   );
 
