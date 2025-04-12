@@ -47,7 +47,7 @@ export function openTelemetrySDK(options: Options = {}) {
   const otlpSpanProcessor = options.url
     ? new BatchSpanProcessor(
         new OTLPTraceExporter({
-          url: options.url,
+          url: `${options.url}/v1/traces`,
           headers: {
             "Content-Type": "application/json",
           },
@@ -79,7 +79,7 @@ export function openTelemetrySDK(options: Options = {}) {
   const otlpMetricReader = options.url
     ? new PeriodicExportingMetricReader({
         exporter: new OTLPMetricExporter({
-          url: options.url,
+          url: `${options.url}/v1/metrics`,
           headers: {
             "Content-Type": "application/json",
           },
