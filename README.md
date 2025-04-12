@@ -7,7 +7,7 @@ Best in class observability brought to React Native.
 
 ## Features
 
-* **Telemetry without lock-in**. Send to **any OTLP compliant backend** including [vendors](https://opentelemetry.io/ecosystem/vendors/).
+* **Telemetry without lock-in**. Send to **any OTLP compliant backend** including [vendors](https://opentelemetry.io/ecosystem/vendors/)
 * [**Tracing** API](https://opentelemetry.io/docs/specs/otel/trace/api/)
 * [**Metrics** API](https://opentelemetry.io/docs/specs/otel/metrics/api/)
 * **Web**, **Android** (experimental) support with **iOS** coming soon
