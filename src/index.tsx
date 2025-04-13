@@ -1,6 +1,11 @@
 import { Platform } from "react-native";
 import * as api from "@opentelemetry/api";
 import {
+  CompositePropagator,
+  W3CBaggagePropagator,
+  W3CTraceContextPropagator,
+} from "@opentelemetry/core";
+import {
   defaultResource,
   resourceFromAttributes,
 } from "@opentelemetry/resources";
@@ -66,6 +71,15 @@ export function openTelemetrySDK(options: Options = {}) {
       otlpSpanProcessor,
       nativeSpanProcessor,
     ].filter((processor) => processor !== null),
+  });
+
+  tracerProvider.register({
+    propagator: new CompositePropagator({
+      propagators: [
+        new W3CBaggagePropagator(),
+        new W3CTraceContextPropagator(),
+      ],
+    }),
   });
 
   // Metrics
