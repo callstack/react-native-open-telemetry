@@ -14,8 +14,22 @@ Best in class observability brought to React Native.
 
 ## Installation
 
+### Step 1
+
+Install packages from npm:
 ```sh
-npm install react-native-open-telemetry
+npm install react-native-open-telemetry react-native-worklets-core
+```
+
+### Step 2
+Add `react-native-worklets-core/plugin` plugin to your `babel.config.js`:
+```js
+module.exports = {
+    plugins: [
+      ... // other plugins
+      'react-native-worklets-core/plugin',
+    ],
+  };
 ```
 
 ## Usage

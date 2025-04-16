@@ -6,7 +6,17 @@ This is a new [**React Native**](https://reactnative.dev) project, bootstrapped 
 
 If you intend to run with the local backend collector deployment, make sure to have [Docker](https://www.docker.com/) installed.
 
-## Step 1: Start the bundler
+## Step 1: Install dependencies
+
+In order to run the example app, you need to install the dependencies both in `root` directory and in the `example` directory.
+
+Run install command from the `root` the project and from the `example` directory.
+
+```shell
+bun install
+```
+
+## Step 2: Start the bundler
 
 ### Web
 
@@ -26,7 +36,7 @@ To start the Metro dev server, run the following command from the root of your R
 bun start
 ```
 
-## Step 2: Build and run your app (mobile only)
+## Step 3: Build and run your app (mobile only)
 
 With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
 
@@ -62,7 +72,7 @@ If everything is set up correctly, you should see your new app running in the An
 
 This is one way to run your app — you can also build it directly from Android Studio or Xcode.
 
-## Step 3: Modify your app
+## Step 4: Modify your app
 
 Now that you have successfully run the app, let's make changes!
 
@@ -73,7 +83,7 @@ When you want to forcefully reload, for example to reset the state of your app, 
 - **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
 - **iOS**: Press <kbd>R</kbd> in iOS Simulator.
 
-## Step 4: Run the Collector (optional)
+## Step 5: Run the Collector (optional)
 
 If you want to setup the backend stack, run the below command:
 
