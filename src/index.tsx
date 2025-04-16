@@ -28,8 +28,6 @@ import {
   ATTR_SERVICE_VERSION,
 } from "@opentelemetry/semantic-conventions";
 import type { Options } from "./types";
-import { NativeTraceExporter } from "./native-trace-exporter";
-import { NativeMetricExporter } from "./native-metric-exporter";
 
 export function openTelemetrySDK(options: Options = {}) {
   console.log("SDK", { options });
@@ -52,9 +50,6 @@ export function openTelemetrySDK(options: Options = {}) {
   const logSpanProcessor = options.debug
     ? new BatchSpanProcessor(new ConsoleSpanExporter())
     : null;
-  const nativeSpanProcessor = options.native
-    ? new BatchSpanProcessor(new NativeTraceExporter())
-    : null;
   const otlpSpanProcessor = options.url
     ? new BatchSpanProcessor(
         new OTLPTraceExporter({
@@ -71,7 +66,6 @@ export function openTelemetrySDK(options: Options = {}) {
     spanProcessors: [
       logSpanProcessor,
       otlpSpanProcessor,
-      nativeSpanProcessor,
     ].filter((processor) => processor !== null),
   });
 
@@ -100,11 +94,6 @@ export function openTelemetrySDK(options: Options = {}) {
         exporter: new ConsoleMetricExporter(),
       })
     : null;
-  const nativeMetricReader = options.native
-    ? new PeriodicExportingMetricReader({
-        exporter: new NativeMetricExporter(),
-      })
-    : null;
   const otlpMetricReader = options.url
     ? new PeriodicExportingMetricReader({
         exporter: new OTLPMetricExporter({
@@ -118,7 +107,7 @@ export function openTelemetrySDK(options: Options = {}) {
 
   const meterProvider = new MeterProvider({
     resource,
-    readers: [logMetricReader, nativeMetricReader, otlpMetricReader].filter(
+    readers: [logMetricReader, otlpMetricReader].filter(
       (reader) => reader !== null
     ),
   });
