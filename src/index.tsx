@@ -28,6 +28,36 @@ import {
 import type { Options } from "./types";
 import { NativeTraceExporter } from "./native-trace-exporter";
 import { NativeMetricExporter } from "./native-metric-exporter";
+import {Worklets} from "react-native-worklets-core";
+
+const Worklet = Worklets.defaultContext
+
+const calculatePrimesWorklet = (limit: number): number[] => {
+    'worklet';
+    const primes: number[] = [];
+    for (let i = 2; primes.length < limit; i++) {
+        let isPrime = true;
+        for (let j = 2; j * j <= i; j++) {
+            if (i % j === 0) {
+                isPrime = false;
+                break;
+            }
+        }
+        if (isPrime) {
+            primes.push(i);
+        }
+    }
+    return primes;
+};
+
+export async function runHeavyWorklet() {
+    await Worklet.runAsync(() => {
+        'worklet'
+        console.log("Running heavy worklet")
+        const result = calculatePrimesWorklet(2400000);
+        console.log(result);
+    })
+}
 
 export function openTelemetrySDK(options: Options = {}) {
   console.log("SDK", { options });

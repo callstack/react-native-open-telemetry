@@ -1,5 +1,5 @@
-import { Text, View, StatusBar, Pressable } from "react-native";
-import { openTelemetrySDK } from "react-native-open-telemetry";
+import {Text, View, StatusBar, TouchableOpacity, StyleSheet} from "react-native";
+import { openTelemetrySDK, runHeavyWorklet } from "react-native-open-telemetry";
 
 const sdk = openTelemetrySDK({
   // Use '10.0.2.2' instead of 'localhost' on Android emulators
@@ -28,8 +28,12 @@ export default function App() {
     >
       <StatusBar />
 
-      <Pressable
-        style={{ padding: 16, backgroundColor: "lightgray", borderRadius: 8 }}
+      <TouchableOpacity onPress={runHeavyWorklet} style={styles.button}>
+          <Text>Run heavy worklet</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.button}
         onPress={async () => {
           console.log("Starting a long, parent span...");
           const parentSpan = tracer.startSpan("my-js-homepage-span");
@@ -57,10 +61,10 @@ export default function App() {
         }}
       >
         <Text>Start a span</Text>
-      </Pressable>
+      </TouchableOpacity>
 
-      <Pressable
-        style={{ padding: 16, backgroundColor: "lightgray", borderRadius: 8 }}
+      <TouchableOpacity
+        style={styles.button}
         onPress={() => {
           console.log("Incrementing counter by 1");
           counter.add(1, {
@@ -71,7 +75,15 @@ export default function App() {
         }}
       >
         <Text>Increment counter</Text>
-      </Pressable>
+      </TouchableOpacity>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+    button: {
+        padding: 16,
+        backgroundColor: "lightgray",
+        borderRadius: 8
+    }
+})
