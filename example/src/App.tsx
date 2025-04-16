@@ -78,7 +78,8 @@ export default function App() {
         onPress={() => {
           fetch("https://api.weatherstack.com/current?query=Portland")
             .then((response) => response.json())
-            .then(data => console.log(data));
+            .then(data => console.log(data))
+            .catch(error => console.error(error))
         }}
       >
         <Text>Fetch weather</Text>
