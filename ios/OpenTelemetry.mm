@@ -9,12 +9,4 @@ RCT_EXPORT_MODULE()
     return std::make_shared<facebook::react::NativeOpenTelemetrySpecJSI>(params);
 }
 
-- (void)exportMetrics:(nonnull NSArray *)metrics {
-    // TODO
-}
-
-- (void)exportTraces:(nonnull NSArray *)spans {
-    // TODO
-}
-
 @end
