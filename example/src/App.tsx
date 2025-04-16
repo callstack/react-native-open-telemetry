@@ -72,6 +72,17 @@ export default function App() {
       >
         <Text>Increment counter</Text>
       </Pressable>
+
+      <Pressable
+        style={{ padding: 16, backgroundColor: "lightgray", borderRadius: 8 }}
+        onPress={() => {
+          fetch("https://api.weatherstack.com/current?query=Portland")
+            .then((response) => response.json())
+            .then(data => console.log(data));
+        }}
+      >
+        <Text>Fetch weather</Text>
+      </Pressable>
     </View>
   );
 }

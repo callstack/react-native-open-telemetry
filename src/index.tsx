@@ -9,6 +9,8 @@ import {
   defaultResource,
   resourceFromAttributes,
 } from "@opentelemetry/resources";
+import { registerInstrumentations } from "@opentelemetry/instrumentation";
+import { FetchInstrumentation } from "@opentelemetry/instrumentation-fetch";
 import {
   MeterProvider,
   PeriodicExportingMetricReader,
@@ -81,6 +83,15 @@ export function openTelemetrySDK(options: Options = {}) {
       ],
     }),
   });
+
+  registerInstrumentations({
+    instrumentations: [
+      new FetchInstrumentation({
+        propagateTraceHeaderCorsUrls: /.*/,
+        clearTimingResources: false,
+      }),
+    ]
+  })
 
   // Metrics
 
