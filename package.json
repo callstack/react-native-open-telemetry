@@ -1,11 +1,9 @@
 {
   "name": "react-native-open-telemetry",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "Observability SDK for React Native",
   "license": "MIT",
-  "author": {
-    "name": "Adam Horodyski"
-  },
+  "author": "Adam Horodyski <adam.horodyski@callstack.com> (https://github.com/callstack)",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/callstack/react-native-open-telemetry.git"
