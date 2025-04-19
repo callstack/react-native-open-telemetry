@@ -53,7 +53,9 @@
     "typecheck": "tsc --noEmit",
     "lint": "oxlint",
     "prepare": "bob build",
-    "codegen": "react-native codegen"
+    "codegen": "react-native codegen",
+    "version": "changeset version",
+    "publish": "changeset publish"
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",
