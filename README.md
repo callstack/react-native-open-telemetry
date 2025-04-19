@@ -11,6 +11,7 @@ Best in class observability brought to React Native.
 * [**Tracing** API](https://opentelemetry.io/docs/specs/otel/trace/api/)
 * [**Metrics** API](https://opentelemetry.io/docs/specs/otel/metrics/api/)
 * **Web**, **Android** (experimental) support with **iOS** coming soon
+* Automatic **fetch instrumentation**
 
 ## Installation
 
@@ -52,7 +53,11 @@ function App() {
 }
 ```
 
-### 2. Start the native SDK (optional)
+### 2. Start the native SDK (optional) 🚧
+
+> [!IMPORTANT]
+> This section is considered **highly experimental** and internals may change at any time.
+> There's currently no support for bidirectional JS/Native communication and `native` options' flag only marks an API that will become available.
 
 **Android**
 
