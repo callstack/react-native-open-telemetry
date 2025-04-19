@@ -13,6 +13,14 @@ Best in class observability brought to React Native.
 * **Web**, **Android** (experimental) support with **iOS** coming soon
 * Automatic **fetch instrumentation**
 
+## Platform support
+
+| Platform | Support |
+| --- | --- |
+| **web** | ☑️ Stable |
+| **android** | ☑️ Stable JS with experimental Native 🏗️ |
+| **ios** | ☑️ Stable JS with planned Native 👀 |
+
 ## Installation
 
 ```sh
@@ -56,8 +64,8 @@ function App() {
 ### 2. Start the native SDK (optional) 🚧
 
 > [!IMPORTANT]
-> This section is considered **highly experimental** and internals may change at any time.
-> There's currently no support for bidirectional JS/Native communication and `native` options' flag only marks an API that will become available.
+> This section is considered **highly experimental**.
+> There's currently no support for bidirectional JS/Native communication and the `native` feature flag only marks an API that will become available.
 
 **Android**
 
