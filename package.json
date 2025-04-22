@@ -52,10 +52,10 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "oxlint",
-    "prepare": "bob build",
+    "prepare": "bunx bob build",
     "codegen": "react-native codegen",
-    "version": "changeset version",
-    "publish": "changeset publish"
+    "version": "bunx changeset version",
+    "publish": "bunx changeset publish"
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",
