@@ -4,7 +4,7 @@ import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.ReadableMapKeySetIterator
 import io.opentelemetry.context.propagation.TextMapGetter
 
-class RNTextMapGetter : TextMapGetter<ReadableMap> {
+object RNTextMapGetter : TextMapGetter<ReadableMap> {
     override fun keys(carrier: ReadableMap): MutableIterable<String> {
         val iterator: ReadableMapKeySetIterator = carrier.keySetIterator()
         val keys = mutableListOf<String>()

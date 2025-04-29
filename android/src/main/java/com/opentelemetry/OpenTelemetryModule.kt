@@ -20,10 +20,9 @@ class OpenTelemetryModule(reactContext: ReactApplicationContext) :
         }
 
         val sdk = OpenTelemetry.get()
-        val getter = RNTextMapGetter()
         val currentContext = Context.current()
         val extractedContext =
-            sdk.propagators.textMapPropagator.extract(currentContext, carrier, getter)
+            sdk.propagators.textMapPropagator.extract(currentContext, carrier, RNTextMapGetter)
         extractedContext.makeCurrent()
     }
 
