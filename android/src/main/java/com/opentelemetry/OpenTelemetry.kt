@@ -3,6 +3,10 @@ package com.opentelemetry
 import android.content.Context
 import io.opentelemetry.api.GlobalOpenTelemetry
 import io.opentelemetry.api.OpenTelemetry
+import io.opentelemetry.api.baggage.propagation.W3CBaggagePropagator;
+import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
+import io.opentelemetry.context.propagation.ContextPropagators;
+import io.opentelemetry.context.propagation.TextMapPropagator;
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.exporter.logging.LoggingMetricExporter
@@ -46,6 +50,10 @@ class OpenTelemetry {
                 ),
             )
 
+            val contextPropagators = ContextPropagators.create(
+                TextMapPropagator.composite(
+                    W3CTraceContextPropagator.getInstance(), W3CBaggagePropagator.getInstance()));
+
             val logSpanExporter = if (options.debug) LoggingSpanExporter.create() else null
             val otlpSpanExporter =
                 options.url?.let { OtlpGrpcSpanExporter.builder().setEndpoint(it).build() }
@@ -75,6 +83,7 @@ class OpenTelemetry {
             OpenTelemetrySdk.builder()
                 .setTracerProvider(tracerProvider)
                 .setMeterProvider(meterProvider)
+                .setPropagators(contextPropagators)
                 .buildAndRegisterGlobal()
         }
     }
