@@ -28,6 +28,7 @@ import {
   ATTR_SERVICE_VERSION,
 } from "@opentelemetry/semantic-conventions";
 import type { Options } from "./types";
+import { RNContextManager } from "./RNContextManager";
 
 export function openTelemetrySDK(options: Options = {}) {
   console.log("SDK", { options });
@@ -63,20 +64,20 @@ export function openTelemetrySDK(options: Options = {}) {
 
   const tracerProvider = new WebTracerProvider({
     resource,
-    spanProcessors: [
-      logSpanProcessor,
-      otlpSpanProcessor,
-    ].filter((processor) => processor !== null),
+    spanProcessors: [logSpanProcessor, otlpSpanProcessor].filter(
+      (processor) => processor !== null
+    ),
   });
 
-  tracerProvider.register({
-    propagator: new CompositePropagator({
-      propagators: [
-        new W3CBaggagePropagator(),
-        new W3CTraceContextPropagator(),
-      ],
-    }),
+  // Context
+
+  const contextManager = new RNContextManager();
+
+  const propagator = new CompositePropagator({
+    propagators: [new W3CBaggagePropagator(), new W3CTraceContextPropagator()],
   });
+
+  tracerProvider.register({ contextManager, propagator });
 
   registerInstrumentations({
     instrumentations: [
@@ -84,8 +85,8 @@ export function openTelemetrySDK(options: Options = {}) {
         propagateTraceHeaderCorsUrls: /.*/,
         clearTimingResources: false,
       }),
-    ]
-  })
+    ],
+  });
 
   // Metrics
 
