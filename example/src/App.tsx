@@ -8,6 +8,11 @@ const sdk = openTelemetrySDK({
   name: "MyExampleApp",
   version: "1.0.0-alpha",
   environment: "development",
+  features: {
+    session: {
+      getSessionId: () => "custom-session-id",
+    },
+  },
 });
 
 const tracer = sdk.trace.getTracer("my-js-tracer");
@@ -78,8 +83,8 @@ export default function App() {
         onPress={() => {
           fetch("https://api.weatherstack.com/current?query=Portland")
             .then((response) => response.json())
-            .then(data => console.log(data))
-            .catch(error => console.error(error))
+            .then((data) => console.log(data))
+            .catch((error) => console.error(error));
         }}
       >
         <Text>Fetch weather</Text>

@@ -27,6 +27,7 @@ import {
   ATTR_SERVICE_NAME,
   ATTR_SERVICE_VERSION,
 } from "@opentelemetry/semantic-conventions";
+import { SessionIdProcessor } from "./SessionIdProcessor";
 import type { Options } from "./types";
 
 export function openTelemetrySDK(options: Options = {}) {
@@ -60,12 +61,16 @@ export function openTelemetrySDK(options: Options = {}) {
         })
       )
     : null;
+  const sessionSpanProcessor = options.features?.session
+    ? new SessionIdProcessor(options.features.session.getSessionId)
+    : null;
 
   const tracerProvider = new WebTracerProvider({
     resource,
     spanProcessors: [
       logSpanProcessor,
       otlpSpanProcessor,
+      sessionSpanProcessor,
     ].filter((processor) => processor !== null),
   });
 
@@ -84,8 +89,8 @@ export function openTelemetrySDK(options: Options = {}) {
         propagateTraceHeaderCorsUrls: /.*/,
         clearTimingResources: false,
       }),
-    ]
-  })
+    ],
+  });
 
   // Metrics
 
