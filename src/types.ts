@@ -5,4 +5,9 @@ export interface Options {
   url?: string;
   debug?: boolean;
   native?: boolean;
+  features?: {
+    session?: {
+      getSessionId: () => string | null;
+    };
+  };
 }
