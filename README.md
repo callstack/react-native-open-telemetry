@@ -12,6 +12,7 @@ Best in class observability brought to React Native.
 * [**Metrics** API](https://opentelemetry.io/docs/specs/otel/metrics/api/)
 * **Web**, **Android** (experimental) support with **iOS** coming soon
 * Automatic **fetch instrumentation**
+* Automatic **session tagging**
 
 ## Platform support
 
