@@ -45,12 +45,18 @@ export default function App() {
             userType: "admin",
           });
 
-          const childSpan = tracer.startSpan(
-            "my-js-homepage-child-span",
-            { attributes: { type: "child" } },
-            ctx
-          );
-          childSpan.end();
+          sdk.context.with(ctx, () => {
+            const childSpan = tracer.startSpan(
+              "my-js-homepage-child-span",
+              { attributes: { type: "child" } }
+            );
+            childSpan.end();
+
+            fetch("https://api.weatherstack.com/current?query=Portland")
+              .then((response) => response.json())
+              .then((data) => console.log(data))
+              .catch((error) => console.error(error));
+          });
 
           // sleep for a random 1-3 seconds
           const sleepTime = Math.floor(Math.random() * 3000) + 1000;
@@ -76,18 +82,6 @@ export default function App() {
         }}
       >
         <Text>Increment counter</Text>
-      </Pressable>
-
-      <Pressable
-        style={{ padding: 16, backgroundColor: "lightgray", borderRadius: 8 }}
-        onPress={() => {
-          fetch("https://api.weatherstack.com/current?query=Portland")
-            .then((response) => response.json())
-            .then((data) => console.log(data))
-            .catch((error) => console.error(error));
-        }}
-      >
-        <Text>Fetch weather</Text>
       </Pressable>
     </View>
   );
