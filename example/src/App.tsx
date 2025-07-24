@@ -1,6 +1,9 @@
 import { Text, View, StatusBar, Pressable } from "react-native";
 import { openTelemetrySDK } from "react-native-open-telemetry";
 
+const sessionId =
+  "custom-session-id-" + Math.random().toString(36).substring(7);
+
 const sdk = openTelemetrySDK({
   // Use '10.0.2.2' instead of 'localhost' on Android emulators
   url: "http://localhost:4318",
@@ -10,7 +13,7 @@ const sdk = openTelemetrySDK({
   environment: "development",
   features: {
     session: {
-      getSessionId: () => "custom-session-id",
+      getSessionId: () => sessionId,
     },
   },
 });
@@ -34,37 +37,28 @@ export default function App() {
       <StatusBar />
 
       <Pressable
+        role="button"
         style={{ padding: 16, backgroundColor: "lightgray", borderRadius: 8 }}
         onPress={async () => {
-          console.log("Starting a long, parent span...");
-          const parentSpan = tracer.startSpan("my-js-homepage-span");
-          const ctx = sdk.trace.setSpan(sdk.context.active(), parentSpan);
-          parentSpan.setAttributes({
-            platform: "js",
-            userId: 123,
-            userType: "admin",
+          const childSpan = tracer.startSpan("my-js-homepage-child-span", {
+            attributes: {
+              type: "child",
+              platform: "js",
+              userType: "admin",
+            },
           });
+          childSpan.end();
 
-          sdk.context.with(ctx, () => {
-            const childSpan = tracer.startSpan(
-              "my-js-homepage-child-span",
-              { attributes: { type: "child" } }
-            );
-            childSpan.end();
+          fetch("https://api.weatherstack.com/current?query=Portland")
+            .then((response) => response.json())
+            .then((data) => console.log(data))
+            .catch((error) => console.error(error));
 
-            fetch("https://api.weatherstack.com/current?query=Portland")
-              .then((response) => response.json())
-              .then((data) => console.log(data))
-              .catch((error) => console.error(error));
-          });
 
           // sleep for a random 1-3 seconds
           const sleepTime = Math.floor(Math.random() * 3000) + 1000;
           console.log(`Sleeping for ${sleepTime}ms`);
           await new Promise((resolve) => setTimeout(resolve, sleepTime));
-
-          parentSpan.end();
-          console.log("Span ended");
         }}
       >
         <Text>Start a span</Text>

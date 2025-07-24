@@ -11,6 +11,7 @@ import {
 } from "@opentelemetry/resources";
 import { registerInstrumentations } from "@opentelemetry/instrumentation";
 import { FetchInstrumentation } from "@opentelemetry/instrumentation-fetch";
+import { UserInteractionInstrumentation } from '@opentelemetry/instrumentation-user-interaction';
 import {
   MeterProvider,
   PeriodicExportingMetricReader,
@@ -89,6 +90,7 @@ export function openTelemetrySDK(options: Options = {}) {
         propagateTraceHeaderCorsUrls: /.*/,
         clearTimingResources: false,
       }),
+      new UserInteractionInstrumentation(),
     ],
   });
 
