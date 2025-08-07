@@ -57,6 +57,7 @@ export function openTelemetrySDK(options: Options = {}) {
           url: `${options.url}/v1/traces`,
           headers: {
             "Content-Type": "application/json",
+            ...options.headers,
           },
         })
       )
@@ -105,6 +106,7 @@ export function openTelemetrySDK(options: Options = {}) {
           url: `${options.url}/v1/metrics`,
           headers: {
             "Content-Type": "application/json",
+            ...options.headers,
           },
         }),
       })

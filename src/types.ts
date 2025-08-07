@@ -3,6 +3,7 @@ export interface Options {
   name?: string;
   environment?: string;
   url?: string;
+  headers?: Record<string, string>;
   debug?: boolean;
   native?: boolean;
   features?: {
