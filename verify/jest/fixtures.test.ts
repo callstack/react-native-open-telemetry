@@ -17,6 +17,9 @@ const CONFIG = {
   exportUrl: '<collector>',
   exportHeaders: [],
 };
+// R11: per-scenario config; export-headers proves the headers reach the collector (fast-jvm asserts headers.json)
+const configFor = (name: string) =>
+  name === 'export-headers' ? {...CONFIG, exportHeaders: [{key: 'x-api-key', value: 'test'}]} : CONFIG;
 const dir = path.join(process.env.VERIFY_DIR ?? path.join(__dirname, '..'), 'fixtures');
 
 function setup() {
@@ -94,8 +97,8 @@ for (const s of allScenarios().filter(x => !x.pending && x.runners.includes('jes
     const file = path.join(dir, `${name}.handoff.json`);
     if (process.env.VERIFY_UPDATE === '1') {
       fs.mkdirSync(dir, {recursive: true});
-      fs.writeFileSync(file, encodeFixture({config: CONFIG, spans: actual}) + '\n');
+      fs.writeFileSync(file, encodeFixture({config: configFor(name), spans: actual}) + '\n');
     }
-    expect(decodeFixture(fs.readFileSync(file, 'utf8'))).toStrictEqual({config: CONFIG, spans: actual});
+    expect(decodeFixture(fs.readFileSync(file, 'utf8'))).toStrictEqual({config: configFor(name), spans: actual});
   });
 }

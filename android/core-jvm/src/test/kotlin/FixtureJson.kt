@@ -22,6 +22,7 @@ object FixtureJson {
       serviceVersion = c.str("serviceVersion"),
       resourceAttributes = attrs(c["resourceAttributes"]),
       exportUrl = c["exportUrl"].asString.replace("<collector>", exportUrl),
+      exportHeaders = attrs(c["exportHeaders"]).associate { it.key to (it.value as AttrValue.Str).value },
     )
     return config to root["spans"].asJsonArray.map { span(it.asJsonObject) }
   }

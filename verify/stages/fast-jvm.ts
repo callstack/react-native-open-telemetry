@@ -42,6 +42,11 @@ const stage: Stage = {
       if (report) console.log(report);
       if (!ok) failed.push(n);
     }
+    // R11: configured export headers reach the collector
+    const raw = path.join(artifacts, 'raw', 'export-headers.android');
+    const hdr = fs.readdirSync(raw).filter(f => f.endsWith('.headers.json'));
+    if (!hdr.length || !hdr.every(f => JSON.parse(fs.readFileSync(path.join(raw, f), 'utf8'))['x-api-key'] === 'test'))
+      failed.push('export-headers (x-api-key: test missing in headers.json)');
     if (failed.length) throw new Error(`android mismatch: ${failed.join(', ')}`);
     console.log(`fast-jvm: ${names.length} fixtures match their android files`);
   },
