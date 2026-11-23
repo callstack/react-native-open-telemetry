@@ -17,26 +17,52 @@ export const decodeRequest = (buf: Uint8Array): ExportTraceServiceRequest =>
 
 const ID_KEYS = ['traceId', 'spanId', 'parentSpanId'];
 
-function hexIds(v: any): any {
-  if (Array.isArray(v)) return v.map(hexIds);
+// Hex id strings (OTLP/JSON) -> bytes, so fromObject does not base64-decode them.
+function idsToBytes(v: any): any {
+  if (Array.isArray(v)) return v.map(idsToBytes);
+  if (v && typeof v === 'object' && !(v instanceof Uint8Array)) {
+    const out: any = {};
+    for (const [k, x] of Object.entries(v))
+      out[k] =
+        ID_KEYS.includes(k) && typeof x === 'string'
+          ? Buffer.from(x, 'hex')
+          : idsToBytes(x);
+    return out;
+  }
+  return v;
+}
+
+function format(v: any, key?: string): any {
+  if (Array.isArray(v)) return v.map(x => format(x));
+  if (v instanceof Uint8Array) {
+    // ids are hex, any other bytes (AnyValue.bytesValue) are base64 per proto3 JSON
+    if (key && ID_KEYS.includes(key))
+      return v.length ? Buffer.from(v).toString('hex') : undefined;
+    return Buffer.from(v).toString('base64');
+  }
+  if (typeof v === 'number' && !Number.isFinite(v))
+    return Number.isNaN(v) ? 'NaN' : v > 0 ? 'Infinity' : '-Infinity';
   if (v && typeof v === 'object') {
     const out: any = {};
     for (const [k, x] of Object.entries(v)) {
-      if (ID_KEYS.includes(k) && x instanceof Uint8Array) {
-        if (x.length) out[k] = Buffer.from(x).toString('hex');
-      } else out[k] = hexIds(x);
+      const f = format(x, k);
+      if (f !== undefined) out[k] = f;
     }
     return out;
   }
   return v;
 }
 
-/** Proto3 JSON: hex ids, int64 as decimal strings, enums as numbers, defaults omitted. */
+/**
+ * Proto3 JSON: hex ids, int64 as decimal strings, enums as numbers, defaults omitted,
+ * NaN/Infinity as strings. Accepts protobuf-decoded objects or OTLP/JSON (hex ids).
+ * -0 stays -0 in the returned object; JSON.stringify writes it as 0.
+ */
 export function toOtlpJson(req: ExportTraceServiceRequest): OtlpJson {
-  const obj = Req.toObject(Req.fromObject(req), {
+  const obj = Req.toObject(Req.fromObject(idsToBytes(req)), {
     longs: String,
     enums: Number,
     bytes: Buffer as any,
   });
-  return hexIds(obj);
+  return format(obj);
 }

@@ -34,7 +34,7 @@ test('collector refuses then accepts', async () => {
   expect(spans.map((s: any) => s.name)).toEqual(['second']);
   expect(fs.existsSync(path.join(dir, 's.js.otlp.json'))).toBe(true);
   expect(fs.existsSync(path.join(dir, 'raw', 's.js', '0.json'))).toBe(true);
-  expect(fs.existsSync(path.join(dir, 'raw', 's.js', 'headers.json'))).toBe(true);
+  expect(fs.existsSync(path.join(dir, 'raw', 's.js', '0.headers.json'))).toBe(true);
 });
 
 test('collector answers CORS preflight', async () => {
@@ -62,4 +62,34 @@ test('collector decodes protobuf bodies', async () => {
   expect(s.spanId).toBe('0a00000000000001');
   expect(s.startTimeUnixNano).toBe('1767225600000000000');
   expect(fs.existsSync(path.join(dir, 'raw', 'p.js', '0.pb'))).toBe(true);
+});
+
+test('POST /_verify/end without begin is a 400, not a crash', async () => {
+  const r = await fetch(`${c.url}/_verify/end`, {method: 'POST'});
+  expect(r.status).toBe(400);
+  expect((await post(body('still alive'))).status).toBe(200);
+});
+
+test('begin clears stale raw files; headers are kept per request', async () => {
+  c.begin('r', 'js');
+  await post(body('a'));
+  await post(body('b'));
+  await c.end();
+  const raw = path.join(dir, 'raw', 'r.js');
+  expect(fs.existsSync(path.join(raw, '0.headers.json'))).toBe(true);
+  expect(fs.existsSync(path.join(raw, '1.headers.json'))).toBe(true);
+  c.begin('r', 'js');
+  await post(body('c'));
+  await c.end();
+  expect(fs.readdirSync(raw).sort()).toEqual(['0.headers.json', '0.json']);
+});
+
+test('begin rejects unsafe scenario/platform names', async () => {
+  for (const [s, p] of [['', 'js'], ['a/b', 'js'], ['..', 'js'], ['a', ''], ['a', '../x']] as [string, string][])
+    expect(() => c.begin(s, p)).toThrow();
+  const r = await fetch(`${c.url}/_verify/begin`, {
+    method: 'POST',
+    body: JSON.stringify({scenario: '../x', platform: 'js'}),
+  });
+  expect(r.status).toBe(400);
 });

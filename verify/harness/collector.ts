@@ -57,7 +57,7 @@ export async function startCollector(
               body,
             );
             fs.writeFileSync(
-              path.join(raw, 'headers.json'),
+              path.join(raw, `${cur.n}.headers.json`),
               JSON.stringify(req.headers, null, 2),
             );
             cur.n++;
@@ -70,7 +70,11 @@ export async function startCollector(
           c.begin(ctl.scenario, ctl.platform);
           return send(200, {});
         }
-        if (route === 'POST /_verify/end') return c.end().then(send.bind(null, 200));
+        if (route === 'POST /_verify/end')
+          return void c.end().then(
+            o => send(200, o),
+            e => send(400, {error: String(e)}),
+          );
         if (route === 'POST /_verify/refuse') {
           c.refuse(ctl.status, ctl.count);
           return send(200, {});
@@ -88,8 +92,12 @@ export async function startCollector(
   const c: Collector = {
     url: `http://localhost:${port}`,
     begin(scenario, platform) {
+      for (const v of [scenario, platform])
+        if (typeof v !== 'string' || !/^[\w.-]+$/.test(v) || v.includes('..'))
+          throw new Error(`collector: bad scenario/platform name ${JSON.stringify(v)}`);
       refusal = {status: 0, count: 0};
       cur = {name: `${scenario}.${platform}`, requests: [], n: 0};
+      fs.rmSync(path.join(dir, 'raw', cur.name), {recursive: true, force: true});
     },
     async end() {
       if (!cur) throw new Error('collector: end() without begin()');

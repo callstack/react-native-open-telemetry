@@ -41,3 +41,39 @@ test('normalize never changes a value', () => {
     expect(got[id].attributes).toHaveLength(want[id].attributes.length);
   }
 });
+
+test('normalize keeps schemaUrl in the merge key and ignores attribute order', () => {
+  const mk = (schemaUrl: string, attrs: string[]) => ({
+    resourceSpans: [
+      {
+        schemaUrl,
+        resource: {attributes: attrs.map(key => ({key, value: {stringValue: key}}))},
+        scopeSpans: [{schemaUrl, scope: {name: 't'}, spans: [{spanId: schemaUrl + attrs[0]}]}],
+      },
+    ],
+  });
+  const same = normalize([mk('u1', ['a', 'b']), mk('u1', ['b', 'a'])]);
+  expect(same.resourceSpans).toHaveLength(1);
+  const diff = normalize([mk('u1', ['a']), mk('u2', ['a'])]);
+  expect(diff.resourceSpans).toHaveLength(2);
+  expect(diff.resourceSpans!.map((r: any) => r.schemaUrl).sort()).toEqual(['u1', 'u2']);
+  const scopes = normalize([
+    {resourceSpans: [{scopeSpans: [{schemaUrl: 'x', scope: {name: 't'}, spans: [{spanId: '1'}]}]}]},
+    {resourceSpans: [{scopeSpans: [{schemaUrl: 'y', scope: {name: 't'}, spans: [{spanId: '2'}]}]}]},
+  ]);
+  expect(scopes.resourceSpans![0].scopeSpans).toHaveLength(2);
+});
+
+test('normalize sorts events and links without changing them', () => {
+  const ev = (name: string, t: string) => ({name, timeUnixNano: t, attributes: [{key: 'b', value: {intValue: '1'}}, {key: 'a', value: {intValue: '2'}}]});
+  const link = (spanId: string) => ({traceId: 't', spanId});
+  const events = [ev('b', '5'), ev('a', '5'), ev('z', '1')];
+  const links = [link('2'), link('1')];
+  const out = normalize([{resourceSpans: [{scopeSpans: [{spans: [{spanId: '1', events, links}]}]}]}]);
+  const s = out.resourceSpans![0].scopeSpans[0].spans[0];
+  expect(s.events.map((e: any) => e.name)).toEqual(['z', 'a', 'b']);
+  expect(s.links.map((l: any) => l.spanId)).toEqual(['1', '2']);
+  expect(s.events[1].attributes.map((a: any) => a.key)).toEqual(['a', 'b']);
+  expect(s.events[1].attributes[0]).toEqual({key: 'a', value: {intValue: '2'}});
+  expect(s.events[0]).toMatchObject({name: 'z', timeUnixNano: '1'});
+});
