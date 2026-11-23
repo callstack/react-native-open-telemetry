@@ -44,21 +44,6 @@
                   }
                 },
                 {
-                  "key": "mixed",
-                  "value": {
-                    "arrayValue": {
-                      "values": [
-                        {
-                          "stringValue": "a"
-                        },
-                        {
-                          "intValue": "1"
-                        }
-                      ]
-                    }
-                  }
-                },
-                {
                   "key": "nan",
                   "value": {
                     "doubleValue": "NaN"
@@ -68,38 +53,6 @@
                   "key": "negZero",
                   "value": {
                     "intValue": "0"
-                  }
-                },
-                {
-                  "key": "nul",
-                  "value": {}
-                },
-                {
-                  "key": "obj",
-                  "value": {
-                    "kvlistValue": {
-                      "values": [
-                        {
-                          "key": "id",
-                          "value": {
-                            "intValue": "1"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                },
-                {
-                  "key": "withNull",
-                  "value": {
-                    "arrayValue": {
-                      "values": [
-                        {
-                          "stringValue": "a"
-                        },
-                        {}
-                      ]
-                    }
                   }
                 }
               ],

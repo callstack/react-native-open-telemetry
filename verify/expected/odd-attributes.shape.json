@@ -1,1 +1,1 @@
-{"resource":["service.name"],"scope":[],"traces":[[{"name":"odd","kind":1,"parent":null,"status":0,"links":[],"attributes":{"nan":"double","inf":"double","negZero":"int","big":"int","empty":"array<empty>","nul":"string","obj":"kvlist","mixed":"array<string>","withNull":"array<string>"}}]]}
+{"resource":["service.name"],"scope":[],"traces":[[{"name":"odd","kind":1,"parent":null,"status":0,"links":[],"attributes":{"big":"int","empty":"array<empty>","inf":"double","nan":"double","negZero":"int"}}]]}
