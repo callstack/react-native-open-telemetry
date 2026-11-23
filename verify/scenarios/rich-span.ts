@@ -1,4 +1,4 @@
-import {SpanStatusCode, TraceFlags} from '@opentelemetry/api';
+import {createTraceState, SpanKind, SpanStatusCode, TraceFlags} from '@opentelemetry/api';
 import {scenario} from '../harness/scenario';
 
 export default scenario('rich-span', async ({getTracer, at}) => {
@@ -7,6 +7,7 @@ export default scenario('rich-span', async ({getTracer, at}) => {
   Object.assign((tracer as any).instrumentationScope, {attributes: {'scope.key': 'scope-value'}});
   const span = tracer.startSpan('rich', {
     startTime: at(0),
+    kind: SpanKind.CLIENT,
     attributes: {
       str: 'zażółć 🚀',
       int: 42,
@@ -19,7 +20,7 @@ export default scenario('rich-span', async ({getTracer, at}) => {
     },
     links: [
       {
-        context: {traceId: '0f'.padEnd(32, '1'), spanId: '0f'.padEnd(16, '2'), traceFlags: TraceFlags.SAMPLED},
+        context: {traceId: '0f'.padEnd(32, '1'), spanId: '0f'.padEnd(16, '2'), traceFlags: TraceFlags.SAMPLED, traceState: createTraceState('k=v')},
         attributes: {'link.key': 'link-value', 'link.n': 7},
       },
     ],

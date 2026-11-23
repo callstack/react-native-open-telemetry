@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import {SamplingDecision} from '@opentelemetry/sdk-trace';
 import {resourceFromAttributes} from '@opentelemetry/resources';
 import {TracerProvider} from '@opentelemetry/sdk-trace';
 import {decodeFixture, encodeFixture} from '../harness/fixtureJson';
@@ -43,14 +44,39 @@ describe('NativeHandOffProcessor', () => {
   });
 
   test('unsampled spans are never handed off', () => {
-    const {calls, provider} = setup();
-    const span = provider.getTracer('t').startSpan('a', {startTime: at(0)});
-    span.end(at(1));
-    calls.length = 0;
+    const calls: SeamSpan[][] = [];
     const native = {handOff: (s: SeamSpan[]) => void calls.push(s)} as unknown as Otel;
-    const unsampled = {...span, spanContext: () => ({...span.spanContext(), traceFlags: 0})};
-    new NativeHandOffProcessor(native).onEnd(unsampled as any);
+    const provider = new TracerProvider({
+      // recorded (so processors see it) but traceFlags stay 0
+      sampler: {shouldSample: () => ({decision: SamplingDecision.RECORD}), toString: () => 'record-only'},
+      spanProcessors: [new NativeHandOffProcessor(native)],
+    });
+    const span = provider.getTracer('t').startSpan('a', {startTime: at(0)});
+    expect(span.spanContext().traceFlags).toBe(0);
+    expect(span.isRecording()).toBe(true);
+    span.end(at(1));
     expect(calls).toEqual([]);
+  });
+
+  test('values outside AttrValue are dropped, never thrown', () => {
+    const {calls, provider} = setup();
+    const odd: any = {
+      keep: 'x', n: null, obj: {id: 1}, bytes: new Uint8Array([1]), mixed: ['a', 1], withNull: ['a', null],
+      ok: [1, 2], empty: [],
+    };
+    const span = provider.getTracer('t').startSpan('a', {startTime: at(0), attributes: odd});
+    span.addEvent('e', odd, at(1));
+    span.end(at(2));
+    const keys = (a: {key: string}[]) => a.map(x => x.key);
+    expect(keys(calls[0]![0]!.attributes)).toEqual(['keep', 'ok', 'empty']);
+    expect(keys(calls[0]![0]!.events[0]!.attributes)).toEqual(['keep', 'ok', 'empty']);
+  });
+
+  test('a throwing handOff never escapes span.end()', () => {
+    const native = {handOff: () => { throw new Error('nitro'); }} as unknown as Otel;
+    const provider = new TracerProvider({spanProcessors: [new NativeHandOffProcessor(native)]});
+    const t = provider.getTracer('t');
+    expect(() => { t.startSpan('a').end(); t.startSpan('b').end(); }).not.toThrow();
   });
 });
 
@@ -65,6 +91,6 @@ for (const name of NAMES) {
       fs.mkdirSync(dir, {recursive: true});
       fs.writeFileSync(file, encodeFixture({config: CONFIG, spans: actual}) + '\n');
     }
-    expect(decodeFixture(fs.readFileSync(file, 'utf8'))).toEqual({config: CONFIG, spans: actual});
+    expect(decodeFixture(fs.readFileSync(file, 'utf8'))).toStrictEqual({config: CONFIG, spans: actual});
   });
 }

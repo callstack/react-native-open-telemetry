@@ -14,7 +14,7 @@
         "traceFlags": 1
       },
       "name": "rich",
-      "kind": 0,
+      "kind": 2,
       "start": [
         1767225600,
         0
@@ -107,7 +107,8 @@
           "context": {
             "traceId": "0f111111111111111111111111111111",
             "spanId": "0f22222222222222",
-            "traceFlags": 1
+            "traceFlags": 1,
+            "traceState": "k=v"
           },
           "attributes": [
             {

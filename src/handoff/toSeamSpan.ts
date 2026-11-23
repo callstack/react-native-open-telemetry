@@ -1,12 +1,24 @@
-import type {Attributes} from '@opentelemetry/api';
+import type {Attributes, SpanContext} from '@opentelemetry/api';
 import type {ReadableSpan} from '@opentelemetry/sdk-trace';
 import type {AttrValue, SeamAttribute, SeamSpan, SeamSpanContext} from '../native/Otel.nitro';
 
-// Insertion order, only `undefined` dropped; sdk-trace already decided what else survives.
-const attrs = (a: Attributes | undefined): SeamAttribute[] =>
-  Object.entries(a ?? {}).flatMap(([key, v]) => (v === undefined ? [] : [{key, value: v as AttrValue}]));
+const PRIMS = ['string', 'number', 'boolean'];
+// Seam-representable: a primitive, or a homogeneous array of one primitive type, no nulls (empty is fine).
+const seamValue = (v: unknown): v is AttrValue =>
+  PRIMS.includes(typeof v) ||
+  (Array.isArray(v) && v.every(x => PRIMS.includes(typeof x) && typeof x === typeof v[0]));
 
-const ctxOf = (c: {traceId: string; spanId: string; traceFlags: number; traceState?: {serialize(): string}}): SeamSpanContext => {
+// Insertion order; anything the seam cannot carry (null, undefined, objects, bytes, mixed arrays) is dropped.
+const attrs = (a: Attributes | undefined): SeamAttribute[] => {
+  const out: SeamAttribute[] = [];
+  for (const key in a) {
+    const value: unknown = a[key];
+    if (seamValue(value)) out.push({key, value});
+  }
+  return out;
+};
+
+const ctxOf = (c: SpanContext): SeamSpanContext => {
   const traceState = c.traceState?.serialize();
   return {traceId: c.traceId, spanId: c.spanId, traceFlags: c.traceFlags, ...(traceState ? {traceState} : {})};
 };

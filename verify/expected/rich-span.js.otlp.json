@@ -30,7 +30,7 @@
               "traceId": "0a000000000000000000000000000001",
               "spanId": "0a00000000000001",
               "name": "rich",
-              "kind": 1,
+              "kind": 3,
               "startTimeUnixNano": "1767225600000000000",
               "endTimeUnixNano": "1767225600000100000",
               "attributes": [
@@ -158,6 +158,7 @@
                 {
                   "traceId": "0f111111111111111111111111111111",
                   "spanId": "0f22222222222222",
+                  "traceState": "k=v",
                   "attributes": [
                     {
                       "key": "link.key",

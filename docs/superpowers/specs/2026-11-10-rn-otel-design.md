@@ -251,7 +251,9 @@ OTel data model.
   because epoch nanoseconds (~1.7e18) exceed what a JS number holds exactly. Known floor:
   Swift `SpanData` stores times as `Date` (≈ sub-µs quantization); document it.
 - **Attribute typing:** JS can't tell `1` from `1.0`. Follow the OTLP JS transformer's rule
-  (`Number.isInteger` → int) on the native side too, so platforms agree.
+  (`Number.isInteger` → int) on the native side too, so platforms agree. Values outside
+  `AttrValue` (null, nested objects, bytes, mixed or null-containing arrays) are dropped at the
+  seam in v0.
 - **Cross-boundary parenting:**
   - **JS → native**: native work started on behalf of JS takes a `SpanContext` (or a
     `traceparent` string) and starts its span with an **explicit parent**

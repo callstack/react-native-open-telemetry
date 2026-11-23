@@ -1,6 +1,6 @@
 import {resourceFromAttributes} from '@opentelemetry/resources';
 import {SimpleSpanProcessor, TracerProvider} from '@opentelemetry/sdk-trace';
-import {OTLPTraceExporter} from '@opentelemetry/exporter-trace-otlp-http';
+import {OTLPTraceExporter} from '@opentelemetry/exporter-trace-otlp-proto';
 import {startCollector, type Collector} from '../harness/collector';
 import {compareToExpected, pendingScenarios} from '../harness/compare';
 import {at} from '../harness/scenario';

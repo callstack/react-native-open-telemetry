@@ -1,5 +1,5 @@
 {
   "resource": ["service.name"],
   "scope": ["scope.key"],
-  "traces": [[{"name": "rich", "kind": 1, "parent": null, "status": 2, "links": ["(external)"], "attributes": {"str": "string", "int": "int", "double": "double", "bool": "bool", "strs": "array<string>", "ints": "array<int>", "doubles": "array<double>", "bools": "array<bool>"}}]]
+  "traces": [[{"name": "rich", "kind": 3, "parent": null, "status": 2, "links": ["(external)"], "attributes": {"str": "string", "int": "int", "double": "double", "bool": "bool", "strs": "array<string>", "ints": "array<int>", "doubles": "array<double>", "bools": "array<bool>"}}]]
 }

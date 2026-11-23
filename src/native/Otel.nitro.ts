@@ -10,6 +10,7 @@ export interface SeamLink { context: SeamSpanContext; attributes: SeamAttribute[
 export interface SeamScope { name: string; version?: string; schemaUrl?: string; attributes: SeamAttribute[] }
 export interface SeamStatus { code: number; message?: string }
 export interface SeamSpan {
+  // @opentelemetry/api SpanKind (INTERNAL=0); OTLP kind = this + 1, native converts.
   context: SeamSpanContext; parentSpanId?: string; name: string; kind: number;
   start: HrTime; end: HrTime; attributes: SeamAttribute[]; events: SeamEvent[];
   links: SeamLink[]; status: SeamStatus; scope: SeamScope;

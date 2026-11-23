@@ -77,7 +77,7 @@
   },
   "devDependencies": {
     "@changesets/cli": "^2.28.1",
-    "@opentelemetry/exporter-trace-otlp-http": "~0.301.2",
+    "@opentelemetry/exporter-trace-otlp-proto": "~0.301.2",
     "@react-native/babel-preset": "^0.88.1",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.0.0",
