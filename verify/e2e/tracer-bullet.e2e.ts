@@ -17,7 +17,7 @@ test('handOff crosses the Nitro seam', async ({app, screen, device, target}) => 
   const platform = platformOf(target);
   const {deviceId} = device.unstable_raw;
   await app.open();
-  const since = clearDeviceLog(platform, deviceId);
+  const since = await clearDeviceLog(platform, deviceId);
   await screen.getByTestId('tracer-bullet-handoff').tap();
   await expect(screen.getByTestId('tracer-bullet-done')).toBeVisible({timeout: 10_000});
   // the log line can land a moment after the tap returns

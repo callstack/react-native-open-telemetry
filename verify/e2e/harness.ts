@@ -1,4 +1,4 @@
-import {execFileSync} from 'node:child_process';
+import {execFileSync, spawn} from 'node:child_process';
 import path from 'node:path';
 import {test as base} from '@e2e-dev/mobile';
 import {expect, type App, type Screen} from 'e2e';
@@ -73,23 +73,36 @@ export async function expectScenario(
   if (!r.ok) throw new Error('\n' + r.report);
 }
 
-/** Device log lines containing `needle`, logged after `since` (Android: after the last clearDeviceLog). */
-export function deviceLog(platform: 'android' | 'ios', deviceId: string, needle: string, since: Date): string[] {
-  const local = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 19).replace('T', ' ');
+// iOS: `log show` takes ~60 s per call on a CI runner, so lines are captured live by a `log stream` started in clearDeviceLog.
+const iosStreams = new Map<string, {lines: string[]}>();
+
+/** Device log lines containing `needle`, logged after the last clearDeviceLog (Android: logcat since the clear; iOS: the live stream). */
+export function deviceLog(platform: 'android' | 'ios', deviceId: string, needle: string, _since: Date): string[] {
   const out =
     platform === 'android'
       ? execFileSync('adb', ['-s', deviceId, 'logcat', '-d', '-v', 'raw', '-s', 'RNOtel:I'], {encoding: 'utf8'})
-      : execFileSync(
-          'xcrun',
-          ['simctl', 'spawn', deviceId, 'log', 'show', '--start', local(since), '--style', 'compact',
-            '--predicate', `process == "OpenTelemetryExample" AND eventMessage CONTAINS "${needle}"`],
-          {encoding: 'utf8', maxBuffer: 1 << 26},
-        );
+      : (iosStreams.get(deviceId)?.lines ?? []).join('\n');
   return out.split('\n').filter(l => l.includes(needle));
 }
 
 /** Starts a fresh log window; returns its start for deviceLog. */
-export function clearDeviceLog(platform: 'android' | 'ios', deviceId: string): Date {
+export async function clearDeviceLog(platform: 'android' | 'ios', deviceId: string): Promise<Date> {
   if (platform === 'android') execFileSync('adb', ['-s', deviceId, 'logcat', '-c']);
+  else {
+    const state = {lines: [] as string[]};
+    iosStreams.set(deviceId, state);
+    const child = spawn(
+      'xcrun',
+      ['simctl', 'spawn', deviceId, 'log', 'stream', '--style', 'compact', '--level', 'info',
+        '--predicate', 'process == "OpenTelemetryExample" AND eventMessage CONTAINS "RNOtel"'],
+      {stdio: ['ignore', 'pipe', 'ignore']},
+    );
+    child.stdout.setEncoding('utf8');
+    child.stdout.on('data', (d: string) => state.lines.push(...d.split('\n')));
+    child.unref();
+    (child.stdout as any).unref?.();
+    process.on('exit', () => child.kill());
+    await new Promise(r => setTimeout(r, 3_000)); // let the stream attach before the tap
+  }
   return new Date();
 }
