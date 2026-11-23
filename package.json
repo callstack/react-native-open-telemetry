@@ -62,6 +62,7 @@
     "lint": "oxlint",
     "static": "bun verify/run.ts static",
     "verify": "bun verify/run.ts",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "prepare": "bunx bob build && (git config core.hooksPath .githooks || true)",
     "version": "bunx changeset version",
     "publish": "bunx changeset publish"

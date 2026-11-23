@@ -27,9 +27,15 @@ for (const s of allScenarios().filter(s => s.runners.includes('jest'))) {
       ],
     });
     collector.begin(s.name, 'js');
-    await s.run({tracer: provider.getTracer('verify'), at});
-    await provider.forceFlush();
-    const r = compareToExpected(s.name, 'js', await collector.end());
+    let actual;
+    try {
+      await s.run({tracer: provider.getTracer('verify'), at});
+      await provider.forceFlush();
+    } finally {
+      actual = await collector.end();
+      await provider.shutdown();
+    }
+    const r = compareToExpected(s.name, 'js', actual);
     if (!r.ok) throw new Error('\n' + r.report);
   });
 }

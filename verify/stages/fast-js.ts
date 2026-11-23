@@ -5,8 +5,7 @@ const stage: Stage = {
   order: 20,
   e2e: false,
   run({sh}) {
-    // the OTLP node transport uses dynamic import()
-    sh(['env', 'NODE_OPTIONS=--experimental-vm-modules', 'bunx', 'jest', '--selectProjects', 'scenarios', '--verbose', '--reporters=default']);
+    sh(['bun', 'run', 'test', '--selectProjects', 'scenarios', '--verbose', '--reporters=default']);
   },
 };
 
