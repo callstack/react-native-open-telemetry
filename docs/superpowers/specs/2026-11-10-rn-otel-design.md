@@ -610,7 +610,9 @@ tests: they don't care about internals, so internals can be rewritten freely.
   output is reduced to a shape and must equal it, so all platforms agree with each other by
   construction. Shapes are written first; exact per-platform files are then drafted with
   `--update` and reviewed (council review: hand-writing 30+ exact OTLP trees puts the bugs
-  in the expected files).
+  in the expected files). Known v0 gap, accepted: opentelemetry-swift 2.6's OTLP encoder never
+  writes span/link `flags`, span/link `traceState` or the scope `schemaUrl`, so the `ios` files
+  lack them (shapes don't cover them; no encoder reimplementation, see verify/VERIFY.md).
 - One non-deterministic smoke scenario per device (production pipeline, no test mode) checks
   the real path still exports.
 

@@ -25,8 +25,9 @@ own OkHttp 5; devices run React Native's OkHttp 4.9.2.
 `*.ios.otlp.json` record these quantized values as emitted (deterministic); shapes ignore times.
 
 **iOS vs Android/JS goldens.** Apart from times, the `ios` files differ only by what the opentelemetry-swift 2.6 OTLP
-encoder (`SpanAdapter`) never writes: span and link `flags` (257), link `traceState`, and the scope `schemaUrl` on
-`ScopeSpans`. The core passes all three into `SpanData`; the exporter drops them.
+encoder (`SpanAdapter`) never writes: span `flags` (257), span `traceState`, link `flags`, link `traceState`, and the
+scope `schemaUrl` on `ScopeSpans`. The core passes them all into `SpanData`; the exporter drops them. Accepted for v0
+(no encoder reimplementation); today's fixtures exercise span flags, link flags/traceState and the scope `schemaUrl`.
 
 The fake collector listens on port 4318; the app reaches it at `10.0.2.2` (Android emulator) or `localhost` (iOS simulator).
 

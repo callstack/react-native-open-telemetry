@@ -1,6 +1,5 @@
 import Foundation
 import OpenTelemetryApi
-import OpenTelemetryProtocolExporterCommon
 import OpenTelemetryProtocolExporterHttp
 import OpenTelemetrySdk
 
@@ -40,11 +39,10 @@ final class OtelCore {
 
     // ponytail: naive endpoint join; Task 19 brings tracesUrl ("append unless present") and URL validation.
     let base = config.exportUrl.hasSuffix("/") ? String(config.exportUrl.dropLast()) : config.exportUrl
-    // envVarHeaders nil: the exporter would otherwise let OTEL_EXPORTER_OTLP_HEADERS replace the configured headers.
-    // compression none, as otel-java's default (the verify collector does not gunzip).
+    // Upstream sends `envVarHeaders ?? config headers`: passing ours there (even empty) means exactly these headers,
+    // never OTEL_EXPORTER_OTLP_HEADERS. Upstream's default gzip stays on.
     exporter = OtlpHttpTraceExporter(endpoint: URL(string: base + "/v1/traces")!,
-                                     config: OtlpConfiguration(compression: .none, headers: config.exportHeaders.map { ($0.key, $0.value) }),
-                                     envVarHeaders: nil)
+                                     envVarHeaders: config.exportHeaders.map { ($0.key, $0.value) })
     bsp = BatchSpanProcessor(spanExporter: exporter)
     let b = TracerProviderBuilder().with(resource: resource).add(spanProcessor: bsp)
     tracerProvider = (testMode ? b.with(idGenerator: SequentialIds()) : b).build()
@@ -57,6 +55,9 @@ final class OtelCore {
 
   /// Blocks the caller up to `timeoutMs`. True when nothing is left unsent: the exporter requeues a failed batch,
   /// and its `flush` retries it.
+  // ponytail: upstream BatchWorker race: if its timer thread has just taken the queue but not yet scheduled the
+  // export, forceFlush finds nothing and returns before that batch is sent (true while in flight). TracerProviderSdk
+  // forceFlush goes through the same worker; fix upstream or track in-flight spans if flush-after-reload needs it.
   func flush(timeoutMs: Double) -> Bool {
     let deadline = Date().addingTimeInterval(timeoutMs / 1000)
     bsp.forceFlush(timeout: timeoutMs / 1000)

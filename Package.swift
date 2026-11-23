@@ -1,7 +1,11 @@
 // swift-tools-version:6.0
 // The pure Swift core (ios/Core) and its tests, for `swift test` on the host (`bun verify fast-swift`).
 // Apps never use this: CocoaPods builds ios/Core from the podspec, with the same opentelemetry-swift versions.
+import Foundation
 import PackageDescription
+
+// ios/CoreTests is not in the npm package (package.json `files`), so the test target exists only in the repo.
+let hasTests = FileManager.default.fileExists(atPath: URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("ios/CoreTests").path)
 
 let package = Package(
   name: "ReactNativeOpenTelemetry",
@@ -20,7 +24,6 @@ let package = Package(
       ],
       path: "ios/Core"
     ),
-    .testTarget(name: "OtelCoreTests", dependencies: ["OtelCore"], path: "ios/CoreTests"),
-  ],
+  ] + (hasTests ? [.testTarget(name: "OtelCoreTests", dependencies: ["OtelCore"], path: "ios/CoreTests")] : []),
   swiftLanguageModes: [.v5]
 )
