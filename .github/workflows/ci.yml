@@ -203,6 +203,12 @@ jobs:
           E2E_TARGET: ios-bare
           AGENT_DEVICE_DAEMON_STARTUP_TIMEOUT_MS: '600000' # the first daemon start on a cold runner outlasts the 120 s default
         run: bun verify --e2e e2e
+      - name: Diagnose the simulator log
+        if: failure()
+        run: |
+          echo "--- RNOtel lines"; xcrun simctl spawn booted log show --last 30m --info --style compact --predicate 'eventMessage CONTAINS "RNOtel"' | tail -20
+          echo "--- app process lines"; xcrun simctl spawn booted log show --last 30m --info --style compact --predicate 'process == "OpenTelemetryExample"' | tail -20
+          date; echo "$TZ"
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
