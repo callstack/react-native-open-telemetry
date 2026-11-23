@@ -99,7 +99,8 @@
     "protobufjs": "^8.8.1",
     "react-native-builder-bob": "^0.40.6",
     "react-native-nitro-modules": "~0.37.0",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vite": "7.3.8"
   },
   "peerDependencies": {
     "react-native": ">=0.79",
