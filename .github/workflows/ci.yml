@@ -24,11 +24,5 @@ jobs:
       - name: Install
         run: bun install --frozen-lockfile
       
-      - name: Typecheck files
-        run: bun typecheck
-        
-      - name: Lint files
-        run: bun lint
-        
-      - name: Build package
-        run: bun prepare
+      - name: Static stage
+        run: bun run prepare && bun run static

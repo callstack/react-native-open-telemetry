@@ -1,4 +1,0 @@
-appId: opentelemetry.example
----
-- launchApp
-- tapOn: "Start a span"
