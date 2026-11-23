@@ -2,8 +2,8 @@ import {readdirSync} from 'node:fs';
 import {join} from 'node:path';
 import {spawnSync} from 'node:child_process';
 
-type Ctx = {e2e: boolean; update: boolean; sh: (cmd: string[]) => string};
-type Stage = {name: string; order: number; e2e?: boolean; run(ctx: Ctx): Promise<void> | void};
+export type Ctx = {e2e: boolean; update: boolean; sh: (cmd: string[]) => string};
+export type Stage = {name: string; order: number; e2e?: boolean; run(ctx: Ctx): Promise<void> | void};
 
 const args = process.argv.slice(2);
 const flags = args.filter(a => a.startsWith('--'));
