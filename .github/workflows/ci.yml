@@ -201,7 +201,15 @@ jobs:
       - name: e2e (ios-bare)
         env:
           E2E_TARGET: ios-bare
+          AGENT_DEVICE_DAEMON_STARTUP_TIMEOUT_MS: '600000' # the first daemon start on a cold runner outlasts the 120 s default
         run: bun verify --e2e e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: agent-device-state-e2e-ios-bare
+          path: ~/.agent-device/
+          if-no-files-found: ignore
+          include-hidden-files: true
       - uses: actions/upload-artifact@v4
         if: always() # e2e retries once; keep traces of retried and failed attempts
         with:
