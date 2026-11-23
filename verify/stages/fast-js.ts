@@ -5,7 +5,7 @@ const stage: Stage = {
   order: 20,
   e2e: false,
   run({sh}) {
-    sh(['bun', 'run', 'test', '--selectProjects', 'unit', 'scenarios', '--verbose', '--reporters=default']);
+    sh(['bun', 'run', 'test', '--selectProjects', 'unit', 'scenarios', 'degraded', '--verbose', '--reporters=default']);
   },
 };
 

@@ -15,5 +15,5 @@ export default scenario(
       parent.end(at(20));
     });
   },
-  {runners: ['jest-degraded'], pending: true}, // Task 11
+  {runners: ['jest-degraded']},
 );

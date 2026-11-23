@@ -58,7 +58,7 @@ e2e targets are android, ios and web unless the Runners column names them.
 | `never-settling-promise` | a never-settling promise does not leak its span into later work | 10 | jest, e2e | pending |
 | `interval-new-root` | exception: each `setInterval` tick is a new root | 10 | jest, e2e | pending |
 | `batching-shared-queue` | exception: a shared queue runs work as its first enqueuer (pinned wrong parent) | 10 | jest, e2e | pending |
-| `degraded-probe` | native `await` → degraded scope attribute, spans after `await` are roots | 11 | jest-degraded | pending |
+| `degraded-probe` | native `await` → degraded scope attribute, spans after `await` are roots | 11 | jest-degraded | passing |
 | `interaction-manager` | `runAfterInteractions` callback is a child of the caller's span | 13 | e2e | pending |
 | `nest-raf` | a `requestAnimationFrame` callback keeps its scheduling context | 13 | e2e | pending |
 | `event-emitter-listener` | a synchronous `DeviceEventEmitter` listener is a child of the emitter's span | 13 | e2e (android, ios) | pending |

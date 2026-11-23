@@ -24,6 +24,6 @@ module.exports = {
       ],
     },
     '<rootDir>/verify/jest/jest.scenarios.config.js',
-    // fixtures, degraded projects live under verify/jest/ (later tasks)
+    '<rootDir>/verify/jest/jest.degraded.config.js',
   ],
 };
