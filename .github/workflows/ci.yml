@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - v0
   pull_request:
     branches:
       - main
@@ -11,18 +12,71 @@ on:
     types:
       - checks_requested
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  E2E_TELEMETRY_DISABLED: '1'
+
 jobs:
-  ci:
+  static-fast:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-      
-      - name: Install
-        run: bun install --frozen-lockfile
-      
-      - name: Static stage
-        run: bun run prepare && bun run static
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.19
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: bun install --frozen-lockfile
+      - run: bun run prepare
+      - run: bun verify static fast-js
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: verify-artifacts-static-fast
+          path: verify/artifacts/
+          if-no-files-found: ignore
+
+  fast-swift:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16.4'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.19
+      - run: bun install --frozen-lockfile
+      - run: bun verify fast-swift # no-op until Package.swift exists (Task 18)
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: verify-artifacts-fast-swift
+          path: verify/artifacts/
+          if-no-files-found: ignore
+
+  budget:
+    needs: [static-fast, fast-swift] # every other job; extend when jobs are added
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check PR time budget
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUDGET: ${{ vars.PR_BUDGET_MINUTES }}
+        run: |
+          started=$(gh api repos/${{ github.repository }}/actions/runs/${{ github.run_id }} --jq .run_started_at)
+          minutes=$(( ($(date +%s) - $(date -d "$started" +%s)) / 60 ))
+          echo "CI duration: ${minutes} min (budget: ${BUDGET:-unset})"
+          if [ -n "$BUDGET" ] && [ "$minutes" -gt "$BUDGET" ]; then
+            echo "::error::CI took ${minutes} min, over the ${BUDGET} min budget"
+            exit 1
+          fi
