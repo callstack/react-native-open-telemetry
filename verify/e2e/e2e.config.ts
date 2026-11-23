@@ -12,6 +12,7 @@ export default {
   retries: 1,
   timeout: 180_000,
   launchTimeout: 120_000,
+  actionTimeout: 90_000, // CI simulators answer installs and taps slowly
   targets: [
     {
       name: 'android-bare',

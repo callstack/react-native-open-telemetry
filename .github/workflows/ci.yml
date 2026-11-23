@@ -112,7 +112,10 @@ jobs:
         working-directory: example/android
         env:
           OTEL_TEST_MODE: '1'
-        run: ./gradlew :app:assembleRelease -PotelTestMode=true -PreactNativeArchitectures=x86_64
+        # one retry: plugin and NDK downloads fail transiently on hosted runners
+        run: |
+          ./gradlew :app:assembleRelease -PotelTestMode=true -PreactNativeArchitectures=x86_64 ||
+            ./gradlew :app:assembleRelease -PotelTestMode=true -PreactNativeArchitectures=x86_64
       - name: Cache AVD snapshot
         uses: actions/cache@v4
         id: avd-cache
