@@ -1,3 +1,6 @@
+diff --git a/node_modules/nitrogen/.bun-tag-893f8af0322bc809 b/.bun-tag-893f8af0322bc809
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 diff --git a/lib/syntax/kotlin/KotlinCxxBridgedType.js b/lib/syntax/kotlin/KotlinCxxBridgedType.js
 index 1444a2055cde816b7c3335db7fcc0b4658adc50f..c10f64d0b97740ba6d661742b9ffdba5da52089b 100644
 --- a/lib/syntax/kotlin/KotlinCxxBridgedType.js
@@ -43,3 +46,18 @@ index 1444a2055cde816b7c3335db7fcc0b4658adc50f..c10f64d0b97740ba6d661742b9ffdba5
                              case 'int64':
                              case 'uint64': {
                                  // primitive arrays can use region/batch access,
+diff --git a/lib/syntax/swift/SwiftCxxBridgedType.js b/lib/syntax/swift/SwiftCxxBridgedType.js
+index 9ad571e6b79050e5c0fdbe340605859f100a3aa5..4126e58da2414475d0f31347ca6ac764a5fc42f6 100644
+--- a/lib/syntax/swift/SwiftCxxBridgedType.js
++++ b/lib/syntax/swift/SwiftCxxBridgedType.js
+@@ -469,6 +469,10 @@ export class SwiftCxxBridgedType {
+                 const wrapping = new SwiftCxxBridgedType(array.itemType, true);
+                 switch (language) {
+                     case 'swift':
++                        if (array.itemType.kind === 'boolean') {
++                            // std::vector<bool> yields bit references, not bool; convert each explicitly.
++                            return `${cppParameterName}.map({ __item in Bool(fromCxx: __item) })`.trim();
++                        }
+                         // We have to iterate the element one by one to create a resulting Array (mapped)
+                         return `${cppParameterName}.map({ __item in ${wrapping.parseFromCppToSwift('__item', 'swift')} })`.trim();
+                     default:

@@ -70,7 +70,7 @@ public extension SeamAttribute {
           return .first(__actual)
         case 1:
           let __actual = __variant.get_1()
-          return .second(__actual.map({ __item in __item }))
+          return .second(__actual.map({ __item in Bool(fromCxx: __item) }))
         case 2:
           let __actual = __variant.get_2()
           return .third(__actual.map({ __item in String(__item) }))
