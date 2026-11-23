@@ -1,0 +1,41 @@
+import {context} from '@opentelemetry/api';
+import {OTLPTraceExporter} from '@opentelemetry/exporter-trace-otlp-proto';
+import {resourceFromAttributes} from '@opentelemetry/resources';
+import {BatchSpanProcessor, TracerProvider} from '@opentelemetry/sdk-trace';
+import {contextManager} from '../setup';
+import {isTestModeBuild, sequentialIds} from '../internal/testMode';
+import {DISTRO_VERSION, tracesUrl, type SdkConfig, type SdkHandle} from './config';
+import {noopHandle} from './noop';
+import {register, startOnce, TAG} from './shared';
+
+function start(config: SdkConfig | undefined): SdkHandle {
+  if (!config?.serviceName || !config.exportConfig?.url) {
+    console.error(`${TAG} serviceName and exportConfig.url are required on web; telemetry is off.`);
+    return noopHandle();
+  }
+  // setup.ts registers ours, but anything registered before it wins the API slot; take it back (§7).
+  if (!context.setGlobalContextManager(contextManager) && (context as any)._getContextManager() !== contextManager) {
+    context.disable();
+    context.setGlobalContextManager(contextManager);
+  }
+  const testMode = isTestModeBuild();
+  const {serviceName, serviceVersion, resourceAttributes, exportConfig, spanProcessors = []} = config;
+  // JS owns the resource on web: no telemetry.sdk.* (§4.3), distro only outside test mode (goldens).
+  const resource = resourceFromAttributes({
+    ...resourceAttributes,
+    'service.name': serviceName,
+    ...(serviceVersion ? {'service.version': serviceVersion} : {}),
+    ...(testMode ? {} : {'telemetry.distro.name': 'react-native-open-telemetry', 'telemetry.distro.version': DISTRO_VERSION}),
+  });
+  const exporter = new OTLPTraceExporter({url: tracesUrl(exportConfig.url), headers: exportConfig.headers});
+  return register(
+    new TracerProvider({
+      resource,
+      ...(testMode ? {idGenerator: sequentialIds('0a')} : {}),
+      spanProcessors: [...spanProcessors, new BatchSpanProcessor({exporter})],
+    }),
+  );
+}
+
+/** Web: spans export straight from JS over OTLP/proto (§7, R7). Never throws: failures give one error and a no-op handle. */
+export const startReactNativeSdk = (config?: SdkConfig): SdkHandle => startOnce(start, config);

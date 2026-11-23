@@ -21,3 +21,6 @@ export function tracesUrl(url: string): string {
   const base = url.replace(/\/+$/, '');
   return base.endsWith('/v1/traces') ? base : base + '/v1/traces';
 }
+
+/** `telemetry.distro.version` on web; a unit test keeps it equal to package.json's version. */
+export const DISTRO_VERSION = '0.2.0';

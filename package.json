@@ -26,6 +26,10 @@
   "module": "./lib/module/index.js",
   "exports": {
     ".": {
+      "browser": {
+        "types": "./lib/typescript/src/index.web.d.ts",
+        "default": "./lib/module/index.web.js"
+      },
       "types": "./lib/typescript/src/index.d.ts",
       "default": "./lib/module/index.js"
     },
@@ -78,12 +82,11 @@
     "@opentelemetry/core": "~3.1.1",
     "@opentelemetry/resources": "~3.1.1",
     "@opentelemetry/semantic-conventions": "^1.45.0",
-    "@opentelemetry/browser-sdk": "0.9.1"
+    "@opentelemetry/exporter-trace-otlp-proto": "0.301.2"
   },
   "devDependencies": {
     "@changesets/cli": "^2.28.1",
     "@e2e-dev/mobile": "0.12.8",
-    "@opentelemetry/exporter-trace-otlp-proto": "~0.301.2",
     "@react-native/babel-preset": "^0.88.1",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.0.0",

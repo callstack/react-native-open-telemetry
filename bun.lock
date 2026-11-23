@@ -5,8 +5,8 @@
       "name": "react-native-open-telemetry",
       "dependencies": {
         "@opentelemetry/api": "~1.10.0",
-        "@opentelemetry/browser-sdk": "0.9.1",
         "@opentelemetry/core": "~3.1.1",
+        "@opentelemetry/exporter-trace-otlp-proto": "0.301.2",
         "@opentelemetry/resources": "~3.1.1",
         "@opentelemetry/sdk-trace": "~3.1.1",
         "@opentelemetry/semantic-conventions": "^1.45.0",
@@ -14,7 +14,6 @@
       "devDependencies": {
         "@changesets/cli": "^2.28.1",
         "@e2e-dev/mobile": "0.12.8",
-        "@opentelemetry/exporter-trace-otlp-proto": "~0.301.2",
         "@react-native/babel-preset": "^0.88.1",
         "@types/jest": "^30.0.0",
         "@types/node": "^24.0.0",
@@ -465,15 +464,7 @@
 
     "@opentelemetry/api": ["@opentelemetry/api@1.10.0", "", {}, "sha512-lMkyes8iHrG+mk6WH7X70MdCLI2RS0FwNBY1PyQ8UemaijE2m5mv5A0Niy3HtbYTFrgkUEQjFMXmSAk2hQDuPQ=="],
 
-    "@opentelemetry/browser-api": ["@opentelemetry/browser-api@0.2.1", "", { "peerDependencies": { "@opentelemetry/api": ">=1.10.0 <1.11.0" } }, "sha512-tsbI75Wk2DupoQ3JVDoW3e8CZV03ldbqTg5xPFOnH5LmC/yoQyhSy5gYLEibEombLoKmnRX3H4uiqbQ7lnOPJw=="],
-
-    "@opentelemetry/browser-sdk": ["@opentelemetry/browser-sdk@0.9.1", "", { "dependencies": { "@opentelemetry/browser-api": "^0.2.1", "@opentelemetry/core": "^3.1.1", "@opentelemetry/exporter-logs-otlp-http": "^0.301.2", "@opentelemetry/exporter-trace-otlp-http": "^0.301.2", "@opentelemetry/resources": "^3.1.1", "@opentelemetry/sdk-logs": "^3.1.1", "@opentelemetry/sdk-trace": "^3.1.1", "@opentelemetry/semantic-conventions": "^1.45.0" }, "peerDependencies": { "@opentelemetry/api": ">=1.10.0 <1.11.0" } }, "sha512-8w2h17s2sRMeVpX8GRX7bb7ZH1VB4M2nEeFmBPn7JAMdbetWKE5bg6GjimkTAReBKRQIfxJkMX38j81aAjVXlQ=="],
-
     "@opentelemetry/core": ["@opentelemetry/core@3.1.1", "", { "dependencies": { "@opentelemetry/semantic-conventions": "^1.29.0" }, "peerDependencies": { "@opentelemetry/api": ">=1.10.0 <1.11.0" } }, "sha512-6wc9r0zrTsAVOd/5UrZBsrHhXWNfwisolgWxd8o3Eu1HKIz8cAxQjOdGrrJB406ceFiGV+ckTcLdXzB+y/QVTA=="],
-
-    "@opentelemetry/exporter-logs-otlp-http": ["@opentelemetry/exporter-logs-otlp-http@0.301.2", "", { "dependencies": { "@opentelemetry/otlp-exporter-base": "0.301.2", "@opentelemetry/otlp-transformer": "0.301.2", "@opentelemetry/sdk-logs": "3.1.1" }, "peerDependencies": { "@opentelemetry/api": "^1.10.0" } }, "sha512-l3K1Fp2qaxAS8wKPyjVm7/QfnvJXZZfPuGXa+AYzNeoOk6qxcZwWZhLe9SYemWxDrtPTl3Mj82diLgVzbz54Hw=="],
-
-    "@opentelemetry/exporter-trace-otlp-http": ["@opentelemetry/exporter-trace-otlp-http@0.301.2", "", { "dependencies": { "@opentelemetry/otlp-exporter-base": "0.301.2", "@opentelemetry/otlp-transformer": "0.301.2", "@opentelemetry/sdk-trace": "3.1.1" }, "peerDependencies": { "@opentelemetry/api": "^1.10.0" } }, "sha512-mGyy0Jv/jgEnVdLME6SyxzPJgZml2vIZAJTF1/SKoM8baqDFsQSeFQ15vjo3qDxTOnbf04t2Y62oofsUy0ETDw=="],
 
     "@opentelemetry/exporter-trace-otlp-proto": ["@opentelemetry/exporter-trace-otlp-proto@0.301.2", "", { "dependencies": { "@opentelemetry/otlp-exporter-base": "0.301.2", "@opentelemetry/otlp-transformer": "0.301.2", "@opentelemetry/sdk-trace": "3.1.1" }, "peerDependencies": { "@opentelemetry/api": "^1.10.0" } }, "sha512-3MOk/LZJI/5D5Wq6F1B0+TclRwyLZI4hoqOnAl4PcPBfbaBZND5IplOD4tWLV4QtwobYeCyZwP9DpeKBLPWviw=="],
 

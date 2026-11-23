@@ -101,8 +101,8 @@ flowchart TB
 
   subgraph web["Web"]
     direction TB
-    jsw["JS: startBrowserSdk (upstream browser-sdk)<br/>+ same ContextManager"]
-    wexp["OTLP/HTTP fetch exporter (upstream)"]
+    jsw["JS: sdk-trace TracerProvider (7)<br/>+ same ContextManager"]
+    wexp["OTLP/HTTP proto fetch exporter (upstream)"]
     jsw --> wexp
   end
 
@@ -114,7 +114,7 @@ flowchart TB
 
 | Ours vs upstream | |
 |---|---|
-| upstream, reused as-is | `@opentelemetry/api`, `sdk-trace`, browser-sdk, otel-java, opentelemetry-swift, exporters |
+| upstream, reused as-is | `@opentelemetry/api`, `sdk-trace`, otel-java, opentelemetry-swift, exporters |
 | ours | ContextManager patch, hand-off processor, Nitro adapters, pure native core, bundler helpers |
 
 ### 4.1 Where spans live (decided: "option C")
@@ -515,9 +515,15 @@ ships TC39 AsyncContext (Stage 2).
 ## 7. Web (decided)
 
 Same `@opentelemetry/api` surface and the same ContextManager; spans live in the JS SDK and
-export directly via upstream `@opentelemetry/browser-sdk` (`startBrowserSdk`) and its OTLP
-fetch exporter. Builder to check whether `browser-sdk` installs its own context manager and
-make ours win.
+export directly from JS. **Changed in v0 implementation (R7, pending author review):** web
+builds its own `sdk-trace` `TracerProvider` + `BatchSpanProcessor` + upstream
+`@opentelemetry/exporter-trace-otlp-proto` (fetch), not `startBrowserSdk`. Why:
+browser-sdk 0.9.1 takes no `idGenerator` (no `0a` test-mode IDs, so no exact web goldens),
+adds `telemetry.sdk.*` to the resource (against 4.3), also starts a Logs SDK, exports JSON
+(loses NaN), and returns no `tracerProvider`/`forceFlush` for our handle. The resource is
+`service.*` + `resourceAttributes` + `telemetry.distro.*` (outside test mode). `start`
+re-registers our context manager if another one took the global slot. The package's
+`exports` `browser` condition points web bundlers (Vite, Metro web) at `index.web.js`.
 
 Browsers run `await` natively, which bypasses the patched `then`. **Decided:** web apps
 compile `async` down in their bundler — the same mechanism RN uses by default, and what
