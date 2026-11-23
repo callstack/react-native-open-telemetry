@@ -10,7 +10,7 @@ const flags = args.filter(a => a.startsWith('--'));
 const only = args.filter(a => !a.startsWith('--'));
 const ctx: Ctx = {
   e2e: flags.includes('--e2e'),
-  update: flags.includes('--update'),
+  update: flags.includes('--update') || process.env.VERIFY_UPDATE === '1',
   sh(cmd) {
     const [bin = '', ...rest] = cmd;
     const p = spawnSync(bin, rest, {encoding: 'utf8', stdio: ['inherit', 'pipe', 'inherit'], maxBuffer: 1 << 28});
@@ -23,6 +23,8 @@ const ctx: Ctx = {
     return out;
   },
 };
+
+if (ctx.update) process.env.VERIFY_UPDATE = '1';
 
 const dir = join(import.meta.dirname, 'stages');
 const stages: Stage[] = [];
