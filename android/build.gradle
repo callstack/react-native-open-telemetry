@@ -98,12 +98,9 @@ dependencies {
 
   implementation platform("io.opentelemetry:opentelemetry-bom:1.68.0")
   implementation "io.opentelemetry:opentelemetry-sdk"
-  implementation "io.opentelemetry:opentelemetry-exporter-otlp"
-
-  // otel-java's OkHttp sender must use the OkHttp React Native ships, not pull the app up to OkHttp 5.
-  // `strictly` (unlike resolutionStrategy.force, which stays in this project) also binds the app's graph.
-  // ReactNativeOpenTelemetry_okhttpVersion mirrors react-native/gradle/libs.versions.toml (`okhttp`); bump with RN.
-  implementation("com.squareup.okhttp3:okhttp") {
-    version { strictly getExtOrDefault("okhttpVersion") }
+  // The OkHttp sender runs on React Native's own OkHttp (every okhttp3 member the 1.68 sender uses exists in 4.9.2);
+  // excluding it keeps otel-java from pulling the app up to OkHttp 5.
+  implementation("io.opentelemetry:opentelemetry-exporter-otlp") {
+    exclude group: "com.squareup.okhttp3", module: "okhttp"
   }
 }

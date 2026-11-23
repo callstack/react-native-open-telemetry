@@ -3,6 +3,10 @@ import path from 'node:path';
 import {test as base} from '@e2e-dev/mobile';
 import {expect, type App, type Screen} from 'e2e';
 
+// Device runs compare to the reviewed .js expected files until Tasks 24/25; they must never rewrite them.
+if (process.env.VERIFY_UPDATE === '1')
+  throw new Error('verify/e2e is compare-only: unset VERIFY_UPDATE (`bun verify --update --e2e` already does)');
+
 const verifyDir = path.join(import.meta.dirname, '..');
 process.env.VERIFY_DIR = verifyDir;
 // ponytail: e2e loads files as ESM; the CJS-style harness modules (all in verify/harness/) read __dirname.

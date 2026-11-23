@@ -40,12 +40,19 @@ export function ScenariosScreen() {
     setTestMode(otel ? `native testMode=${otel.initialize().testMode}` : 'native: no HybridObject');
   }, []);
 
-  const press = (name: string) => () => {
-    setStatus(`running ${name}`);
-    runScenario(name).then(
+  // The run starts after the commit that removed the previous scenario-done, so a stale marker never satisfies a wait.
+  const [running, setRunning] = useState<string | null>(null);
+  useEffect(() => {
+    if (!running) return;
+    runScenario(running).then(
       () => setStatus('done'),
       e => setStatus(`error ${String(e)}`),
-    );
+    ).finally(() => setRunning(null));
+  }, [running]);
+
+  const press = (name: string) => () => {
+    setStatus(`running ${name}`);
+    setRunning(name);
   };
 
   const handOff = () => {

@@ -21,7 +21,7 @@
         "babel-jest": "^30.5.2",
         "e2e": "0.24.0",
         "jest": "^30.5.2",
-        "nitrogen": "~0.37.0",
+        "nitrogen": "0.37.2",
         "oxlint": "^1.95.0",
         "protobufjs": "^8.8.1",
         "react-native-builder-bob": "^0.40.6",

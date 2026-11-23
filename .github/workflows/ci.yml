@@ -91,6 +91,8 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - uses: gradle/actions/setup-gradle@v4
+      - name: Enable the Gradle build cache (setup-gradle persists it)
+        run: echo "org.gradle.caching=true" >> example/android/gradle.properties
       - name: Cache native build outputs
         uses: actions/cache@v4
         with:
@@ -161,12 +163,17 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun install --frozen-lockfile
         working-directory: example
+      - name: Cache Swift packages
+        uses: actions/cache@v4
+        with:
+          path: example/ios/build/SourcePackages
+          key: ios-spm-${{ hashFiles('example/ios/OpenTelemetryExample.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
       - name: Cache native build outputs
         uses: actions/cache@v4
         with:
           path: |
             example/ios/Pods
-            example/ios/build
+            example/ios/build/Build
           key: ios-native-${{ hashFiles('ios/**', 'nitrogen/**', 'ReactNativeOpenTelemetry.podspec', 'example/ios/Podfile', 'example/ios/Podfile.lock', 'example/ios/OpenTelemetryExample/**', 'example/ios/OpenTelemetryExample.xcodeproj/**', 'bun.lock', 'example/bun.lock') }}
       - name: pod install (test mode)
         working-directory: example/ios
