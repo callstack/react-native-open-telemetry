@@ -34,7 +34,11 @@ export const test = base.extend<{target: string}, {collector: Collector; install
   ],
   installed: [
     async ({device}, use) => {
-      await device.installApp();
+      const {app} = await device.installApp();
+      // Warm-up launch: on Android the first relaunch right after an install can fail with
+      // "remained foreground after close", and a test retry does not re-run this worker fixture.
+      await device.openApp(app);
+      await device.closeApp();
       await use();
     },
     {scope: 'worker', auto: true},
