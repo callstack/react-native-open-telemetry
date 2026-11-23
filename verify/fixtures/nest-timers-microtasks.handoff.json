@@ -1,0 +1,178 @@
+{
+  "config": {
+    "serviceName": "verify",
+    "serviceVersion": "0.0.0",
+    "resourceAttributes": [],
+    "exportUrl": "<collector>",
+    "exportHeaders": []
+  },
+  "spans": [
+    {
+      "context": {
+        "traceId": "0a000000000000000000000000000001",
+        "spanId": "0a00000000000002",
+        "traceFlags": 1
+      },
+      "parentSpanId": "0a00000000000001",
+      "name": "timeout",
+      "kind": 0,
+      "start": [
+        1767225600,
+        10000
+      ],
+      "end": [
+        1767225600,
+        11000
+      ],
+      "attributes": [],
+      "events": [],
+      "links": [],
+      "status": {
+        "code": 0
+      },
+      "scope": {
+        "name": "verify",
+        "attributes": []
+      }
+    },
+    {
+      "context": {
+        "traceId": "0a000000000000000000000000000001",
+        "spanId": "0a00000000000003",
+        "traceFlags": 1
+      },
+      "parentSpanId": "0a00000000000001",
+      "name": "immediate",
+      "kind": 0,
+      "start": [
+        1767225600,
+        20000
+      ],
+      "end": [
+        1767225600,
+        21000
+      ],
+      "attributes": [],
+      "events": [],
+      "links": [],
+      "status": {
+        "code": 0
+      },
+      "scope": {
+        "name": "verify",
+        "attributes": []
+      }
+    },
+    {
+      "context": {
+        "traceId": "0a000000000000000000000000000001",
+        "spanId": "0a00000000000004",
+        "traceFlags": 1
+      },
+      "parentSpanId": "0a00000000000001",
+      "name": "microtask",
+      "kind": 0,
+      "start": [
+        1767225600,
+        30000
+      ],
+      "end": [
+        1767225600,
+        31000
+      ],
+      "attributes": [],
+      "events": [],
+      "links": [],
+      "status": {
+        "code": 0
+      },
+      "scope": {
+        "name": "verify",
+        "attributes": []
+      }
+    },
+    {
+      "context": {
+        "traceId": "0a000000000000000000000000000001",
+        "spanId": "0a00000000000005",
+        "traceFlags": 1
+      },
+      "parentSpanId": "0a00000000000001",
+      "name": "timeout.microtask",
+      "kind": 0,
+      "start": [
+        1767225600,
+        40000
+      ],
+      "end": [
+        1767225600,
+        41000
+      ],
+      "attributes": [],
+      "events": [],
+      "links": [],
+      "status": {
+        "code": 0
+      },
+      "scope": {
+        "name": "verify",
+        "attributes": []
+      }
+    },
+    {
+      "context": {
+        "traceId": "0a000000000000000000000000000001",
+        "spanId": "0a00000000000001",
+        "traceFlags": 1
+      },
+      "name": "root",
+      "kind": 0,
+      "start": [
+        1767225600,
+        0
+      ],
+      "end": [
+        1767225600,
+        50000
+      ],
+      "attributes": [],
+      "events": [],
+      "links": [],
+      "status": {
+        "code": 0
+      },
+      "scope": {
+        "name": "verify",
+        "attributes": []
+      }
+    },
+    {
+      "context": {
+        "traceId": "0a000000000000000000000000000001",
+        "spanId": "0a00000000000006",
+        "traceFlags": 1
+      },
+      "parentSpanId": "0a00000000000001",
+      "name": "after.end",
+      "kind": 0,
+      "start": [
+        1767225600,
+        60000
+      ],
+      "end": [
+        1767225600,
+        61000
+      ],
+      "attributes": [],
+      "events": [],
+      "links": [],
+      "status": {
+        "code": 0
+      },
+      "scope": {
+        "name": "verify",
+        "attributes": []
+      }
+    }
+  ]
+}

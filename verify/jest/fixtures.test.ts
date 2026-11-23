@@ -11,7 +11,6 @@ import type {Otel, SeamSpan} from '../../src/native/Otel.nitro';
 import {allScenarios} from '../scenarios';
 import {pendingScenarios} from '../harness/compare';
 
-const NAMES = ['handoff-basic', 'rich-span', 'odd-attributes', 'nest-after-await'];
 const CONFIG = {
   serviceName: 'verify',
   serviceVersion: '0.0.0',
@@ -81,11 +80,11 @@ describe('NativeHandOffProcessor', () => {
   });
 });
 
-for (const name of NAMES) {
-  const s = allScenarios().find(x => x.name === name);
-  if (!s) throw new Error('unknown fixture scenario ' + name);
+// R6: every active Jest scenario has a seam fixture
+for (const s of allScenarios().filter(x => !x.pending && x.runners.includes('jest'))) {
+  const name = s.name;
   // a pending body is not its final version yet: keep the reviewed fixture until the owning task un-pends it
-  if (s.pending || pendingScenarios.has(name)) {
+  if (pendingScenarios.has(name)) {
     test.todo(`${name} fixture matches hand-off payloads`);
     continue;
   }

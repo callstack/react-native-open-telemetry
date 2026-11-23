@@ -19,5 +19,4 @@ export default scenario(
     await Promise.all([caught, next]);
     parent.end(at(40));
   },
-  {pending: true}, // Task 10
 );

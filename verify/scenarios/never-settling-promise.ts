@@ -15,5 +15,4 @@ export default scenario(
     await new Promise<void>(r => setTimeout(r, 0));
     tracer.startSpan('later.timeout', {startTime: at(40)}).end(at(41));
   },
-  {pending: true}, // Task 10
 );

@@ -25,5 +25,4 @@ export default scenario(
       await inCallback(cb => setTimeout(cb, 0), 'after.end', 60);
     });
   },
-  {pending: true}, // Task 10
 );
