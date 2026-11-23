@@ -56,7 +56,9 @@ function start(config: SdkConfig | undefined): SdkHandle {
   });
   const getTracer = provider.getTracer.bind(provider);
   provider.getTracer = (name, version, options) => stampScope(getTracer(name, version, options));
-  trace.setGlobalTracerProvider(provider);
+  if (!trace.setGlobalTracerProvider(provider)) {
+    console.error('[react-native-open-telemetry] another tracer provider is already registered; trace.getTracer() will not reach this SDK.');
+  }
   probeAsyncContext().catch(() => {});
   return {
     tracerProvider: provider,

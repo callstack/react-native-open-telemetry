@@ -317,7 +317,7 @@ OTel data model.
   loudly (`console.error`), and `startReactNativeSdk` returns a working no-op handle. The
   SDK never throws into the app.
 - **Multiple runtimes (Claude's call):** one native singleton; `initialize` is safe under
-  concurrent calls; each JS runtime has its own hand-off and clock anchor. Per-runtime
+  concurrent calls; each JS runtime has its own hand-off. Per-runtime
   attributes are out of scope for v0.
 
 ### 4.4 Configuration (decided: "option A", with JS fallback)
@@ -906,7 +906,7 @@ direct precedent was found; treat those as the highest-risk parts.
 | P11 | Links instead of parents for batched/multi-cause work; interval ticks as new roots (5, 6.2) | OTel spec: links represent batched operations; React notes it can't attribute batched updates without AsyncContext | [Spec: Links between spans](https://github.com/open-telemetry/opentelemetry-specification/blob/a03fa4e26b3982da42aa0010aaebcd9f694cb037/specification/overview.md#L207-L214) · [React `ReactFiberAsyncAction.js`](https://github.com/facebook/react/blob/fe719f77ba3e4b5fb3ebe13787bfbd0ed911da19/packages/react-reconciler/src/ReactFiberAsyncAction.js#L42) |
 | P12 | *(removed: the staleness rule was cut in council review, see 6.2)* | | |
 | P13 | *(removed: the pre-init buffer was cut in council review, see 4.3)* | | |
-| P14 | Clock offset `Date.now() - performance.now()`, recomputed on foreground (4.3) | OTel JS derives span times from `performance.timeOrigin` + `performance.now()`; Sentry RN guards an unreliable `performance.timeOrigin` | [Sentry `timeOrigin` guard](https://github.com/getsentry/sentry-react-native/blob/794a52a9e80ca0a7c4ee005264cd9cd3ee1533de/packages/core/src/js/sdk.tsx#L76-L80) |
+| P14 | *(Superseded by R8: upstream timing kept, no offset.)* Clock offset `Date.now() - performance.now()`, recomputed on foreground (4.3) | OTel JS derives span times from `performance.timeOrigin` + `performance.now()`; Sentry RN guards an unreliable `performance.timeOrigin` | [Sentry `timeOrigin` guard](https://github.com/getsentry/sentry-react-native/blob/794a52a9e80ca0a7c4ee005264cd9cd3ee1533de/packages/core/src/js/sdk.tsx#L76-L80) |
 | P15 | Custom names under a reverse-domain prefix, never `otel.*` (4.5) | OTel naming guidance | [naming.md: app developers](https://github.com/open-telemetry/semantic-conventions/blob/2d91ead21027a8a58fbb7488b12d80238e7c0ac5/docs/general/naming.md#L183-L187) · [`otel.*` reserved](https://github.com/open-telemetry/semantic-conventions/blob/2d91ead21027a8a58fbb7488b12d80238e7c0ac5/docs/general/naming.md#L217-L227) |
 | P16 | Option names mirror `startBrowserSdk`; invalid config returns a no-op SDK instead of throwing (4.4) | OTel Browser SIG browser SDK | [browser-sdk README](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/sdk) |
 | P17 | Exact expected-output files (goldens) for traces (9.1) | OTel Collector tests compare traces against golden files | [collector-contrib `pkg/golden`](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/c64840337cf400792cb684037ed998428b268197/pkg/golden) · [`ptracetest` compare options](https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/c64840337cf400792cb684037ed998428b268197/pkg/pdatatest/ptracetest/options.go#L102-L149) |
