@@ -49,6 +49,7 @@ jobs:
           name: verify-artifacts-static-fast
           path: verify/artifacts/
           if-no-files-found: ignore
+          include-hidden-files: true # verify/e2e/.e2e is a dot dir
 
   fast-swift:
     runs-on: xcode-27
@@ -69,6 +70,7 @@ jobs:
           name: verify-artifacts-fast-swift
           path: verify/artifacts/
           if-no-files-found: ignore
+          include-hidden-files: true # verify/e2e/.e2e is a dot dir
 
   # Release builds with the JS bundle embedded (no Metro), test mode on.
   # Native outputs are cached on native inputs only, so a JS-only change re-bundles but reuses the native build.
@@ -150,6 +152,7 @@ jobs:
             verify/artifacts/
             verify/e2e/.e2e/
           if-no-files-found: ignore
+          include-hidden-files: true # verify/e2e/.e2e is a dot dir
 
   e2e-ios-bare:
     runs-on: xcode-27
@@ -190,6 +193,11 @@ jobs:
           xcodebuild -workspace OpenTelemetryExample.xcworkspace -scheme OpenTelemetryExample
           -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator'
           -derivedDataPath build ARCHS=arm64 build
+      - name: Pre-boot the simulator (a cold boot on the runner outlasts agent-device's boot timeout)
+        run: |
+          udid=$(xcrun simctl list devices available -j | jq -r '[.devices[][] | select(.name | startswith("iPhone"))][0].udid')
+          xcrun simctl boot "$udid"
+          xcrun simctl bootstatus "$udid" -b
       - name: e2e (ios-bare)
         env:
           E2E_TARGET: ios-bare
@@ -202,6 +210,7 @@ jobs:
             verify/artifacts/
             verify/e2e/.e2e/
           if-no-files-found: ignore
+          include-hidden-files: true # verify/e2e/.e2e is a dot dir
 
   budget:
     needs: [static-fast, fast-swift, e2e-android-bare, e2e-ios-bare] # every other job; extend when jobs are added
