@@ -70,13 +70,13 @@ nesting**, to a collector — on iOS, Android and web.
   experimental 0.301.x (`@opentelemetry/sdk-trace` replaced `sdk-trace-base`/`-web` in 3.0),
   `@opentelemetry/browser-sdk` (lives in `open-telemetry/opentelemetry-browser`, pre-1.0),
   otel-java (stable), opentelemetry-swift 2.6.
-- Nitro Modules 0.37.x (pre-1.0). Requires Xcode ≥ 16.4, NDK ≥ 27. Pin the supported range
+- Nitro Modules 0.37.x (pre-1.0). Requires Xcode ≥ 27.0 (the opentelemetry-swift 2.6 dependencies need Swift 6.4), NDK ≥ 27. Pin the supported range
   and document it; `react-native-nitro-modules` is a peer dependency the app installs.
 - Bare RN and Expo must both work. Expo config plugins only run in `expo prebuild`, so
   nothing essential may depend on a plugin.
 - opentelemetry-swift appears to be distributed via SwiftPM only (no podspec at repo
   root — reported by a reviewer, builder to confirm). The pod must pull it via
-  `spm_dependency` (RN ≥ 0.75) or vendor it; verify with Xcode 16.4, static frameworks and
+  `spm_dependency` (RN ≥ 0.75) or vendor it; verify with Xcode 27.0, static frameworks and
   Nitro's Swift/C++ interop.
 
 ## 4. Architecture (decided)
