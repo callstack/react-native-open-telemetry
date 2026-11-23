@@ -1,0 +1,8 @@
+{
+  "resource": ["service.name"],
+  "scope": [],
+  "traces": [[
+    {"name":"js.after_native","kind":1,"parent":"native.work","status":0,"links":[],"attributes":{}},
+    {"name":"native.work","kind":1,"parent":null,"status":0,"links":[],"attributes":{}}
+  ]]
+}

@@ -1,0 +1,11 @@
+{
+  "resource": ["service.name"],
+  "scope": [],
+  "traces": [[
+    {"name":"caught","kind":1,"parent":"parent","status":0,"links":[],"attributes":{}},
+    {"name":"parent","kind":1,"parent":null,"status":0,"links":[],"attributes":{}},
+    {"name":"throws","kind":1,"parent":"parent","status":0,"links":[],"attributes":{}}
+  ], [
+    {"name":"root.next","kind":1,"parent":null,"status":0,"links":[],"attributes":{}}
+  ]]
+}

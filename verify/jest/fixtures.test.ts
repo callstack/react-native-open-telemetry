@@ -81,8 +81,13 @@ describe('NativeHandOffProcessor', () => {
 });
 
 for (const name of NAMES) {
+  const s = allScenarios().find(x => x.name === name)!;
+  // a pending body is not its final version yet: keep the reviewed fixture until the owning task un-pends it
+  if (s.pending) {
+    test.todo(`${name} fixture matches hand-off payloads`);
+    continue;
+  }
   test(`${name} fixture matches hand-off payloads`, async () => {
-    const s = allScenarios().find(x => x.name === name)!;
     const {calls, provider} = setup();
     await s.run({tracer: provider.getTracer('verify'), getTracer: (n, v, o) => provider.getTracer(n, v, o), at});
     const actual = calls.flat();

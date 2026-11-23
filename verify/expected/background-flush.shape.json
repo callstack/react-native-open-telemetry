@@ -1,0 +1,7 @@
+{
+  "resource": ["service.name"],
+  "scope": [],
+  "traces": [[
+    {"name":"before_background","kind":1,"parent":null,"status":0,"links":[],"attributes":{}}
+  ]]
+}

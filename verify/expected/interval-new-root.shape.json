@@ -1,0 +1,12 @@
+{
+  "resource": ["service.name"],
+  "scope": [],
+  "traces": [[
+    {"name":"load","kind":1,"parent":"tap","status":0,"links":[],"attributes":{}},
+    {"name":"tap","kind":1,"parent":null,"status":0,"links":[],"attributes":{}}
+  ], [
+    {"name":"tick","kind":1,"parent":null,"status":0,"links":[],"attributes":{}}
+  ], [
+    {"name":"tick","kind":1,"parent":null,"status":0,"links":[],"attributes":{}}
+  ]]
+}

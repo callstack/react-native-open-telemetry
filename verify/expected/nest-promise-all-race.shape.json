@@ -1,0 +1,12 @@
+{
+  "resource": ["service.name"],
+  "scope": [],
+  "traces": [[
+    {"name":"after","kind":1,"parent":"root","status":0,"links":[],"attributes":{}},
+    {"name":"all.a","kind":1,"parent":"root","status":0,"links":[],"attributes":{}},
+    {"name":"all.b","kind":1,"parent":"root","status":0,"links":[],"attributes":{}},
+    {"name":"race.a","kind":1,"parent":"root","status":0,"links":[],"attributes":{}},
+    {"name":"race.b","kind":1,"parent":"root","status":0,"links":[],"attributes":{}},
+    {"name":"root","kind":1,"parent":null,"status":0,"links":[],"attributes":{}}
+  ]]
+}

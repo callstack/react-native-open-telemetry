@@ -1,0 +1,11 @@
+{
+  "resource": ["service.name"],
+  "scope": [],
+  "traces": [[
+    {"name":"h1","kind":1,"parent":null,"status":0,"links":[],"attributes":{}},
+    {"name":"h1.work","kind":1,"parent":"h1","status":0,"links":[],"attributes":{}},
+    {"name":"h2.work","kind":1,"parent":"h1","status":0,"links":[],"attributes":{}}
+  ], [
+    {"name":"h2","kind":1,"parent":null,"status":0,"links":[],"attributes":{}}
+  ]]
+}

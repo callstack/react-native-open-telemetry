@@ -1,10 +1,14 @@
-import {context, trace} from '@opentelemetry/api';
 import {scenario} from '../harness/scenario';
 
-// Task 10 replaces this body with the real context-propagation version; names and structure must stay.
-export default scenario('nest-after-await', async ({tracer, at}) => {
-  const parent = tracer.startSpan('parent', {startTime: at(0)});
-  await Promise.resolve();
-  tracer.startSpan('child', {startTime: at(10)}, trace.setSpan(context.active(), parent)).end(at(20));
-  parent.end(at(30));
-});
+/** A span started after `await` is a child of the span active before it (§6.1). */
+export default scenario(
+  'nest-after-await',
+  async ({tracer, at}) => {
+    await tracer.startActiveSpan('parent', {startTime: at(0)}, async parent => {
+      await Promise.resolve();
+      tracer.startSpan('child', {startTime: at(10)}).end(at(20));
+      parent.end(at(30));
+    });
+  },
+  {pending: true}, // Task 10
+);

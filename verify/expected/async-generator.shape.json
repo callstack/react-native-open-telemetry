@@ -1,0 +1,11 @@
+{
+  "resource": ["service.name"],
+  "scope": [],
+  "traces": [[
+    {"name":"gen.0","kind":1,"parent":"root","status":0,"links":[],"attributes":{}},
+    {"name":"gen.1","kind":1,"parent":"root","status":0,"links":[],"attributes":{}},
+    {"name":"loop.0","kind":1,"parent":"root","status":0,"links":[],"attributes":{}},
+    {"name":"loop.1","kind":1,"parent":"root","status":0,"links":[],"attributes":{}},
+    {"name":"root","kind":1,"parent":null,"status":0,"links":[],"attributes":{}}
+  ]]
+}
