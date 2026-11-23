@@ -13,6 +13,7 @@ module.exports = {
         '<rootDir>/verify/harness/**/*.test.ts',
       ],
     },
-    // scenarios, fixtures, degraded projects live under verify/jest/ (later tasks)
+    '<rootDir>/verify/jest/jest.scenarios.config.js',
+    // fixtures, degraded projects live under verify/jest/ (later tasks)
   ],
 };

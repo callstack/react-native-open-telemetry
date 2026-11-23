@@ -1,0 +1,5 @@
+{
+  "resource": ["service.name"],
+  "scope": [],
+  "traces": [[{"name": "smoke", "kind": 1, "parent": null, "status": 0, "links": [], "attributes": {}}]]
+}
