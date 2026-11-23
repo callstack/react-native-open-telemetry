@@ -215,20 +215,20 @@ Exact shapes are the builder's, within the seam rule. A sketch of the Nitro spec
 
 ```ts
 // illustrative: src/specs/Otel.nitro.ts
-type HrTime = [seconds: number, nanos: number];
+type HrTime = number[]; // [seconds, nanos]; Nitro/Swift rejects tuples (swiftlang/swift#75865)
 interface SeamSpanContext { traceId: string; spanId: string; traceFlags: number; traceState?: string }
 type AttrValue = string | number | boolean | string[] | number[] | boolean[];
 interface SeamAttribute { key: string; value: AttrValue }
 interface SeamSpan {
   context: SeamSpanContext; parentSpanId?: string; name: string; kind: number;
   start: HrTime; end: HrTime; attributes: SeamAttribute[];
-  events: { name: string; time: HrTime; attributes: SeamAttribute[] }[];
+  events: { name: string; time: HrTime; attributes: SeamAttribute[] }[]; // named interfaces (SeamEvent, SeamLink, SeamStatus, SeamScope) in code: Nitro rejects anonymous objects
   links: { context: SeamSpanContext; attributes: SeamAttribute[] }[];
   status: { code: number; message?: string };
   scope: { name: string; version?: string; schemaUrl?: string; attributes: SeamAttribute[] };
 }
 interface Otel extends HybridObject<{ ios: 'swift'; android: 'kotlin' }> {
-  initialize(config?: SeamConfig): { alreadyInitialized: boolean; error?: string }; // idempotent
+  initialize(config?: SeamConfig): { alreadyInitialized: boolean; testMode: boolean; error?: string }; // idempotent
   handOff(spans: SeamSpan[]): void;              // sync, one span per ended span in v0
   flush(timeoutMs: number): Promise<void>;
 }

@@ -57,6 +57,7 @@
     "!**/.*"
   ],
   "scripts": {
+    "codegen": "nitrogen",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint",
     "static": "bun verify/run.ts static",
