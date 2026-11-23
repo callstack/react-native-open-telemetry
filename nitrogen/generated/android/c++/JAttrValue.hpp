@@ -56,7 +56,8 @@ namespace margelo::nitro::callstack::otel {
         case 1: return create_1([&]() {
           size_t __size = std::get<1>(variant).size();
           jni::local_ref<jni::JArrayBoolean> __array = jni::JArrayBoolean::newArray(__size);
-          __array->setRegion(0, __size, std::get<1>(variant).data());
+          std::vector<jboolean> __buffer(std::get<1>(variant).begin(), std::get<1>(variant).end());
+          __array->setRegion(0, __size, __buffer.data());
           return __array;
         }());
         case 2: return create_2([&](auto&& __input) {

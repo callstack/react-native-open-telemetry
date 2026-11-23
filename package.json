@@ -77,6 +77,7 @@
   },
   "devDependencies": {
     "@changesets/cli": "^2.28.1",
+    "@e2e-dev/mobile": "0.12.8",
     "@opentelemetry/exporter-trace-otlp-proto": "~0.301.2",
     "@react-native/babel-preset": "^0.88.1",
     "@types/jest": "^30.0.0",
@@ -107,5 +108,8 @@
         }
       ]
     ]
+  },
+  "patchedDependencies": {
+    "nitrogen@0.37.2": "patches/nitrogen@0.37.2.patch"
   }
 }

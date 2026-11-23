@@ -21,9 +21,9 @@ namespace margelo::nitro::callstack::otel {
       auto jniValue = static_cast<const JAttrValue_impl::Second*>(this)->getValue();
       return [&]() {
         size_t __size = jniValue->size();
-        std::vector<bool> __vector(__size);
-        jniValue->getRegion(0, __size, __vector.data());
-        return __vector;
+        std::vector<jboolean> __buffer(__size);
+        jniValue->getRegion(0, __size, __buffer.data());
+        return std::vector<bool>(__buffer.begin(), __buffer.end());
       }();
     } else if (isInstanceOf(JAttrValue_impl::Third::javaClassStatic())) {
       // It's a `std::vector<std::string>`
