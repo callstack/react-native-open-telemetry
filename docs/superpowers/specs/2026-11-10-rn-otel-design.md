@@ -305,12 +305,11 @@ OTel data model.
   itself with the semantic-convention distro attributes `telemetry.distro.name` /
   `telemetry.distro.version` (`telemetry.sdk.*` stays otel-java / opentelemetry-swift's).
   Carry `schemaUrl` for resource and scope.
-- **Clock (Claude's call, simplified in council review):** both sides use wall-clock epoch
-  time. JS computes one offset, `Date.now() - performance.now()`, at start and again on
-  `AppState` → active (Hermes' monotonic clock doesn't advance during device suspend), and
-  uses it as the JS SDK's time source. Error between JS and native siblings is under 1 ms;
-  scenarios use explicit timestamps, so test output is unaffected. Guard missing
-  `performance` (fall back to `Date.now()`).
+- **Clock (Claude's call, simplified in council review and again in v0 implementation):** both
+  sides use wall-clock epoch time. JS keeps upstream `sdk-trace` timing: each span starts at
+  `Date.now()` and measures its duration with `performance.now()`; there is no extra JS offset
+  (sdk-trace 3.1 has no time-source hook). Error between JS and native siblings is under 1 ms;
+  scenarios use explicit timestamps, so test output is unaffected.
 - **Before native is ready / failures (Claude's call):** no pre-init buffer. `initialize`
   runs synchronously inside `startReactNativeSdk` before the JS provider is registered, so
   no span can end before native is ready; spans started earlier come from the API's no-op
@@ -872,7 +871,7 @@ Left out until needed:
 8. Default sampling `ParentBased(AlwaysOn)` on both sides, honoring `traceFlags` (4.3).
 9. One native-owned resource; JS adds no `telemetry.sdk.*`; SDK identity via
    `telemetry.distro.*` (4.3).
-10. Clock: one `Date.now() - performance.now()` offset, recomputed on foreground (4.3).
+10. Clock: upstream sdk-trace timing (start at `Date.now()`, `performance.now()` durations) (4.3).
 11. No pre-init buffer; init failure → one error and a no-op handle, never a throw;
     multi-runtime handling (4.3, 4.4).
 12. Context manager extends upstream `StackContextManager`; Metro `withOtel` helper for
