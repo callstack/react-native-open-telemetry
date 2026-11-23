@@ -592,8 +592,9 @@ tests: they don't care about internals, so internals can be rewritten freely.
   time; native: Gradle property `otelTestMode` / `OTEL_TEST_MODE=1` at `pod install`. Same
   flag for the bare and Expo apps; no test fields in the public API or the seam config:
   - **explicit timestamps**: v0 scenarios create all spans themselves, so they pass
-    `startTime` / `end(t)` explicitly (JS and native), in whole microseconds (exactly
-    representable on iOS). Clock stubs (Java `setClock`/`TestClock` in test source sets
+    `startTime` / `end(t)` explicitly (JS and native), in whole microseconds. iOS cannot
+    represent them exactly: opentelemetry-swift exports `Date`, a ~238–256 ns grid, so the `ios`
+    files record the quantized values (R22, measured floor in verify/VERIFY.md). Clock stubs (Java `setClock`/`TestClock` in test source sets
     only; Swift `with(clock:)`) are only a fallback for implicit reads.
   - sequential test ID generators, namespaced per side (JS `0a…01`, native `0b…01`) via
     upstream hooks: JS `sdk-trace` `idGenerator`, Java `setIdGenerator`, Swift

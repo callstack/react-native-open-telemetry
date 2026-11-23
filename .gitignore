@@ -89,3 +89,8 @@ android/generated
 .superpowers/
 verify/artifacts/
 verify/e2e/.e2e/
+
+# SwiftPM (Package.swift: ios/Core tests)
+.build/
+.swiftpm/
+/Package.resolved

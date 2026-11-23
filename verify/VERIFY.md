@@ -16,6 +16,18 @@ E2E_TARGET=android-bare bun verify --e2e e2e   # or ios-bare; omit E2E_TARGET fo
 Gradle wrapper) into a collector on a free port and compares `<name>.android.otlp.json`. The JVM tests run otel-java's
 own OkHttp 5; devices run React Native's OkHttp 4.9.2.
 
+`fast-swift` (macOS only; skips elsewhere) does the same through the Swift core: `swift test` over `Package.swift`
+(`ios/Core`, tests in `ios/CoreTests`) into `<name>.ios.otlp.json`. Both stages share `harness/nativeReplay.ts`.
+
+**iOS time floor (R22).** opentelemetry-swift 2.6 keeps times as `Date` and exports
+`UInt64(timeIntervalSince1970 * 1e9)`, so whole-µs seam times come back on a ~238–256 ns grid, truncated:
+`TimeRoundTripTests` measures `at(0…10_000)` and `at(1_000_000_000)` at **max |error| 240 ns, 314 of 10 002 exact**.
+`*.ios.otlp.json` record these quantized values as emitted (deterministic); shapes ignore times.
+
+**iOS vs Android/JS goldens.** Apart from times, the `ios` files differ only by what the opentelemetry-swift 2.6 OTLP
+encoder (`SpanAdapter`) never writes: span and link `flags` (257), link `traceState`, and the scope `schemaUrl` on
+`ScopeSpans`. The core passes all three into `SpanData`; the exporter drops them.
+
 The fake collector listens on port 4318; the app reaches it at `10.0.2.2` (Android emulator) or `localhost` (iOS simulator).
 
 ## Device capability check (Task 7, 2026-11-23)

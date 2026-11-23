@@ -51,6 +51,7 @@
     "!ios/build",
     "!android/build",
     "!android/core-jvm",
+    "!ios/CoreTests",
     "!android/gradle",
     "!android/gradlew",
     "!android/gradlew.bat",

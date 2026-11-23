@@ -1,14 +1,15 @@
-import {existsSync} from 'node:fs';
+import path from 'node:path';
 import type {Stage} from '../run';
+import {replayFixtures} from '../harness/nativeReplay';
 
 const stage: Stage = {
   name: 'fast-swift',
   order: 30,
   e2e: false,
-  run({sh}) {
+  async run() {
     if (process.platform !== 'darwin') return void console.log('skipped: not macOS');
-    if (!existsSync('Package.swift')) return void console.log('skipped: no Package.swift');
-    sh(['swift', 'test']);
+    const n = await replayFixtures('ios', 'swift', ['test'], path.join(import.meta.dirname, '..', '..'));
+    console.log(`fast-swift: ${n} fixtures match their ios files`);
   },
 };
 
