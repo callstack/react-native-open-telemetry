@@ -1,7 +1,12 @@
-import type {HrTime, Tracer} from '@opentelemetry/api';
+import type {HrTime, Tracer, TracerOptions} from '@opentelemetry/api';
 
 // TestNative (ctx.native) arrives with Task 26.
-export type ScenarioCtx = {tracer: Tracer; at(us: number): HrTime};
+export type ScenarioCtx = {
+  tracer: Tracer;
+  /** Extra tracers, for scenarios that need their own scope (version, schemaUrl). */
+  getTracer(name: string, version?: string, options?: TracerOptions): Tracer;
+  at(us: number): HrTime;
+};
 export type Runner = 'jest' | 'e2e';
 export type Scenario = {
   name: string;

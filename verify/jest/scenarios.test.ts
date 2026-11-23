@@ -29,7 +29,7 @@ for (const s of allScenarios().filter(s => s.runners.includes('jest'))) {
     collector.begin(s.name, 'js');
     let actual;
     try {
-      await s.run({tracer: provider.getTracer('verify'), at});
+      await s.run({tracer: provider.getTracer('verify'), getTracer: (n, v, o) => provider.getTracer(n, v, o), at});
       await provider.forceFlush();
     } finally {
       actual = await collector.end();

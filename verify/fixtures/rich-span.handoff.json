@@ -1,0 +1,141 @@
+{
+  "config": {
+    "serviceName": "verify",
+    "serviceVersion": "0.0.0",
+    "resourceAttributes": [],
+    "exportUrl": "<collector>",
+    "exportHeaders": []
+  },
+  "spans": [
+    {
+      "context": {
+        "traceId": "0a000000000000000000000000000001",
+        "spanId": "0a00000000000001",
+        "traceFlags": 1
+      },
+      "name": "rich",
+      "kind": 0,
+      "start": [
+        1767225600,
+        0
+      ],
+      "end": [
+        1767225600,
+        100000
+      ],
+      "attributes": [
+        {
+          "key": "str",
+          "value": "zażółć 🚀"
+        },
+        {
+          "key": "int",
+          "value": 42
+        },
+        {
+          "key": "double",
+          "value": 1.5
+        },
+        {
+          "key": "bool",
+          "value": true
+        },
+        {
+          "key": "strs",
+          "value": [
+            "a",
+            "b"
+          ]
+        },
+        {
+          "key": "ints",
+          "value": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "key": "doubles",
+          "value": [
+            1.5,
+            2.5
+          ]
+        },
+        {
+          "key": "bools",
+          "value": [
+            true,
+            false
+          ]
+        }
+      ],
+      "events": [
+        {
+          "name": "first",
+          "time": [
+            1767225600,
+            10000
+          ],
+          "attributes": [
+            {
+              "key": "event.key",
+              "value": "e1"
+            },
+            {
+              "key": "event.n",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "name": "second",
+          "time": [
+            1767225600,
+            20000
+          ],
+          "attributes": [
+            {
+              "key": "event.ok",
+              "value": true
+            }
+          ]
+        }
+      ],
+      "links": [
+        {
+          "context": {
+            "traceId": "0f111111111111111111111111111111",
+            "spanId": "0f22222222222222",
+            "traceFlags": 1
+          },
+          "attributes": [
+            {
+              "key": "link.key",
+              "value": "link-value"
+            },
+            {
+              "key": "link.n",
+              "value": 7
+            }
+          ]
+        }
+      ],
+      "status": {
+        "code": 2,
+        "message": "boom"
+      },
+      "scope": {
+        "name": "verify.rich",
+        "version": "1.2.3",
+        "schemaUrl": "https://opentelemetry.io/schemas/1.40.0",
+        "attributes": [
+          {
+            "key": "scope.key",
+            "value": "scope-value"
+          }
+        ]
+      }
+    }
+  ]
+}
