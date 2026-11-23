@@ -88,3 +88,4 @@ android/generated
 # React Native Nitro Modules
 .superpowers/
 verify/artifacts/
+verify/e2e/.e2e/

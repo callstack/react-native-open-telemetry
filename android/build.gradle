@@ -1,84 +1,90 @@
-buildscript {
-  ext.getExtOrDefault = {name ->
-    return rootProject.ext.has(name) ? rootProject.ext.get(name) : project.properties['OpenTelemetry_' + name]
-  }
-
-  repositories {
-    google()
-    mavenCentral()
-  }
-
-  dependencies {
-    classpath "com.android.tools.build:gradle:8.7.2"
-    // noinspection DifferentKotlinGradleVersion
-    classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${getExtOrDefault('kotlinVersion')}"
-  }
+def reactNativeArchitectures() {
+  def value = rootProject.getProperties().get("reactNativeArchitectures")
+  return value ? value.split(",") : ["armeabi-v7a", "x86", "x86_64", "arm64-v8a"]
 }
-
 
 apply plugin: "com.android.library"
-apply plugin: "kotlin-android"
+apply plugin: "org.jetbrains.kotlin.android"
+apply from: "../nitrogen/generated/android/ReactNativeOpenTelemetry+autolinking.gradle"
+apply from: "./fix-prefab.gradle"
 
-apply plugin: "com.facebook.react"
+def getExtOrDefault(name) {
+  return rootProject.ext.has(name) ? rootProject.ext.get(name) : project.properties["ReactNativeOpenTelemetry_" + name]
+}
 
 def getExtOrIntegerDefault(name) {
-  return rootProject.ext.has(name) ? rootProject.ext.get(name) : (project.properties["OpenTelemetry_" + name]).toInteger()
+  return getExtOrDefault(name).toInteger()
 }
 
-def supportsNamespace() {
-  def parsed = com.android.Version.ANDROID_GRADLE_PLUGIN_VERSION.tokenize('.')
-  def major = parsed[0].toInteger()
-  def minor = parsed[1].toInteger()
-
-  // Namespace support was added in 7.3.0
-  return (major == 7 && minor >= 3) || major >= 8
-}
+// Test mode is a build flag, never API: -PotelTestMode=true (or otelTestMode=true in the app's gradle.properties).
+def otelTestMode = (findProperty("otelTestMode") ?: "false").toString() == "true"
 
 android {
-  if (supportsNamespace()) {
-    namespace "com.opentelemetry"
+  namespace "com.margelo.nitro.callstack.otel"
 
-    sourceSets {
-      main {
-        manifest.srcFile "src/main/AndroidManifestNew.xml"
-      }
-    }
-  }
-
+  ndkVersion getExtOrDefault("ndkVersion")
   compileSdkVersion getExtOrIntegerDefault("compileSdkVersion")
 
   defaultConfig {
     minSdkVersion getExtOrIntegerDefault("minSdkVersion")
     targetSdkVersion getExtOrIntegerDefault("targetSdkVersion")
+    buildConfigField "boolean", "OTEL_TEST_MODE", otelTestMode.toString()
+
+    externalNativeBuild {
+      cmake {
+        cppFlags "-frtti -fexceptions -Wall -Wextra -fstack-protector-all"
+        arguments "-DANDROID_STL=c++_shared", "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
+        abiFilters (*reactNativeArchitectures())
+        buildTypes {
+          debug { cppFlags "-O1 -g" }
+          release { cppFlags "-O2" }
+        }
+      }
+    }
+  }
+
+  externalNativeBuild {
+    cmake { path "CMakeLists.txt" }
+  }
+
+  packagingOptions {
+    excludes = [
+      "META-INF",
+      "META-INF/**",
+      "**/libc++_shared.so",
+      "**/libNitroModules.so",
+      "**/libfbjni.so",
+      "**/libjsi.so",
+      "**/libfolly_json.so",
+      "**/libfolly_runtime.so",
+      "**/libglog.so",
+      "**/libhermes.so",
+      "**/libhermes-executor-debug.so",
+      "**/libhermes_executor.so",
+      "**/libreactnative.so",
+      "**/libreactnativejni.so",
+      "**/libturbomodulejsijni.so",
+      "**/libreact_nativemodule_core.so",
+      "**/libjscexecutor.so"
+    ]
   }
 
   buildFeatures {
     buildConfig true
+    prefab true
   }
 
   buildTypes {
-    release {
-      minifyEnabled false
-    }
+    release { minifyEnabled false }
   }
 
-  lintOptions {
-    disable "GradleCompatible"
-  }
+  lintOptions { disable "GradleCompatible" }
 
   compileOptions {
-    sourceCompatibility JavaVersion.VERSION_1_8
-    targetCompatibility JavaVersion.VERSION_1_8
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
   }
-
-  sourceSets {
-    main {
-      java.srcDirs += [
-        "generated/java",
-        "generated/jni"
-      ]
-    }
-  }
+  kotlinOptions { jvmTarget = "17" }
 }
 
 repositories {
@@ -86,20 +92,18 @@ repositories {
   google()
 }
 
-def kotlin_version = getExtOrDefault("kotlinVersion")
-
 dependencies {
   implementation "com.facebook.react:react-android"
-  implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-  // TODO restrict to a specific version
-  api "io.opentelemetry:opentelemetry-api:latest.release"
-  api "io.opentelemetry:opentelemetry-sdk:latest.release"
-  api "io.opentelemetry:opentelemetry-exporter-logging:latest.release"
-  api "io.opentelemetry:opentelemetry-exporter-otlp:latest.release"
-}
+  implementation project(":react-native-nitro-modules")
 
-react {
-  jsRootDir = file("../src/")
-  libraryName = "OpenTelemetry"
-  codegenJavaPackageName = "com.opentelemetry"
+  implementation platform("io.opentelemetry:opentelemetry-bom:1.68.0")
+  implementation "io.opentelemetry:opentelemetry-sdk"
+  implementation "io.opentelemetry:opentelemetry-exporter-otlp"
+
+  // otel-java's OkHttp sender must use the OkHttp React Native ships, not pull the app up to OkHttp 5.
+  // `strictly` (unlike resolutionStrategy.force, which stays in this project) also binds the app's graph.
+  // ReactNativeOpenTelemetry_okhttpVersion mirrors react-native/gradle/libs.versions.toml (`okhttp`); bump with RN.
+  implementation("com.squareup.okhttp3:okhttp") {
+    version { strictly getExtOrDefault("okhttpVersion") }
+  }
 }
