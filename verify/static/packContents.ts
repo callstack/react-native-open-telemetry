@@ -1,4 +1,4 @@
-// Package.swift joins with Task 18, which creates it.
+// Package.swift joins with Task 18 and vite/ with Task 22, which create them.
 export const REQUIRED = ['package.json', 'lib/', 'src/', 'nitrogen/', 'metro/', 'android/', 'ios/', 'ReactNativeOpenTelemetry.podspec'];
 
 /** Returns the required paths missing from the `npm pack --dry-run --json` file list. */

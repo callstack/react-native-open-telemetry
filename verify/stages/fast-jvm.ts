@@ -11,7 +11,8 @@ const artifacts = path.join(root, 'verify', 'artifacts');
 // The collector must keep serving while Gradle runs, so no spawnSync (ctx.sh) here.
 const run = (cmd: string, args: string[], cwd: string, env: NodeJS.ProcessEnv) =>
   new Promise<void>((ok, fail) =>
-    spawn(cmd, args, {cwd, env, stdio: 'inherit'}).on('exit', c => (c === 0 ? ok() : fail(new Error(`${cmd} exited ${c}`)))),
+    spawn(cmd, args, {cwd, env, stdio: 'inherit'}).on('error', fail)
+      .on('exit', (c, sig) => (c === 0 ? ok() : fail(new Error(`${cmd} exited ${c ?? sig}`)))),
   );
 
 const stage: Stage = {
