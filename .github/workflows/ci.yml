@@ -143,7 +143,9 @@ jobs:
           force-avd-creation: false
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          script: bun verify --e2e e2e
+          script: |
+            adb shell settings put global hide_error_dialogs 1
+            bun verify --e2e e2e
       - uses: actions/upload-artifact@v4
         if: always() # e2e retries once; keep traces of retried and failed attempts
         with:
