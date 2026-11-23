@@ -13,7 +13,6 @@ import {pendingScenarios} from '../harness/compare';
 
 const CONFIG = {
   serviceName: 'verify',
-  serviceVersion: '0.0.0',
   resourceAttributes: [],
   exportUrl: '<collector>',
   exportHeaders: [],

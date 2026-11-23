@@ -12,6 +12,10 @@ cd example/ios && OTEL_TEST_MODE=1 pod install && OTEL_TEST_MODE=1 xcodebuild -w
 E2E_TARGET=android-bare bun verify --e2e e2e   # or ios-bare; omit E2E_TARGET for both
 ```
 
+`fast-jvm` replays every `verify/fixtures/<name>.handoff.json` through the Kotlin core (`android/core-jvm`, its own
+Gradle wrapper) into a collector on a free port and compares `<name>.android.otlp.json`. The JVM tests run otel-java's
+own OkHttp 5; devices run React Native's OkHttp 4.9.2.
+
 The fake collector listens on port 4318; the app reaches it at `10.0.2.2` (Android emulator) or `localhost` (iOS simulator).
 
 ## Device capability check (Task 7, 2026-11-23)
