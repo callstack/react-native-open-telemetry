@@ -20,7 +20,8 @@ class HybridOtel: HybridOtelSpec {
     let attrs = spans.reduce(0) { $0 + $1.attributes.count }
     let events = spans.reduce(0) { $0 + $1.events.count }
     let links = spans.reduce(0) { $0 + $1.links.count }
-    NSLog("%@", "RNOtel handOff spans=\(spans.count) attrs=\(attrs) events=\(events) links=\(links)")
+    // integer arguments only: a %@ string is redacted as <private> in the unified log on a runner without developer logging
+    NSLog("RNOtel handOff spans=%ld attrs=%ld events=%ld links=%ld", spans.count, attrs, events, links)
   }
 
   func flush(timeoutMs: Double) throws -> Promise<Void> {
