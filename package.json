@@ -31,7 +31,10 @@
     },
     "./metro": "./metro/index.js",
     "./vite": "./vite/index.ts",
-    "./setup": "./lib/module/setup.js",
+    "./setup": {
+      "types": "./lib/typescript/src/setup.d.ts",
+      "default": "./lib/module/setup.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
