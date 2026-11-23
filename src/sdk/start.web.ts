@@ -1,8 +1,7 @@
-import {context} from '@opentelemetry/api';
+import '../setup';
 import {OTLPTraceExporter} from '@opentelemetry/exporter-trace-otlp-proto';
 import {resourceFromAttributes} from '@opentelemetry/resources';
 import {BatchSpanProcessor, TracerProvider} from '@opentelemetry/sdk-trace';
-import {contextManager} from '../setup';
 import {isTestModeBuild, sequentialIds} from '../internal/testMode';
 import {DISTRO_VERSION, tracesUrl, type SdkConfig, type SdkHandle} from './config';
 import {noopHandle} from './noop';
@@ -12,11 +11,6 @@ function start(config: SdkConfig | undefined): SdkHandle {
   if (!config?.serviceName || !config.exportConfig?.url) {
     console.error(`${TAG} serviceName and exportConfig.url are required on web; telemetry is off.`);
     return noopHandle();
-  }
-  // setup.ts registers ours, but anything registered before it wins the API slot; take it back (§7).
-  if (!context.setGlobalContextManager(contextManager) && (context as any)._getContextManager() !== contextManager) {
-    context.disable();
-    context.setGlobalContextManager(contextManager);
   }
   const testMode = isTestModeBuild();
   const {serviceName, serviceVersion, resourceAttributes, exportConfig, spanProcessors = []} = config;

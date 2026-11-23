@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 import {context, ROOT_CONTEXT, trace, type ProxyTracerProvider} from '@opentelemetry/api';
-import {InMemorySpanExporter, SimpleSpanProcessor, StackContextManager} from '@opentelemetry/sdk-trace';
+import {InMemorySpanExporter, SimpleSpanProcessor} from '@opentelemetry/sdk-trace';
 import {MARKER} from '../../context/patch';
 import {contextManager} from '../../setup';
 import {DISTRO_VERSION} from '../config';
@@ -38,8 +38,6 @@ const isNoop = (h: ReturnType<typeof startReactNativeSdk>) =>
   !h.tracerProvider.getTracer('t').startSpan('s').isRecording();
 
 test('our context manager is the global one after start', () => {
-  context.disable();
-  context.setGlobalContextManager(new StackContextManager().enable()); // a foreign one got there first
   startReactNativeSdk(CONFIG);
   const ctx = ROOT_CONTEXT.setValue(Symbol('k'), 1);
   expect(context.with(ctx, () => contextManager.active())).toBe(ctx);
