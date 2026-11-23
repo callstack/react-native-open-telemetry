@@ -43,6 +43,12 @@ for (const f of readdirSync(dir).filter(f => f.endsWith('.ts')).sort()) {
 }
 stages.sort((a, b) => a.order - b.order);
 
+const unknown = only.filter(n => !stages.some(s => s.name === n));
+if (unknown.length) {
+  console.error(`unknown stage(s): ${unknown.join(', ')}; available: ${stages.map(s => s.name).join(', ')}`);
+  process.exit(1);
+}
+
 for (const s of stages) {
   if ((s.e2e && !ctx.e2e) || (only.length && !only.includes(s.name))) continue;
   console.log(`\n== ${s.name} ==`);

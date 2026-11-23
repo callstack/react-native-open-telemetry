@@ -12,6 +12,10 @@ on:
     types:
       - checks_requested
 
+permissions:
+  contents: read
+  actions: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -76,6 +80,10 @@ jobs:
           started=$(gh api repos/${{ github.repository }}/actions/runs/${{ github.run_id }} --jq .run_started_at)
           minutes=$(( ($(date +%s) - $(date -d "$started" +%s)) / 60 ))
           echo "CI duration: ${minutes} min (budget: ${BUDGET:-unset})"
+          if [ -n "$BUDGET" ] && ! [[ "$BUDGET" =~ ^[0-9]+$ ]]; then
+            echo "::error::PR_BUDGET_MINUTES must be a whole number, got '$BUDGET'"
+            exit 1
+          fi
           if [ -n "$BUDGET" ] && [ "$minutes" -gt "$BUDGET" ]; then
             echo "::error::CI took ${minutes} min, over the ${BUDGET} min budget"
             exit 1
