@@ -10,9 +10,11 @@ const stamped = new Map<{attributes?: Attributes}, Attributes>();
 export const scopeAttributes = (): Attributes => (degraded ? {[DEGRADED_ATTR]: true} : {});
 
 /** Called by the probe on failure; tracers stamped earlier get the flag too. */
-export function markDegraded(): void {
+export function markDegraded(): boolean {
+  if (degraded) return false;
   degraded = true;
   for (const [scope, extra] of stamped) scope.attributes = {...extra, ...scopeAttributes()};
+  return true;
 }
 
 /**
@@ -21,7 +23,8 @@ export function markDegraded(): void {
  */
 export function stampScope<T extends Tracer>(tracer: T, extra: Attributes = {}): T {
   const scope = (tracer as unknown as {instrumentationScope: {attributes?: Attributes}}).instrumentationScope;
-  stamped.set(scope, extra);
-  scope.attributes = {...extra, ...scopeAttributes()};
+  const merged = {...stamped.get(scope), ...extra};
+  stamped.set(scope, merged);
+  scope.attributes = {...merged, ...scopeAttributes()};
   return tracer;
 }

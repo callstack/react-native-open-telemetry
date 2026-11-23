@@ -18,12 +18,11 @@ const defaultStep = async (): Promise<Context> => {
 export async function probeAsyncContext(step: () => Promise<Context> = defaultStep): Promise<boolean> {
   const after = await context.with(context.active().setValue(KEY, true), step);
   const ok = after.getValue(KEY) === true;
-  if (!ok) {
+  if (!ok && markDegraded()) {
     console.error(
       `[react-native-open-telemetry] context did not survive \`await\`: native async/await was not downleveled, ` +
         `so spans after \`await\` will be roots (${DEGRADED_ATTR}=true). Use the Metro/Vite helper or transform async-to-generator.`,
     );
-    markDegraded();
   }
   return ok;
 }
