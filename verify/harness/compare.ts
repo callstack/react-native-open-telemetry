@@ -73,7 +73,7 @@ export function diffOtlp(expected: OtlpJson, actual: OtlpJson): Diff[] {
 
 const show = (v: unknown) => (v === undefined ? '(none)' : JSON.stringify(v));
 
-export function formatReport(scenario: string, platform: Platform, diffs: Diff[]): string {
+export function formatReport(scenario: string, platform: Platform, diffs: Diff[], expectedFile = rel('expected', scenario, `${platform}.otlp.json`)): string {
   const lines: string[] = [];
   let last: string | undefined | null = null;
   for (const d of diffs) {
@@ -84,7 +84,7 @@ export function formatReport(scenario: string, platform: Platform, diffs: Diff[]
     lines.push(`    ${d.path}  expected ${show(d.expected)}  got ${show(d.actual)}`);
   }
   lines.push(
-    `  expected: ${rel('expected', scenario, `${platform}.otlp.json`)}`,
+    `  expected: ${expectedFile}`,
     `  actual:   ${rel('artifacts', scenario, `${platform}.otlp.json`)}`,
     `  scenario: verify/scenarios/${scenario}.ts`,
   );
@@ -97,12 +97,12 @@ const write = (f: string, o: unknown) => {
 };
 
 export function compareToExpected(scenario: string, platform: Platform, actual: OtlpJson): {ok: boolean; report: string} {
-  const fail = (diffs: Diff[]) => {
+  const fail = (diffs: Diff[], expectedFile?: string) => {
     write(abs('artifacts', scenario, `${platform}.otlp.json`), actual);
-    return {ok: false, report: formatReport(scenario, platform, diffs)};
+    return {ok: false, report: formatReport(scenario, platform, diffs, expectedFile)};
   };
   const shape = compareShape(scenario, actual);
-  if (shape.length) return fail(shape);
+  if (shape.length) return fail(shape, rel('expected', scenario, 'shape.json'));
   const f = expectedPath(scenario, platform);
   if (process.env.VERIFY_UPDATE === '1') {
     write(f, actual);

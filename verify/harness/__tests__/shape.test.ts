@@ -41,3 +41,22 @@ test('shapeOf ignores ids and timestamps', () => {
     ],
   });
 });
+
+test('unresolved parent and link targets become (external)', () => {
+  const o = mk([span({name: 'a', parentSpanId: 'ee01', links: [{spanId: 'ee02'}]})]);
+  const [t] = shapeOf(o).traces;
+  expect(t![0]).toMatchObject({parent: '(external)', links: ['(external)']});
+});
+
+test('duplicate span names resolve parent and links by spanId', () => {
+  const o = mk([
+    span({spanId: '0a01', name: 'dup', startTimeUnixNano: '1'}),
+    span({spanId: '0a02', name: 'dup', startTimeUnixNano: '2', parentSpanId: '0a01'}),
+    span({spanId: '0a03', name: 'z', startTimeUnixNano: '3', parentSpanId: '0a02', links: [{spanId: '0a01'}]}),
+  ]);
+  const z = shapeOf(o).traces[0]!.find(s => s.name === 'z')!;
+  expect(z.parent).toBe('dup');
+  expect(z.links).toEqual(['dup']);
+  const dups = shapeOf(o).traces[0]!.filter(s => s.name === 'dup');
+  expect(dups.map(d => d.parent)).toEqual([null, 'dup']);
+});

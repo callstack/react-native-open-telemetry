@@ -24,6 +24,8 @@ const kindOf = (v: any = {}): string => {
   if ('bytesValue' in v) return 'bytes';
   return 'string';
 };
+// parent/link target not in this export: stable placeholder, never a platform-specific id
+const EXTERNAL = '(external)';
 const keys = (set: Set<string>) => [...set].sort();
 const cmp = (a: any, b: any) => (a < b ? -1 : a > b ? 1 : 0);
 
@@ -52,9 +54,9 @@ export function shapeOf(otlp: OtlpJson): Shape {
     t.push({
       name: s.name,
       kind: s.kind ?? 0,
-      parent: s.parentSpanId ? (name.get(s.parentSpanId) ?? s.parentSpanId) : null,
+      parent: s.parentSpanId ? (name.get(s.parentSpanId) ?? EXTERNAL) : null,
       status: s.status?.code ?? 0,
-      links: (s.links ?? []).map((l: any) => name.get(l.spanId) ?? l.spanId),
+      links: (s.links ?? []).map((l: any) => name.get(l.spanId) ?? EXTERNAL),
       attributes: Object.fromEntries(
         (s.attributes ?? []).map((a: any) => [a.key, kindOf(a.value)]),
       ),
