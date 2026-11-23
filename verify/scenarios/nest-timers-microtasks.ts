@@ -21,6 +21,8 @@ export default scenario(
       // scheduled from inside a callback: the context is carried twice
       await inCallback(cb => setTimeout(() => queueMicrotask(cb), 0), 'timeout.microtask', 40);
       root.end(at(50));
+      // a callback that runs after its parent ended is still its child (§6.2)
+      await inCallback(cb => setTimeout(cb, 0), 'after.end', 60);
     });
   },
   {pending: true}, // Task 10

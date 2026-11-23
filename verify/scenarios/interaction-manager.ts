@@ -1,6 +1,10 @@
 import {scenario} from '../harness/scenario';
 
-/** The span active when `InteractionManager.runAfterInteractions` is called parents the span started in its callback (Hermes). */
+/**
+ * The span active when `InteractionManager.runAfterInteractions` is called parents the span started in its callback (Hermes).
+ * Assumes no ROOT `runAfterInteractions` is already queued: InteractionManager is a shared queue (§6.2), so with an
+ * earlier enqueuer the callback would run in that enqueuer's context.
+ */
 export default scenario(
   'interaction-manager',
   async ({tracer, at}) => {

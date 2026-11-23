@@ -6,4 +6,4 @@ import {scenario} from '../harness/scenario';
  * JS starts `js.after_native` under `trace.wrapSpanContext(<that context>)`. Proof: one trace,
  * `js.after_native` has `native.work` as parent. Body lands with `ScenarioCtx.native`.
  */
-export default scenario('cross-native-to-js', async () => {}, {runners: ['e2e'], pending: true});
+export default scenario('cross-native-to-js', async () => {}, {runners: ['e2e'], targets: ['android', 'ios'], pending: true});

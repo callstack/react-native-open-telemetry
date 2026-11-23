@@ -7,11 +7,15 @@ export type ScenarioCtx = {
   getTracer(name: string, version?: string, options?: TracerOptions): Tracer;
   at(us: number): HrTime;
 };
-export type Runner = 'jest' | 'e2e';
+/** `jest-degraded`: the Jest project that keeps native `async` (Task 11). */
+export type Runner = 'jest' | 'jest-degraded' | 'e2e';
+export type Target = 'android' | 'ios' | 'web';
 export type Scenario = {
   name: string;
   run: (ctx: ScenarioCtx) => Promise<void>;
   runners: Runner[];
+  /** e2e targets it runs on. */
+  targets: Target[];
   pending: boolean;
 };
 
@@ -22,5 +26,11 @@ export const at = (us: number): HrTime => [BASE_S + Math.floor(us / 1e6), (us % 
 export const scenario = (
   name: string,
   run: Scenario['run'],
-  opts: {runners?: Runner[]; pending?: boolean} = {},
-): Scenario => ({name, run, runners: opts.runners ?? ['jest', 'e2e'], pending: !!opts.pending});
+  opts: {runners?: Runner[]; targets?: Target[]; pending?: boolean} = {},
+): Scenario => ({
+  name,
+  run,
+  runners: opts.runners ?? ['jest', 'e2e'],
+  targets: opts.targets ?? ['android', 'ios', 'web'],
+  pending: !!opts.pending,
+});

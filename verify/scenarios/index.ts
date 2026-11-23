@@ -20,6 +20,7 @@ import intervalNewRoot from './interval-new-root';
 import nativeInitFailure from './native-init-failure';
 import nestAfterAwait from './nest-after-await';
 import nestPromiseAllRace from './nest-promise-all-race';
+import nestRaf from './nest-raf';
 import nestTimersMicrotasks from './nest-timers-microtasks';
 import neverSettlingPromise from './never-settling-promise';
 import oddAttributes from './odd-attributes';
@@ -29,4 +30,4 @@ import rootNoLeak from './root-no-leak';
 import smokeDevice from './smoke-device';
 import smokeJs from './smoke-js';
 
-export const allScenarios = (): Scenario[] => [asyncGenerator, backgroundFlush, batchingSharedQueue, capturedThen, collectorDown, concurrentInterleaved, crossJsToNative, crossNativeToJs, degradedProbe, errorInCallback, eventEmitterListener, exportHeaders, fastRefreshIdempotent, flushAfterReload, handoffBasic, interactionManager, intervalNewRoot, nativeInitFailure, nestAfterAwait, nestPromiseAllRace, nestTimersMicrotasks, neverSettlingPromise, oddAttributes, perfBudget, richSpan, rootNoLeak, smokeDevice, smokeJs];
+export const allScenarios = (): Scenario[] => [asyncGenerator, backgroundFlush, batchingSharedQueue, capturedThen, collectorDown, concurrentInterleaved, crossJsToNative, crossNativeToJs, degradedProbe, errorInCallback, eventEmitterListener, exportHeaders, fastRefreshIdempotent, flushAfterReload, handoffBasic, interactionManager, intervalNewRoot, nativeInitFailure, nestAfterAwait, nestPromiseAllRace, nestRaf, nestTimersMicrotasks, neverSettlingPromise, oddAttributes, perfBudget, richSpan, rootNoLeak, smokeDevice, smokeJs];

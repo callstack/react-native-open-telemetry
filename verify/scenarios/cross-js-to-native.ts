@@ -6,4 +6,4 @@ import {scenario} from '../harness/scenario';
  * `native.work` with `contextFrom(traceparent)` as parent. Proof: one trace, `native.work` (a `0b…` id)
  * has `js.parent` as parent. Body lands with `ScenarioCtx.native`.
  */
-export default scenario('cross-js-to-native', async () => {}, {runners: ['e2e'], pending: true});
+export default scenario('cross-js-to-native', async () => {}, {runners: ['e2e'], targets: ['android', 'ios'], pending: true});

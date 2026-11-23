@@ -10,6 +10,7 @@ export default scenario(
     };
     await tracer.startActiveSpan('root', {startTime: at(0)}, async root => {
       await Promise.all([step('all.a', 10), step('all.b', 20)]);
+      // race.b takes as many ticks as race.a, so it ends before `after` and before the export
       await Promise.race([step('race.a', 30), step('race.b', 40)]);
       tracer.startSpan('after', {startTime: at(50)}).end(at(51));
       root.end(at(60));

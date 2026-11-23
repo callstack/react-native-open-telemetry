@@ -15,6 +15,7 @@ process.env.VERIFY_DIR = verifyDir;
 
 const {startCollector} = await import('../harness/collector');
 const {compareToExpected} = await import('../harness/compare');
+const {allScenarios} = await import('../scenarios');
 type Collector = Awaited<ReturnType<typeof startCollector>>;
 
 /** Must match COLLECTOR_PORT in example/src/ScenariosScreen.tsx. */
@@ -55,6 +56,9 @@ export async function expectScenario(
   target: string,
   {app, screen, collector}: {app: App; screen: Screen; collector: Collector},
 ) {
+  const s = allScenarios().find(x => x.name === name);
+  if (!s) throw new Error(`unknown scenario ${name}`);
+  test.skip(!s.targets.includes(platformOf(target)), `${name} does not run on ${platformOf(target)}`);
   await app.open();
   collector.begin(name, platformOf(target));
   let actual;

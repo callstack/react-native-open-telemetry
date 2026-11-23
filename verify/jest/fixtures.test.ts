@@ -9,6 +9,7 @@ import {sequentialIds} from '../../src/internal/testMode';
 import {NativeHandOffProcessor} from '../../src/handoff/NativeHandOffProcessor';
 import type {Otel, SeamSpan} from '../../src/native/Otel.nitro';
 import {allScenarios} from '../scenarios';
+import {pendingScenarios} from '../harness/compare';
 
 const NAMES = ['handoff-basic', 'rich-span', 'odd-attributes', 'nest-after-await'];
 const CONFIG = {
@@ -81,9 +82,10 @@ describe('NativeHandOffProcessor', () => {
 });
 
 for (const name of NAMES) {
-  const s = allScenarios().find(x => x.name === name)!;
+  const s = allScenarios().find(x => x.name === name);
+  if (!s) throw new Error('unknown fixture scenario ' + name);
   // a pending body is not its final version yet: keep the reviewed fixture until the owning task un-pends it
-  if (s.pending) {
+  if (s.pending || pendingScenarios.has(name)) {
     test.todo(`${name} fixture matches hand-off payloads`);
     continue;
   }

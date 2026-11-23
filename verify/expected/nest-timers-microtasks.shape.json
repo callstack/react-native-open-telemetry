@@ -2,6 +2,7 @@
   "resource": ["service.name"],
   "scope": [],
   "traces": [[
+    {"name":"after.end","kind":1,"parent":"root","status":0,"links":[],"attributes":{}},
     {"name":"immediate","kind":1,"parent":"root","status":0,"links":[],"attributes":{}},
     {"name":"microtask","kind":1,"parent":"root","status":0,"links":[],"attributes":{}},
     {"name":"root","kind":1,"parent":null,"status":0,"links":[],"attributes":{}},

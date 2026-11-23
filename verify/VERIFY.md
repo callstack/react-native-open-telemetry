@@ -42,13 +42,15 @@ Shapes use the JS runner's resource, `["service.name"]`. Native-first and device
 (`service.version`, and `telemetry.*` outside test mode): Tasks 24/25 (and 29 for `smoke-device`) revise those
 shape files with the author.
 
+e2e targets are android, ios and web unless the Runners column names them.
+
 | Scenario | Guarantee | Task | Runners | Status |
 | --- | --- | --- | --- | --- |
 | `smoke-js` | the JS pipeline exports a span | 7 | jest | passing |
 | `nest-after-await` | a span after `await` is a child of the span active before it | 10 | jest, e2e | pending |
-| `nest-timers-microtasks` | `setTimeout`/`setImmediate`/`queueMicrotask` callbacks keep their scheduling context | 10 | jest, e2e | pending |
+| `nest-timers-microtasks` | `setTimeout`/`setImmediate`/`queueMicrotask` callbacks keep their scheduling context, also after the parent ended | 10 | jest, e2e | pending |
 | `nest-promise-all-race` | `Promise.all`/`race` branches and the code after them keep the parent | 10 | jest, e2e | pending |
-| `concurrent-interleaved` | interleaved async jobs keep their own parents | 10 | jest, e2e | pending |
+| `concurrent-interleaved` | interleaved async jobs keep their own parents; work after the join is a root | 10 | jest, e2e | pending |
 | `root-no-leak` | after a span's work ends, later work (fast path included) starts new roots | 10 | jest, e2e | pending |
 | `captured-then` | exception: a `then` captured before the patch loses the parent | 10 | jest, e2e | pending |
 | `async-generator` | async generator bodies and `for await` keep the parent | 10 | jest, e2e | pending |
@@ -56,28 +58,30 @@ shape files with the author.
 | `never-settling-promise` | a never-settling promise does not leak its span into later work | 10 | jest, e2e | pending |
 | `interval-new-root` | exception: each `setInterval` tick is a new root | 10 | jest, e2e | pending |
 | `batching-shared-queue` | exception: a shared queue runs work as its first enqueuer (pinned wrong parent) | 10 | jest, e2e | pending |
-| `degraded-probe` | native `await` → degraded scope attribute, spans after `await` are roots | 11 | jest (degraded project) | pending |
+| `degraded-probe` | native `await` → degraded scope attribute, spans after `await` are roots | 11 | jest-degraded | pending |
 | `interaction-manager` | `runAfterInteractions` callback is a child of the caller's span | 13 | e2e | pending |
-| `event-emitter-listener` | a synchronous `DeviceEventEmitter` listener is a child of the emitter's span | 13 | e2e | pending |
+| `nest-raf` | a `requestAnimationFrame` callback keeps its scheduling context | 13 | e2e | pending |
+| `event-emitter-listener` | a synchronous `DeviceEventEmitter` listener is a child of the emitter's span | 13 | e2e (android, ios) | pending |
 | `handoff-basic` | a span crosses the seam intact | 8, 15, 18 | jest, e2e | passing (js) |
 | `rich-span` | every attribute type, events, links, status, scope survive the seam | 8, 15, 18 | jest, e2e | passing (js) |
 | `odd-attributes` | NaN, ±Infinity, -0, big ints, empty arrays survive the seam | 8, 15, 18 | jest, e2e | passing (js) |
-| `export-headers` | configured export headers are sent on every request | 16, 19 | jest, e2e | pending |
-| `cross-js-to-native` | a native span started from JS is a child of the JS span | 26 | e2e | pending |
-| `cross-native-to-js` | a JS span started under a native span's context is its child | 26 | e2e | pending |
+| `export-headers` | configured export headers are sent on every request | 16, 19 | e2e | pending |
+| `cross-js-to-native` | a native span started from JS is a child of the JS span | 26 | e2e (android, ios) | pending |
+| `cross-native-to-js` | a JS span started under a native span's context is its child | 26 | e2e (android, ios) | pending |
 | `collector-down` | app never blocks; spans arrive exactly once when the collector is back | 27 | e2e | pending |
-| `native-init-failure` | one error log, no-op SDK, nothing exported | 27 | e2e | pending |
-| `flush-after-reload` | `forceFlush()` resolves across a JS reload; spans arrive once | 27 | e2e | pending |
-| `background-flush` | spans are exported on background without `forceFlush()` | 27 | e2e | pending |
-| `fast-refresh-idempotent` | fast refresh does not stack the patch (`nest-after-await` output unchanged) | 27 | e2e | pending |
-| `smoke-device` | production pipeline (no test mode) exports `smoke` spans | 29 | e2e | pending |
-| `perf-budget` | hand-off p50 < 100 µs/span, patch ratio < 3× (`artifacts/perf.json`, no shape) | 29 | e2e (android-bare) | pending |
+| `native-init-failure` | one error log, no-op SDK, nothing exported | 27 | e2e (android, ios) | pending |
+| `flush-after-reload` | `forceFlush()` resolves across a JS reload; spans arrive once | 27 | e2e (android, ios) | pending |
+| `background-flush` | spans are exported on background without `forceFlush()` | 27 | e2e (android, ios) | pending |
+| `fast-refresh-idempotent` | fast refresh does not stack the patch: `then`/`setTimeout` keep their identity across refreshes | 27 | e2e | pending |
+| `smoke-device` | production pipeline (no test mode) exports `smoke` spans | 29 | e2e (android, ios) | pending |
+| `perf-budget` | hand-off p50 < 100 µs/span, patch ratio < 3× (`artifacts/perf.json`, no shape) | 29 | e2e (android) | pending |
 
 ### Adding a scenario
 
 1. `verify/scenarios/<guarantee-id>.ts`: `export default scenario('<guarantee-id>', async ({tracer, at}) => {…}, opts)`.
    Explicit `at(µs)` start/end times on every span; parents through `context.active()` (`startActiveSpan`), not
-   explicit parent contexts. `opts.runners` defaults to `['jest', 'e2e']`; `pending: true` until it passes.
+   explicit parent contexts. `opts.runners` defaults to `['jest', 'e2e']` (`'jest-degraded'` is the native-`async` project), `opts.targets` to
+   `['android', 'ios', 'web']` (the e2e harness skips other targets); `pending: true` until it passes.
 2. Hand-write `verify/expected/<guarantee-id>.shape.json` in exactly `shapeOf()`'s format (traces ordered by first
    span start, spans sorted by name, `kind` 1 = INTERNAL) and get it reviewed.
 3. `bun verify` regenerates `verify/scenarios/index.ts`. Un-pend, draft the exact files with `VERIFY_UPDATE=1 bun verify`
