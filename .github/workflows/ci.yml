@@ -42,7 +42,7 @@ jobs:
       - run: bun install --frozen-lockfile
         working-directory: example # static's bundle-size check bundles the example app
       - run: bun run prepare
-      - run: bun verify static fast-js
+      - run: bun verify # every non-e2e stage (R17); fast-swift skips off macOS
       - uses: actions/upload-artifact@v4
         if: always()
         with:

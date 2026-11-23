@@ -29,6 +29,10 @@ encoder (`SpanAdapter`) never writes: span `flags` (257), span `traceState`, lin
 scope `schemaUrl` on `ScopeSpans`. The core passes them all into `SpanData`; the exporter drops them. Accepted for v0
 (no encoder reimplementation); today's fixtures exercise span flags, link flags/traceState and the scope `schemaUrl`.
 
+**iOS `TRACEPARENT` (upstream caveat).** opentelemetry-swift reads a `TRACEPARENT` environment variable at provider
+construction and makes it the parent of every root span, even with `setNoParent()`. Apps only see it when launched with
+it (Xcode scheme, `SIMCTL_CHILD_TRACEPARENT`); the verify stages unset it for native runs.
+
 The fake collector listens on port 4318; the app reaches it at `10.0.2.2` (Android emulator) or `localhost` (iOS simulator).
 
 ## Device capability check (Task 7, 2026-11-23)

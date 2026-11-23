@@ -26,7 +26,8 @@ export async function replayFixtures(platform: Platform, cmd: string, args: stri
   for (const n of names) fs.rmSync(path.join(artifacts, `${n}.${platform}.otlp.json`), {force: true});
   const collector = await startCollector({port: 0});
   try {
-    await run(cmd, args, cwd, {...process.env, VERIFY_COLLECTOR: collector.url});
+    // TRACEPARENT unset: opentelemetry-swift adopts it as the parent of every root span (VERIFY.md).
+    await run(cmd, args, cwd, {...process.env, TRACEPARENT: undefined, VERIFY_COLLECTOR: collector.url});
   } finally {
     await collector.close();
   }
