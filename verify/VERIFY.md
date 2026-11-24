@@ -258,6 +258,17 @@ The T3 host process has no `JAVA_HOME`, so `avdmanager list avd` fails. The emul
 (`@e2e-dev/mobile`, agent-device 0.21.39) drives it fine. Reload / fast refresh / background on Android still need a
 check before Task 27; fix the T3 host's Java (or run the check through an e2e test) and fill in the column. Task 27 filled it in through e2e tests.
 
+## OTLP compliance (Task 30)
+
+CI job `compliance` (needs every e2e job) downloads their `verify-artifacts-e2e-*`, runs the pinned official
+`otel/opentelemetry-collector:0.165.0` with `verify/compliance/collector.yaml` (OTLP/HTTP in, `debug` exporter,
+`verbosity: detailed`) and runs `bun verify/compliance/replay.ts --url http://localhost:4318 --dirs <dir>...`. It POSTs every
+`raw/*/<n>.pb` as `application/x-protobuf`, every raw `.json` and every `verify/expected/*.otlp.json` as `application/json`;
+a non-2xx or a `\terror\t` collector log line fails the job. Needs docker, so it is not in `bun verify`.
+X9: `JSON_EXCEPTIONS` in `replay.ts` names the `odd-attributes.*.otlp.json` files (NaN/Infinity `doubleValue` strings) whose
+JSON rejection is only warned about; the protobuf raw requests still prove the value. Delete the list once CI shows the
+Collector accepts them.
+
 ## Scenarios
 
 One file per guarantee in `verify/scenarios/`, named after it, with a hand-written `verify/expected/<name>.shape.json`
