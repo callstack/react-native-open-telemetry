@@ -260,7 +260,9 @@ on 0.79, CocoaPods' own "Copy generated compatibility header" phase writes the p
 instead). Dropping `:output_files` locally got past it. (2) RN 0.79's `fmt` pod: `call to consteval function
 'fmt::basic_format_string…' is not a constant expression` (the newer Clang). Either fix both for 0.79 users (podspec;
 an fmt workaround in the Podfile) or raise the peer minimum. Until then `rn-0.79-ios` is `experimental`
-(`continue-on-error`, does not block `nightly`).
+(`continue-on-error`, does not block `nightly`). (1) is fixed (abcaff0, no `:output_files`); (2) stands. The README's
+Requirements say so: iOS is verified on Xcode 27 only (16.4 fails on the Swift packages' tools versions, 26 is
+untested), with an RN that builds on it (verified: 0.88.1); the peer range stays `>=0.79` until the author decides.
 
 **Verified only after merge to `main`.** `schedule` and `workflow_dispatch` run workflow files from the default branch
 only (R28). Before merge the file was checked with `actionlint` and one PR run through a temporary `pull_request`
