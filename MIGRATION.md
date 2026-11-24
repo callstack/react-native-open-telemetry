@@ -20,8 +20,11 @@ had. The version stays in 0.x (0.2.0 → 0.3.0), but expect breaking changes.
 - iOS: add `pod 'ReactNativeOpenTelemetryCore', :path => '../node_modules/react-native-open-telemetry'` to the
   Podfile. On Expo, add the `"react-native-open-telemetry"` config plugin instead. See the [README](README.md#install).
 - Android: minSdk 26.
-- Metro: wrap the merged config with `withOtel` from `react-native-open-telemetry/metro`. Vite (7 and older):
-  `withOtel` from `react-native-open-telemetry/vite`. Without it, context is lost after `await`.
+- Metro: wrap the merged config with `withOtel` from `react-native-open-telemetry/metro`. It runs the context patch
+  before any app module. Without it, the patch installs at the package import, and only code that runs before that
+  import loses parents.
+- Vite (7 and older): `withOtel` from `react-native-open-telemetry/vite`. It also compiles `async` down. Without it,
+  context is lost after a native `await`.
 
 ## Init
 
@@ -46,7 +49,7 @@ const tracer = trace.getTracer('app');
 | 0.2 option | v0 |
 | --- | --- |
 | `name` / `version` | `serviceName` / `serviceVersion` |
-| `environment` | `resourceAttributes: {'deployment.environment.name': …}`. 0.2 Android wrote it as `environment` |
+| `environment` | `resourceAttributes: {'deployment.environment.name': …}`. 0.2 JS defaulted it to `process.env.NODE_ENV`; v0 sets no default, so pass it yourself. 0.2 Android wrote it as `environment` (default `development`) |
 | `url` | `exportConfig.url` (JS) or `export { url }` (native). It is the OTLP **HTTP** base URL (usually port 4318); `/v1/traces` is appended unless already there. 0.2 Android exported gRPC (4317); v0 sends OTLP/HTTP protobuf everywhere |
 | `native` | Gone. Init natively with `RNOtel.start` instead. JS then attaches to it |
 | return value (the `@opentelemetry/api` module) | `{tracerProvider, forceFlush, shutdown}`. Import `@opentelemetry/api` yourself |
@@ -69,7 +72,9 @@ RNOtel.start(this) {
 }
 ```
 
-v0 does not set `GlobalOpenTelemetry`. For native spans, use `RNOtel.tracer(name)`.
+v0 does not set `GlobalOpenTelemetry`. For native spans, use `RNOtel.tracer(name)`. 0.2's Android `debug` (on by
+default, through otel-java's logging exporters) is gone, and v0 has no native console exporter. Use the JS console
+processor below for JS spans, or point the export at a local Collector with the `debug` exporter.
 
 ## Interim replacements
 

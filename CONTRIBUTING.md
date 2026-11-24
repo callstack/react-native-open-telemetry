@@ -77,9 +77,34 @@ We follow the [conventional commits specification](https://www.conventionalcommi
 
 We use [TypeScript](https://www.typescriptlang.org/) for type checking and [OXLint](https://oxc.rs/docs/guide/usage/linter.html) for linting and formatting the code.
 
-### Publishing to npm 🚧
+### Publishing to npm
 
-We use [changesets](https://github.com/changesets/changesets) for managing versions, though this is a manual process for now in the experimental phase.
+We use [changesets](https://github.com/changesets/changesets), automated by `.github/workflows/release.yml`. Never run
+`changeset publish` or `npm publish` locally.
+
+1. Add a changeset (`bunx changeset`) in your PR.
+2. When CI is green on a `main` push, `publish-next` re-checks that CI result through the API
+   (`scripts/release-gate.js`). It then opens or updates the "chore: version packages" PR.
+3. After that PR is merged and CI is green on the merge, it publishes with `npm publish --tag next` and pushes the
+   `v<version>` tag. It creates no GitHub Release.
+4. To make a version `latest`:
+   - Run Nightly on its tag: Actions → Nightly → Run workflow, "Use workflow from" `v<version>`.
+   - Then run Release from `main` with `promote=<version>`.
+   - It refuses a commit without a green nightly run, and a version lower than the current `latest`.
+
+Setup and caveats:
+
+- **`npm` environment.** Create an environment named `npm` (Settings → Environments). Store `NPM_TOKEN` there as an
+  environment secret. Use a granular access token limited to publishing this package. Both publishing jobs run in this
+  environment, so required reviewers on it gate them too.
+- **Allow the version PR.** Enable Settings → Actions → General → "Allow GitHub Actions to create and approve pull
+  requests". Without it, the version PR cannot be opened.
+- **The version PR gets no CI.** Events from `GITHUB_TOKEN` don't trigger workflows, so CI does not run on the
+  version PR. To get CI on it:
+  - close and reopen the PR, or push an empty commit to its branch yourself;
+  - or give the action a GitHub App or fine-grained PAT token in place of `GITHUB_TOKEN`.
+
+  The merge to `main` runs CI either way, and `publish-next` publishes only after that run is green.
 
 ### Scripts
 

@@ -5,9 +5,12 @@ name: Release
 # - publish-next: after CI completes on a `main` push, and only if that commit's CI is green. Changesets opens the
 #   "version packages" PR while changesets are pending; once it is merged (and CI is green on the merge), it runs
 #   `changeset publish --tag next` (npm publish --tag next). Nothing ever publishes to `latest` directly.
-# - promote (manual): moves a published version from `next` to `latest`, only if its release commit (tag v<version>)
-#   has a green `nightly` status (scheduled.yml's mark-nightly). Run the nightly on that commit first if needed:
+# - promote (manual, from `main`): moves a published version from `next` to `latest`, only if its release commit
+#   (tag v<version>) has a green `nightly` status from a successful scheduled.yml run (mark-nightly), and the version
+#   is not lower than the current `latest`. Run the nightly on that commit first if needed:
 #   Actions -> Nightly -> Run workflow -> "Use workflow from" tag v<version>.
+# Both publishing jobs run in the `npm` environment, which holds NPM_TOKEN (a granular, publish-only token). Setup and
+# caveats (the version PR gets no CI): CONTRIBUTING.md "Publishing to npm".
 # Real publishing is first verified after merge to `main` (R28); until then only the dry run below has run.
 on:
   workflow_run:
@@ -32,8 +35,9 @@ on:
 permissions:
   contents: read
 
+# per event: a dry run or a promote never queues behind or replaces a pending publish-next
 concurrency:
-  group: release
+  group: release-${{ github.event_name }}
   cancel-in-progress: false
 
 env:
@@ -56,6 +60,8 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # all branches: changeset status compares against origin/main
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -72,7 +78,7 @@ jobs:
           if node scripts/release-gate.js nightly "$KNOWN_RED_SHA"; then echo "::error::nightly gate passed"; exit 1; fi
       - run: bun install --frozen-lockfile
       - run: bun run prepare
-      - run: bunx changeset status --verbose
+      - run: bunx changeset status --verbose --since=origin/main
       - name: Version (what the version PR would contain)
         run: bun run version && git status --short && git diff -- package.json src/sdk/config.ts ios/RNOtel/RNOtel.swift
       # `changeset publish` has no dry-run flag, so the dry run packs exactly what it would publish, with its dist-tag
@@ -84,6 +90,7 @@ jobs:
       github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    environment: npm
     permissions:
       contents: write # the version PR branch and the v<version> tag
       pull-requests: write # the version PR
@@ -112,18 +119,23 @@ jobs:
           publish: bun run release
           title: 'chore: version packages'
           commit: 'chore: version packages'
+          createGithubReleases: false # `latest` is promote's call, not the publish's
         env:
           GITHUB_TOKEN: ${{ github.token }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: 'true'
 
   promote:
-    if: github.event_name == 'workflow_dispatch' && inputs.promote != '' && !inputs.dry_run
+    if: >-
+      github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' &&
+      inputs.promote != '' && !inputs.dry_run
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    environment: npm
     permissions:
       contents: read
-      statuses: read # the nightly gate
+      statuses: read # the nightly gate: the status
+      actions: read # the nightly gate: the scheduled.yml run it links
     env:
       VERSION: ${{ inputs.promote }}
       GH_TOKEN: ${{ github.token }}
@@ -137,10 +149,15 @@ jobs:
           registry-url: https://registry.npmjs.org
       - name: Resolve the release commit
         run: |
-          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || { echo "::error::not a version: $VERSION"; exit 1; }
+          # x.y.z only: a prerelease never becomes `latest`, and sort -V orders plain versions correctly
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::not a release version: $VERSION"; exit 1; }
           sha=$(git rev-list -n 1 "v$VERSION") # fails the step when the tag is missing
           echo "SHA=$sha" >> "$GITHUB_ENV"
           test "$(npm view "$PACKAGE@$VERSION" version)" = "$VERSION"
+          latest=$(npm view "$PACKAGE" dist-tags.latest)
+          if [ "$(printf '%s\n' "$latest" "$VERSION" | sort -V | tail -n 1)" != "$VERSION" ]; then
+            echo "::error::$VERSION is lower than latest $latest"; exit 1
+          fi
       - run: node scripts/release-gate.js nightly "$SHA"
       - run: npm dist-tag add "$PACKAGE@$VERSION" latest
         env:
