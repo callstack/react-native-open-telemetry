@@ -13,7 +13,10 @@ test('background-flush', {platforms: MOBILE}, async ({app, screen, collector, de
       await device.home();
       if (!(await until(() => collector.received() > 0, 15_000))) throw new Error('nothing exported within 15 s of going to background');
       // back in the foreground the app answers a tap at once: the background flush left the main thread free
-      await device.openApp(bundleIdOf(target)); // foreground only (app.open() relaunches)
+      // foreground only (app.open() relaunches). A CI simulator's `simctl launch` can outlast agent-device's 15 s
+      // xcrun timeout; the flush runs off the main thread (RNOtel.swift), so one retry, then the 2 s tap still proves it.
+      const open = () => device.openApp(bundleIdOf(target));
+      await open().catch(open);
       await tapFlush(screen, 1, 2_000);
     },
   });

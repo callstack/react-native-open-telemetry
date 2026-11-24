@@ -162,7 +162,8 @@ export async function clearDeviceLog(platform: 'android' | 'ios', deviceId: stri
     iosStreams.set(deviceId, state);
     const child = spawn(
       'xcrun',
-      ['simctl', 'spawn', deviceId, 'log', 'stream', '--style', 'compact', '--level', 'info',
+      // --timeout: the stream ends on its own even when the worker dies without an 'exit' event (a killed run)
+      ['simctl', 'spawn', deviceId, 'log', 'stream', '--timeout', '3m', '--style', 'compact', '--level', 'info',
         '--predicate', 'process == "OpenTelemetryExample" AND (eventMessage CONTAINS "RNOtel" OR eventMessage CONTAINS "[react-native-open-telemetry]")'],
       {stdio: ['ignore', 'pipe', 'ignore']},
     );
