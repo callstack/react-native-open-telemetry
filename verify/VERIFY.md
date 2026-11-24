@@ -40,7 +40,7 @@ it (Xcode scheme, `SIMCTL_CHILD_TRACEPARENT`); the verify stages unset it for na
 `verify/e2e/scenarios.e2e.ts` runs one test per scenario with runner `e2e`, not `pending`, on each target it lists,
 except the scenarios with their own e2e file. Each test cold-starts the app (R5). e2e is compare-only;
 `VERIFY_E2E_DRAFT=1` writes a **missing** `<name>.js.otlp.json` from the device run and still fails the test
-("drafted …, review it"); existing files are never overwritten. Until Tasks 24/25 device runs compare to the `js` files.
+("drafted …, review it"); existing files are never overwritten. Draft runs have no retries, so a drafting run always ends red. Until Tasks 24/25 device runs compare to the `js` files.
 
 **`performance.timeOrigin` on Hermes (X17, Task 13).** Defined on both platforms (RN 0.88.1 release, Hermes),
 checked with a one-off `console.log` of `timeOrigin`, `performance.now()` and `Date.now()` at app start:
