@@ -73,6 +73,8 @@ jobs:
           include-hidden-files: true # verify/e2e/.e2e is a dot dir
 
   # Release builds with the JS bundle embedded (no Metro), test mode on.
+  # Every Task 27 failure scenario runs here except fast-refresh-idempotent: it needs dev builds + Metro, so it is
+  # local only (verify/VERIFY.md), no per-PR jobs; a nightly can add it.
   # Native outputs are cached on native inputs only, so a JS-only change re-bundles but reuses the native build.
   e2e-android-bare:
     runs-on: ubuntu-latest

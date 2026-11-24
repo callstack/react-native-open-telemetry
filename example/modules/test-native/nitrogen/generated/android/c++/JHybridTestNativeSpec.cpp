@@ -60,5 +60,9 @@ namespace margelo::nitro::callstack::testnative {
     }());
     return __result->toStdString();
   }
+  void JHybridTestNativeSpec::reload() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void()>("reload");
+    method(_javaPart);
+  }
 
 } // namespace margelo::nitro::callstack::testnative

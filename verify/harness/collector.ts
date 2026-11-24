@@ -10,6 +10,8 @@ export type Collector = {
   begin(scenario: string, platform: string): void;
   end(): Promise<OtlpJson>;
   refuse(status: number, count: number): void;
+  /** Export requests accepted since `begin`. */
+  received(): number;
   close(): Promise<void>;
 };
 
@@ -116,6 +118,7 @@ export async function startCollector(
     refuse(status, count) {
       refusal = {status, count};
     },
+    received: () => cur?.n ?? 0,
     close: () =>
       new Promise<void>(r => {
         server.closeAllConnections();

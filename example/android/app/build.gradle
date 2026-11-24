@@ -84,6 +84,8 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        // test mode is a build flag (-PotelTestMode=true); MainApplication reads test-only overrides only then
+        buildConfigField "boolean", "OTEL_TEST_MODE", ((findProperty("otelTestMode") ?: "false").toString() == "true").toString()
     }
     signingConfigs {
         debug {

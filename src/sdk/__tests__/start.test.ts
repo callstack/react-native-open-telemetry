@@ -18,7 +18,7 @@ function fakeOtel({initialized = false, testMode = false, error}: {initialized?:
   const otel = {
     initialize(cfg?: SeamConfig) {
       calls.push(cfg);
-      if (error) return {alreadyInitialized: false, testMode, error};
+      if (error) return {alreadyInitialized: initialized, testMode, error};
       if (initialized) return {alreadyInitialized: true, testMode};
       if (!cfg) return {alreadyInitialized: false, testMode, error: 'no config'};
       initialized = true;
@@ -98,6 +98,13 @@ test('init error returns a no-op handle and logs once', () => {
   const h = startReactNativeSdk(CONFIG);
   expect(err).toHaveBeenCalledTimes(1);
   expect(String(err.mock.calls[0])).toMatch(/invalid exportUrl/);
+  expect(isNoop(h)).toBe(true);
+});
+
+test('a failed native-first init (sticky, R16) was reported by native: no second report', () => {
+  fakeOtel({initialized: true, error: 'invalid exportUrl'});
+  const h = startReactNativeSdk();
+  expect(err).not.toHaveBeenCalled();
   expect(isNoop(h)).toBe(true);
 });
 

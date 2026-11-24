@@ -69,6 +69,50 @@ an argument) can be off by that skew on iOS.
 
 The fake collector listens on port 4318; the app reaches it at `10.0.2.2` (Android emulator) or `localhost` (iOS simulator).
 
+## Failure scenarios (Task 27)
+
+Each has its own e2e file (R10); the ScenariosScreen does not `forceFlush()` after `collector-down`,
+`flush-after-reload` and `background-flush`, so the test decides what exports. Test-mode-only screen controls:
+`flush` (a JS `forceFlush()`, shows `flush-done-<n>`), `reload` (`TestNative.reload()`) and `patch-identity`.
+
+- **Test mode has no timed export.** Test-mode native cores set the batch processor's schedule delay to 120 s
+  (default 5 s), so within a device test only a flush or the background hook sends anything. Without it,
+  `background-flush` and `flush-after-reload` would pass on the timer alone.
+- `collector-down`: `refuse(503, 3)` after `begin`, `scenario-done` within 2 s, then three `flush` taps (each
+  resolves while the collector refuses); the span arrives once. Android: otel-java retries a 503 inside the export.
+  **iOS (X6):** opentelemetry-swift 2.6's `OtlpHttpTraceExporter` does not retry; with its default
+  `requeueOnFailure: true` it keeps a failed batch in memory and resends it on the next `export` or `flush` (our core
+  flush calls both). So on iOS the span arrives on the first flush after the collector is back, not by itself; its
+  batch processor never exports an empty queue. No exception needed, no hand-rolled retry.
+- `native-init-failure`: the example's native init gets `exportUrl = "not a url"`, in test-mode builds only (R26).
+  iOS: launch argument `--otel-export-url=not a url` (AppDelegate, `#if OTEL_TEST_MODE`; the Podfile adds the
+  condition to the app target). Android: `Application.onCreate` cannot see launch arguments (they reach the
+  Activity), so the test writes `/sdcard/Android/data/opentelemetry.example/files/otel-export-url` (mode 644, removed
+  afterwards) and `MainApplication` reads it. Asserted: exactly one log line with `telemetry is off` (native `RNOtel`
+  plus JS `[react-native-open-telemetry]` lines), `scenario-done` (the no-op `forceFlush()` resolved), and the empty
+  expected file. JS no longer repeats a native-first failure that native already reported (`alreadyInitialized`).
+- `flush-after-reload`: `reload`, then `flush` must resolve within 5 s, the span arrives once.
+  **Step 0:** `DevSettings.reload()` is a no-op in release builds (JS side, `__DEV__` only), on both platforms. The
+  example's TestNative `reload()` calls `ReactHost.reload` / `RCTTriggerReloadCommandListeners`, the native reload
+  that OTA updaters use, so this runs on the release builds, per PR, with no extra build.
+- `background-flush`: `device.home()` right after `scenario-done`; something must arrive within 15 s. Android: no
+  `am_anr` for the app in the events log. Checked: without `home()` nothing arrives within 15 s on either platform.
+- `fast-refresh-idempotent` (**local only**: dev builds + Metro, not in CI; nightly can add it, Task 31): each of two
+  edits of `lib/module/setup.js` appends `globalThis.__otelRefreshes += 1`; Metro hot-updates it, it re-runs
+  `installContextPatch`, and `patch-identity` must read `same refreshes=<n>` (`then`/`setTimeout` are still the
+  functions first seen; a full reload would reset the count). Then `nest-after-await` must match its own expected
+  file. Run it:
+
+  ```sh
+  cd example/android && OTEL_TEST_MODE=1 ./gradlew :app:assembleDebug -PotelTestMode=true
+  cd example/ios && OTEL_TEST_MODE=1 xcodebuild -workspace OpenTelemetryExample.xcworkspace -scheme OpenTelemetryExample \
+    -configuration Debug -sdk iphonesimulator -derivedDataPath build build
+  cd example && OTEL_TEST_MODE=1 bunx react-native start   # keep running; Android also: adb reverse tcp:8081 tcp:8081
+  E2E_DEV=1 bunx e2e run --config verify/e2e/e2e.config.ts --target android-dev,ios-dev fast-refresh-idempotent
+  ```
+
+  If watchman reports recrawls, restart Metro: a dead watch never delivers the edit.
+
 ## Android cold start with `RNOtel.start` (Task 24, 2026-11-24)
 
 `adb shell am start -W -n opentelemetry.example/.MainActivity` after `am force-stop`, 6 launches each, Pixel_9
@@ -90,16 +134,16 @@ iOS: iPhone 18 Pro simulator, iOS 27.0, Xcode 27.1, agent-device 0.21.36 (T3 dev
 
 | Capability | iOS simulator | Android emulator (Pixel_9) |
 | --- | --- | --- |
-| JS reload | ✓ `agent-device metro reload` (Metro re-bundled; screen state reset) | not checked: blocked, see below |
-| Fast refresh (dev build) | ✓ editing `ScenariosScreen.tsx` text showed on device with React state kept | not checked |
-| Background and back | ✓ `agent-device home`, then `open opentelemetry.example`: UIKit logged the background task end and `UIApplicationWillEnterForegroundNotification`; state kept. `appstate` still says `runningForeground` after `home` (known iOS quirk, documented by e2e), so check lifecycle in the log, not `appstate` | not checked |
+| JS reload | ✓ `agent-device metro reload` (Metro re-bundled; screen state reset). Release: native reload via TestNative (Task 27) | ✓ release: native reload via TestNative, e2e `flush-after-reload` (Task 27). `DevSettings.reload()` is a no-op in release |
+| Fast refresh (dev build) | ✓ editing `ScenariosScreen.tsx` text showed on device with React state kept | ✓ e2e `fast-refresh-idempotent` on `android-dev` (Task 27) |
+| Background and back | ✓ `agent-device home`, then `open opentelemetry.example`: UIKit logged the background task end and `UIApplicationWillEnterForegroundNotification`; state kept. `appstate` still says `runningForeground` after `home` (known iOS quirk, documented by e2e), so check lifecycle in the log, not `appstate` | ✓ `device.home()` in e2e `background-flush` (Task 27) |
 | Read logs | ✓ `agent-device logs start/stop` captures the app's unified log, `NSLog` lines included (`RNOtel handOff …`). The e2e harness reads with `xcrun simctl spawn <udid> log show --predicate 'process == "OpenTelemetryExample" …'` | ✓ via the e2e harness: `adb logcat -d -s RNOtel:I` (tracer-bullet test green; the test was retired in Task 24, R14) |
 
 **Blocker (Android, interactive only):** the T3 device panel could not open `Pixel_9`:
 `Failed to allocate an emulator port for Pixel_9 … avdmanager: … Unable to locate a Java Runtime.`
 The T3 host process has no `JAVA_HOME`, so `avdmanager list avd` fails. The emulator itself boots and the e2e runner
 (`@e2e-dev/mobile`, agent-device 0.21.39) drives it fine. Reload / fast refresh / background on Android still need a
-check before Task 27; fix the T3 host's Java (or run the check through an e2e test) and fill in the column.
+check before Task 27; fix the T3 host's Java (or run the check through an e2e test) and fill in the column. Task 27 filled it in through e2e tests.
 
 ## Scenarios
 
@@ -137,11 +181,11 @@ e2e targets are android, ios and web unless the Runners column names them.
 | `export-headers` | configured export headers are sent on every request | 16, 19, 24, 25 | jest, e2e (android, ios; web with 23) | passing |
 | `cross-js-to-native` | a native span started from JS is a child of the JS span | 26 | e2e (android, ios) | passing |
 | `cross-native-to-js` | a JS span started under a native span's context is its child | 26 | e2e (android, ios) | passing |
-| `collector-down` | app never blocks; spans arrive exactly once when the collector is back | 27 | e2e | pending |
-| `native-init-failure` | one error log, no-op SDK, nothing exported | 27 | e2e (android, ios) | pending |
-| `flush-after-reload` | `forceFlush()` resolves across a JS reload; spans arrive once | 27 | e2e (android, ios) | pending |
-| `background-flush` | spans are exported on background without `forceFlush()` | 27 | e2e (android, ios) | pending |
-| `fast-refresh-idempotent` | fast refresh does not stack the patch: `then`/`setTimeout` keep their identity across refreshes | 27 | e2e | pending |
+| `collector-down` | app never blocks; spans arrive exactly once when the collector is back | 27 | e2e (android, ios; web with 23) | passing |
+| `native-init-failure` | one error log, no-op SDK, nothing exported | 27 | e2e (android, ios) | passing |
+| `flush-after-reload` | `forceFlush()` resolves across a JS reload; spans arrive once | 27 | e2e (android, ios) | passing |
+| `background-flush` | spans are exported on background without `forceFlush()` | 27 | e2e (android, ios) | passing |
+| `fast-refresh-idempotent` | fast refresh does not stack the patch: `then`/`setTimeout` keep their identity across refreshes | 27 | e2e (android-dev, ios-dev; local only) | passing (local only) |
 | `smoke-device` | production pipeline (no test mode) exports `smoke` spans | 29 | e2e (android, ios) | pending |
 | `perf-budget` | hand-off p50 < 100 µs/span, patch ratio < 3× (`artifacts/perf.json`, no shape) | 29 | e2e (android) | pending |
 

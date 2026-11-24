@@ -50,22 +50,38 @@ export const test = base.extend<{target: string}, {collector: Collector; install
   },
 });
 
+/** Steps the failure scenarios (Task 27) add around the tap-and-compare. */
+export type ScenarioSteps = {
+  /** Replaces the cold start, e.g. to relaunch with launch arguments. */
+  launch?: () => Promise<void>;
+  /** After `collector.begin` (which clears refusals, F15). */
+  afterBegin?: () => void;
+  /** How long `scenario-done` may take after the tap. */
+  doneTimeout?: number;
+  /** After `scenario-done`, before the collector's output is read. */
+  afterDone?: () => Promise<void>;
+};
+
 /** Taps `scenario-<name>`, waits for `scenario-done`, compares what the collector got. */
 export async function expectScenario(
   name: string,
   target: string,
   {app, screen, collector}: {app: App; screen: Screen; collector: Collector},
+  steps: ScenarioSteps = {},
 ) {
   const s = allScenarios().find(x => x.name === name);
   if (!s) throw new Error(`unknown scenario ${name}`);
   test.skip(!s.targets.includes(platformOf(target)), `${name} does not run on ${platformOf(target)}`);
-  await app.restart(); // cold start per scenario (R5): no SDK state or ID counters carried over
+  // cold start per scenario (R5): no SDK state or ID counters carried over
+  await (steps.launch ? steps.launch() : app.restart());
 
   collector.begin(name, platformOf(target));
+  steps.afterBegin?.();
   let actual;
   try {
     await screen.getByTestId(`scenario-${name}`).tap();
-    await expect(screen.getByTestId('scenario-done')).toBeVisible({timeout: 30_000});
+    await expect(screen.getByTestId('scenario-done')).toBeVisible({timeout: steps.doneTimeout ?? 30_000});
+    await steps.afterDone?.();
   } finally {
     actual = await collector.end();
   }
@@ -75,29 +91,42 @@ export async function expectScenario(
   if (!r.ok) throw new Error('\n' + r.report);
 }
 
-// ponytail: clearDeviceLog/deviceLog are unused since the tracer bullet retired (R14); Task 27 reads device logs with them.
+/** Taps the test-mode `flush` button (a JS `forceFlush()`) for the `n`th time and waits until it resolved. */
+export async function tapFlush(screen: Screen, n: number, timeout = 10_000) {
+  await screen.getByTestId('flush').tap();
+  await expect(screen.getByTestId(`flush-done-${n}`)).toBeVisible({timeout});
+}
+
+/** Polls until `ok()` or the timeout; false on timeout. */
+export async function until(ok: () => boolean, timeoutMs: number): Promise<boolean> {
+  const end = Date.now() + timeoutMs;
+  while (!ok() && Date.now() < end) await new Promise(r => setTimeout(r, 250));
+  return ok();
+}
+
+// The SDK's own lines: native (`RNOtel` tag / NSLog prefix) and JS (`[react-native-open-telemetry]`, ReactNativeJS).
 // iOS: `log show` takes ~60 s per call on a CI runner, so lines are captured live by a `log stream` started in clearDeviceLog.
 const iosStreams = new Map<string, {lines: string[]}>();
 
 /** Device log lines containing `needle`, logged after the last clearDeviceLog (Android: logcat since the clear; iOS: the live stream). */
-export function deviceLog(platform: 'android' | 'ios', deviceId: string, needle: string, _since: Date): string[] {
+export function deviceLog(platform: 'android' | 'ios', deviceId: string, needle: string): string[] {
   const out =
     platform === 'android'
-      ? execFileSync('adb', ['-s', deviceId, 'logcat', '-d', '-v', 'raw', '-s', 'RNOtel:I'], {encoding: 'utf8'})
+      ? execFileSync('adb', ['-s', deviceId, 'logcat', '-d', '-v', 'raw', '-s', 'RNOtel:I', 'ReactNativeJS:I'], {encoding: 'utf8'})
       : (iosStreams.get(deviceId)?.lines ?? []).join('\n');
   return out.split('\n').filter(l => l.includes(needle));
 }
 
-/** Starts a fresh log window; returns its start for deviceLog. */
-export async function clearDeviceLog(platform: 'android' | 'ios', deviceId: string): Promise<Date> {
-  if (platform === 'android') execFileSync('adb', ['-s', deviceId, 'logcat', '-c']);
+/** Starts a fresh log window for deviceLog (Android: every logcat buffer, events too). */
+export async function clearDeviceLog(platform: 'android' | 'ios', deviceId: string): Promise<void> {
+  if (platform === 'android') execFileSync('adb', ['-s', deviceId, 'logcat', '-b', 'all', '-c']);
   else {
     const state = {lines: [] as string[]};
     iosStreams.set(deviceId, state);
     const child = spawn(
       'xcrun',
       ['simctl', 'spawn', deviceId, 'log', 'stream', '--style', 'compact', '--level', 'info',
-        '--predicate', 'process == "OpenTelemetryExample" AND eventMessage CONTAINS "RNOtel"'],
+        '--predicate', 'process == "OpenTelemetryExample" AND (eventMessage CONTAINS "RNOtel" OR eventMessage CONTAINS "[react-native-open-telemetry]")'],
       {stdio: ['ignore', 'pipe', 'ignore']},
     );
     child.stdout.setEncoding('utf8');
@@ -107,5 +136,4 @@ export async function clearDeviceLog(platform: 'android' | 'ios', deviceId: stri
     process.on('exit', () => child.kill());
     await new Promise(r => setTimeout(r, 3_000)); // let the stream attach before the tap
   }
-  return new Date();
 }

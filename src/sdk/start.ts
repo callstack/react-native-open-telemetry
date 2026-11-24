@@ -36,7 +36,8 @@ function start(config: SdkConfig | undefined): SdkHandle {
   }
   const result = native.initialize(config && toSeamConfig(config));
   if (result.error) {
-    console.error(`${TAG} native init failed; telemetry is off: ${result.error}`);
+    // alreadyInitialized: a failed native-first init sticks (R16) and native already reported it, once
+    if (!result.alreadyInitialized) console.error(`${TAG} native init failed; telemetry is off: ${result.error}`);
     return noopHandle();
   }
   if (result.alreadyInitialized && config?.exportConfig) {

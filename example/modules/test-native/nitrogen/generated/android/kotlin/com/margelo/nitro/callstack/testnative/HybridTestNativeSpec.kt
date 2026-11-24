@@ -32,6 +32,10 @@ abstract class HybridTestNativeSpec: HybridObject() {
   @DoNotStrip
   @Keep
   abstract fun doWork(traceparent: String, start: DoubleArray, end: DoubleArray): String
+  
+  @DoNotStrip
+  @Keep
+  abstract fun reload(): Unit
 
   // Default implementation of `HybridObject.toString()`
   override fun toString(): String {

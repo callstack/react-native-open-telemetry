@@ -50,6 +50,7 @@ namespace margelo::nitro::callstack::testnative {
     public:
       // Methods
       virtual std::string doWork(const std::string& traceparent, const std::vector<double>& start, const std::vector<double>& end) = 0;
+      virtual void reload() = 0;
 
     protected:
       // Hybrid Setup

@@ -30,5 +30,20 @@ export default {
         appPath: process.env.E2E_IOS_APP ?? `${example}/ios/build/Build/Products/Release-iphonesimulator/OpenTelemetryExample.app`,
       },
     },
+    // Dev builds (Debug + Metro), local only: fast-refresh-idempotent (Task 27). See VERIFY.md.
+    ...(process.env.E2E_DEV === '1'
+      ? [
+          {
+            name: 'android-dev',
+            engine: mobile({platform: 'android', device: process.env.E2E_ANDROID_DEVICE}),
+            app: {bundleId, appPath: `${example}/android/app/build/outputs/apk/debug/app-debug.apk`},
+          },
+          {
+            name: 'ios-dev',
+            engine: mobile({platform: 'ios', device: process.env.E2E_IOS_DEVICE}),
+            app: {bundleId, appPath: `${example}/ios/build/Build/Products/Debug-iphonesimulator/OpenTelemetryExample.app`},
+          },
+        ]
+      : []),
   ],
 } satisfies E2EConfig;

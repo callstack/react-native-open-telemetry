@@ -8,6 +8,17 @@ import {at} from '../../verify/harness/scenario';
 import {allScenarios} from '../../verify/scenarios';
 import type {TestNative} from '../modules/test-native/src/TestNative.nitro';
 
+// Failure scenarios (Task 27) whose e2e test decides when, or whether, anything flushes.
+const NO_FLUSH = new Set(['collector-down', 'flush-after-reload', 'background-flush']);
+const TEST_MODE = process.env.OTEL_TEST_MODE === '1';
+
+// fast-refresh-idempotent (Task 27): the patched functions as first seen; `??=` keeps them across re-evaluations of
+// this module, so a refresh that stacked the patch shows `changed`. The e2e edit counts in `__otelRefreshes`.
+const g = globalThis as any;
+g.__otelFirstPatch ??= {then: Promise.prototype.then, setTimeout: g.setTimeout};
+const patchIdentity = () =>
+  `${g.__otelFirstPatch.then === Promise.prototype.then && g.__otelFirstPatch.setTimeout === g.setTimeout ? 'same' : 'changed'} refreshes=${g.__otelRefreshes ?? 0}`;
+
 // Native-first: MainApplication / AppDelegate ran RNOtel.start (collector URL there); attach and export through the native core.
 async function runScenario(name: string) {
   const s = allScenarios().find(x => x.name === name)!;
@@ -18,7 +29,7 @@ async function runScenario(name: string) {
     at,
     native: NitroModules.createHybridObject<TestNative>('TestNative'),
   });
-  await sdk.forceFlush();
+  if (!NO_FLUSH.has(name)) await sdk.forceFlush();
 }
 
 export function ScenariosScreen() {
@@ -40,6 +51,10 @@ export function ScenariosScreen() {
     ).finally(() => setRunning(null));
   }, [running]);
 
+  // test-mode only (Task 27): each resolved forceFlush shows `flush-done-<n>`, so a wait never matches a stale one
+  const [flushes, setFlushes] = useState(0);
+  const flush = () => startReactNativeSdk().forceFlush().then(() => setFlushes(n => n + 1));
+
   const press = (name: string) => () => {
     setStatus(`running ${name}`);
     setRunning(name);
@@ -50,6 +65,19 @@ export function ScenariosScreen() {
       <Text testID="native-test-mode">{testMode}</Text>
       {status === 'done' && <Text testID="scenario-done">done</Text>}
       {status.startsWith('error') && <Text testID="scenario-error">{status}</Text>}
+      {TEST_MODE && (
+        <View style={styles.chips}>
+          <Pressable testID="flush" onPress={flush} style={styles.button}>
+            <Text style={styles.chipText}>flush</Text>
+          </Pressable>
+          {/* DevSettings.reload() is a no-op in release builds; this is the native reload OTA updaters use */}
+          <Pressable testID="reload" onPress={() => NitroModules.createHybridObject<TestNative>('TestNative').reload()} style={styles.button}>
+            <Text style={styles.chipText}>reload</Text>
+          </Pressable>
+          {flushes > 0 && <Text testID={`flush-done-${flushes}`}>flushed {flushes}</Text>}
+          <Text testID="patch-identity">{patchIdentity()}</Text>
+        </View>
+      )}
       {/* compact chips: everything the e2e runner taps must fit one small CI screen, no scrolling */}
       <View style={styles.chips}>
         {allScenarios().map(s => (

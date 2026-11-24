@@ -14,6 +14,7 @@ public protocol HybridTestNativeSpec_protocol: HybridObject {
 
   // Methods
   func doWork(traceparent: String, start: [Double], end: [Double]) throws -> String
+  func reload() throws -> Void
 }
 
 public extension HybridTestNativeSpec_protocol {

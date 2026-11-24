@@ -55,6 +55,7 @@ namespace margelo::nitro::callstack::testnative {
   public:
     // Methods
     std::string doWork(const std::string& traceparent, const std::vector<double>& start, const std::vector<double>& end) override;
+    void reload() override;
 
   private:
     jni::global_ref<JHybridTestNativeSpec::JavaPart> _javaPart;

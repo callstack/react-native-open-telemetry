@@ -61,7 +61,8 @@ package final class OtelCore {
         OtlpHttpTraceExporter(endpoint: $0, envVarHeaders: config.exportHeaders.map { ($0.key, $0.value) })
       }
     }
-    bsp = BatchSpanProcessor(spanExporter: exporter)
+    // test mode: no timed export within a device test, so only flush and background export send (Task 27)
+    bsp = BatchSpanProcessor(spanExporter: exporter, scheduleDelay: testMode ? 120 : 5)
     let b = TracerProviderBuilder().with(resource: resource).add(spanProcessor: bsp)
     tracerProvider = (testMode ? b.with(idGenerator: SequentialIds()) : b).build()
   }

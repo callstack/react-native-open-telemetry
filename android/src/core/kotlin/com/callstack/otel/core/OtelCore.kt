@@ -51,7 +51,8 @@ class OtelCore(config: CoreConfig, testMode: Boolean = false, distroVersion: Str
       OtlpHttpSpanExporter.builder().setEndpoint(tracesUrl(config.exportUrl))
         .apply { config.exportHeaders.forEach { (k, v) -> addHeader(k, v) } }.build()
     },
-  ).build()
+  // test mode: no timed export within a device test, so only flush and background export send (Task 27)
+  ).apply { if (testMode) setScheduleDelay(120, TimeUnit.SECONDS) }.build()
 
   /** The native TracerProvider; JS spans join its batch processor. */
   val tracerProvider: SdkTracerProvider = SdkTracerProvider.builder()

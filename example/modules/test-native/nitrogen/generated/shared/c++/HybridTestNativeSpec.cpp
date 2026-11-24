@@ -15,6 +15,7 @@ namespace margelo::nitro::callstack::testnative {
     // load custom methods/properties
     registerHybrids(this, [](Prototype& prototype) {
       prototype.registerHybridMethod("doWork", &HybridTestNativeSpec::doWork);
+      prototype.registerHybridMethod("reload", &HybridTestNativeSpec::reload);
     });
   }
 
