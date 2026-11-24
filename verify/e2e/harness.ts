@@ -76,6 +76,7 @@ export async function expectScenario(
   if (!r.ok) throw new Error('\n' + r.report);
 }
 
+// ponytail: clearDeviceLog/deviceLog are unused since the tracer bullet retired (R14); Task 27 reads device logs with them.
 // iOS: `log show` takes ~60 s per call on a CI runner, so lines are captured live by a `log stream` started in clearDeviceLog.
 const iosStreams = new Map<string, {lines: string[]}>();
 

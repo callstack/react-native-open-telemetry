@@ -7,6 +7,8 @@ import com.callstack.otel.core.HrTime
 import com.callstack.otel.core.OtelCore
 import com.facebook.proguard.annotations.DoNotStrip
 import com.margelo.nitro.core.Promise
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import com.callstack.otel.core.AttrValue as CoreValue
 import com.callstack.otel.core.SeamAttribute as CoreAttribute
 import com.callstack.otel.core.SeamEvent as CoreEvent
@@ -39,11 +41,13 @@ class HybridOtel : HybridOtelSpec() {
     OtelCore.instance?.handOff(spans.map(::span))
   }
 
-  // Off the JS and main threads; resolves even when native never initialized.
-  override fun flush(timeoutMs: Double): Promise<Unit> = Promise.async {
+  // Off the JS and main threads (the join blocks, so on IO); resolves even when native never initialized.
+  override fun flush(timeoutMs: Double): Promise<Unit> = Promise.async(io) {
     OtelCore.instance?.flush(timeoutMs.toLong())
     Unit
   }
+
+  private val io = CoroutineScope(Dispatchers.IO)
 
   private fun span(s: SeamSpan) = CoreSpan(
     context = ctx(s.context),

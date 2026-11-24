@@ -31,6 +31,8 @@ class MainApplication : Application(), ReactApplication {
         headers = mapOf("x-api-key" to "test") // asserted by verify/e2e/export-headers.e2e.ts
       }
     }
+    // compile check: the otel API is part of RNOtel's public surface (a no-op tracer is cheap to build)
+    RNOtel.tracer("opentelemetry.example")
     loadReactNative(this)
   }
 }

@@ -22,3 +22,16 @@ test('is idempotent when applied twice', () => {
   const once = withOtel(base, {setupPath: SETUP});
   expect(run(withOtel(once, {setupPath: SETUP}))).toEqual([CORE, SETUP]);
 });
+
+test('keeps the package out of inline requires, after the existing entries', async () => {
+  const cfg = {
+    ...base,
+    transformer: {
+      getTransformOptions: async () => ({transform: {inlineRequires: true, nonInlinedRequires: ['React']}, x: 1}),
+    },
+  };
+  const out = await withOtel(cfg, {setupPath: SETUP}).transformer.getTransformOptions([], {}, () => []);
+  expect(out).toEqual({transform: {inlineRequires: true, nonInlinedRequires: ['React', 'react-native-open-telemetry']}, x: 1});
+  const bare = await withOtel(base, {setupPath: SETUP}).transformer.getTransformOptions([], {}, () => []);
+  expect(bare.transform.nonInlinedRequires).toEqual(['react-native-open-telemetry']);
+});

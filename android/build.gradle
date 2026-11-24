@@ -106,7 +106,9 @@ dependencies {
   // ProcessLifecycleOwner: background flush on ON_STOP (same version React Native already resolves)
   implementation "androidx.lifecycle:lifecycle-process:2.6.2"
 
-  implementation platform("io.opentelemetry:opentelemetry-bom:1.68.0")
+  // RNOtel's public signatures expose Tracer, Span and Context: the API is part of ours
+  api platform("io.opentelemetry:opentelemetry-bom:1.68.0")
+  api "io.opentelemetry:opentelemetry-api"
   implementation "io.opentelemetry:opentelemetry-sdk"
   // The OkHttp sender runs on React Native's own OkHttp (every okhttp3 member the 1.68 sender uses exists in 4.9.2);
   // excluding it keeps otel-java from pulling the app up to OkHttp 5.
