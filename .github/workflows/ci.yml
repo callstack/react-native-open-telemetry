@@ -89,6 +89,7 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun install --frozen-lockfile
         working-directory: example
+      - run: bun run prepare # the example bundles the package through exports -> lib/ (R4)
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -173,6 +174,7 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun install --frozen-lockfile
         working-directory: example
+      - run: bun run prepare # the example bundles the package through exports -> lib/ (R4)
       - name: Cache Swift packages
         uses: actions/cache@v4
         with:

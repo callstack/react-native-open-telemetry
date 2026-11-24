@@ -3,6 +3,8 @@ import {Platform, Pressable, ScrollView, StyleSheet, Text, View} from 'react-nat
 import {resourceFromAttributes} from '@opentelemetry/resources';
 import {SimpleSpanProcessor, TracerProvider} from '@opentelemetry/sdk-trace';
 import {OTLPTraceExporter} from '@opentelemetry/exporter-trace-otlp-proto';
+// the package's entry imports its setup (context patch); withOtel runs it before the app
+import 'react-native-open-telemetry';
 import {getOtel} from '../../src/native/otel';
 import {sequentialIds} from '../../src/internal/testMode';
 import type {SeamSpan} from '../../src/native/Otel.nitro';

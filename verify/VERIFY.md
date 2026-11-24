@@ -3,7 +3,11 @@
 `bun verify [stage…] [--e2e] [--update]` runs the stages in `verify/stages/`. `--e2e` adds the device stage
 (`e2e`), which needs release builds of `example/` in test mode:
 
+The example bundles the package through `exports` → `lib/` (R4), so build `lib/` first: the release builds embed
+the JS bundle, and the e2e stage cannot rebuild it.
+
 ```sh
+bun run prepare   # lib/
 # Android (emulator booted)
 cd example/android && OTEL_TEST_MODE=1 ./gradlew :app:assembleRelease -PotelTestMode=true
 # iOS
@@ -32,6 +36,20 @@ scope `schemaUrl` on `ScopeSpans`. The core passes them all into `SpanData`; the
 **iOS `TRACEPARENT` (upstream caveat).** opentelemetry-swift reads a `TRACEPARENT` environment variable at provider
 construction and makes it the parent of every root span, even with `setNoParent()`. Apps only see it when launched with
 it (Xcode scheme, `SIMCTL_CHILD_TRACEPARENT`); the verify stages unset it for native runs.
+
+`verify/e2e/scenarios.e2e.ts` runs one test per scenario with runner `e2e`, not `pending`, on each target it lists,
+except the scenarios with their own e2e file. Each test cold-starts the app (R5). e2e is compare-only;
+`VERIFY_E2E_DRAFT=1` writes a **missing** `<name>.js.otlp.json` from the device run and still fails the test
+("drafted …, review it"); existing files are never overwritten. Until Tasks 24/25 device runs compare to the `js` files.
+
+**`performance.timeOrigin` on Hermes (X17, Task 13).** Defined on both platforms (RN 0.88.1 release, Hermes),
+checked with a one-off `console.log` of `timeOrigin`, `performance.now()` and `Date.now()` at app start:
+Android `timeOrigin + now()` = `Date.now()` within 1 ms; **iOS simulator `timeOrigin + now()` was ~23.9 h behind
+`Date.now()`** (the monotonic clock under `now()` stopped while the host slept; `timeOrigin` stayed at simulator boot).
+sdk-trace 3.1 is unaffected: each span recomputes `_performanceOffset = Date.now() - (now() + timeOrigin)` at start,
+so explicit times, default times and `addEvent(name, perfNumber)` stay correct. Known limit: anything that turns
+`performance.now()` values into wall-clock with `timeOrigin` alone (e.g. `@opentelemetry/core` `hrTime()` without
+an argument) can be off by that skew on iOS.
 
 The fake collector listens on port 4318; the app reaches it at `10.0.2.2` (Android emulator) or `localhost` (iOS simulator).
 
@@ -68,24 +86,24 @@ e2e targets are android, ios and web unless the Runners column names them.
 | Scenario | Guarantee | Task | Runners | Status |
 | --- | --- | --- | --- | --- |
 | `smoke-js` | the JS pipeline exports a span | 7 | jest | passing |
-| `nest-after-await` | a span after `await` is a child of the span active before it | 10 | jest, e2e | pending |
-| `nest-timers-microtasks` | `setTimeout`/`setImmediate`/`queueMicrotask` callbacks keep their scheduling context, also after the parent ended | 10 | jest, e2e | pending |
-| `nest-promise-all-race` | `Promise.all`/`race` branches and the code after them keep the parent | 10 | jest, e2e | pending |
-| `concurrent-interleaved` | interleaved async jobs keep their own parents; work after the join is a root | 10 | jest, e2e | pending |
-| `root-no-leak` | after a span's work ends, later work (fast path included) starts new roots | 10 | jest, e2e | pending |
-| `captured-then` | exception: a `then` captured before the patch loses the parent | 10 | jest, e2e | pending |
-| `async-generator` | async generator bodies and `for await` keep the parent | 10 | jest, e2e | pending |
-| `error-in-callback` | a throwing callback still restores context | 10 | jest, e2e | pending |
-| `never-settling-promise` | a never-settling promise does not leak its span into later work | 10 | jest, e2e | pending |
-| `interval-new-root` | exception: each `setInterval` tick is a new root | 10 | jest, e2e | pending |
-| `batching-shared-queue` | exception: a shared queue runs work as its first enqueuer (pinned wrong parent) | 10 | jest, e2e | pending |
+| `nest-after-await` | a span after `await` is a child of the span active before it | 10 | jest, e2e | passing |
+| `nest-timers-microtasks` | `setTimeout`/`setImmediate`/`queueMicrotask` callbacks keep their scheduling context, also after the parent ended | 10 | jest, e2e | passing |
+| `nest-promise-all-race` | `Promise.all`/`race` branches and the code after them keep the parent | 10 | jest, e2e | passing |
+| `concurrent-interleaved` | interleaved async jobs keep their own parents; work after the join is a root | 10 | jest, e2e | passing |
+| `root-no-leak` | after a span's work ends, later work (fast path included) starts new roots | 10 | jest, e2e | passing |
+| `captured-then` | exception: a `then` captured before the patch loses the parent | 10 | jest, e2e | passing |
+| `async-generator` | async generator bodies and `for await` keep the parent | 10 | jest, e2e | passing |
+| `error-in-callback` | a throwing callback still restores context | 10 | jest, e2e | passing |
+| `never-settling-promise` | a never-settling promise does not leak its span into later work | 10 | jest, e2e | passing |
+| `interval-new-root` | exception: each `setInterval` tick is a new root | 10 | jest, e2e | passing |
+| `batching-shared-queue` | exception: a shared queue runs work as its first enqueuer (pinned wrong parent) | 10 | jest, e2e | passing |
 | `degraded-probe` | native `await` → degraded scope attribute, spans after `await` are roots | 11 | jest-degraded | passing |
-| `interaction-manager` | `runAfterInteractions` callback is a child of the caller's span | 13 | e2e | pending |
-| `nest-raf` | a `requestAnimationFrame` callback keeps its scheduling context | 13 | e2e | pending |
-| `event-emitter-listener` | a synchronous `DeviceEventEmitter` listener is a child of the emitter's span | 13 | e2e (android, ios) | pending |
-| `handoff-basic` | a span crosses the seam intact | 8, 15, 18 | jest, e2e | passing (js) |
-| `rich-span` | every attribute type, events, links, status, scope survive the seam | 8, 15, 18 | jest, e2e | passing (js) |
-| `odd-attributes` | NaN, ±Infinity, -0, big ints, empty arrays survive the seam | 8, 15, 18 | jest, e2e | passing (js) |
+| `interaction-manager` | `runAfterInteractions` callback is a child of the caller's span | 13 | e2e | pending: RN 0.88 removed `InteractionManager` |
+| `nest-raf` | a `requestAnimationFrame` callback keeps its scheduling context | 13 | e2e | passing |
+| `event-emitter-listener` | a synchronous `DeviceEventEmitter` listener is a child of the emitter's span | 13 | e2e (android, ios) | passing |
+| `handoff-basic` | a span crosses the seam intact | 8, 15, 18 | jest, e2e | passing |
+| `rich-span` | every attribute type, events, links, status, scope survive the seam | 8, 15, 18 | jest, e2e | passing |
+| `odd-attributes` | NaN, ±Infinity, -0, big ints, empty arrays survive the seam | 8, 15, 18 | jest, e2e | passing |
 | `export-headers` | configured export headers are sent on every request | 16, 19 | e2e | pending |
 | `cross-js-to-native` | a native span started from JS is a child of the JS span | 26 | e2e (android, ios) | pending |
 | `cross-native-to-js` | a JS span started under a native span's context is its child | 26 | e2e (android, ios) | pending |

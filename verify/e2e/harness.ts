@@ -15,7 +15,7 @@ process.env.VERIFY_DIR = verifyDir;
 
 const {startCollector} = await import('../harness/collector');
 const {compareToExpected} = await import('../harness/compare');
-const {allScenarios} = await import('../scenarios');
+export const {allScenarios} = await import('../scenarios');
 type Collector = Awaited<ReturnType<typeof startCollector>>;
 
 /** Must match COLLECTOR_PORT in example/src/ScenariosScreen.tsx. */
@@ -59,7 +59,8 @@ export async function expectScenario(
   const s = allScenarios().find(x => x.name === name);
   if (!s) throw new Error(`unknown scenario ${name}`);
   test.skip(!s.targets.includes(platformOf(target)), `${name} does not run on ${platformOf(target)}`);
-  await app.open();
+  await app.restart(); // cold start per scenario (R5): no SDK state or ID counters carried over
+
   collector.begin(name, platformOf(target));
   let actual;
   try {
@@ -69,7 +70,8 @@ export async function expectScenario(
     actual = await collector.end();
   }
   // Until Tasks 24/25 device runs compare to the JS expected files.
-  const r = compareToExpected(name, 'js', actual);
+  // VERIFY_E2E_DRAFT=1 writes a missing expected file and still fails (review it, then rerun)
+  const r = compareToExpected(name, 'js', actual, {draft: process.env.VERIFY_E2E_DRAFT === '1'});
   if (!r.ok) throw new Error('\n' + r.report);
 }
 
