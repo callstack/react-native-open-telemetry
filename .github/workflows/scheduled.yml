@@ -12,21 +12,17 @@ on:
         description: 'Dry run: setup, app regeneration and packing only (no builds, no devices, no status)'
         type: boolean
         default: false
-  # TEMPORARY (R28): one dry run from the PR that adds this file; removed in the follow-up commit.
-  pull_request:
-    paths:
-      - .github/workflows/scheduled.yml
 
 permissions:
   contents: read
 
 concurrency:
   group: nightly-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }} # never cancel a real nightly
+  cancel-in-progress: false # never cancel a real nightly
 
 env:
   E2E_TELEMETRY_DISABLED: '1'
-  DRY_RUN: ${{ github.event_name == 'pull_request' || inputs.dry_run == true }}
+  DRY_RUN: ${{ inputs.dry_run == true }}
 
 jobs:
   e2e:
@@ -196,7 +192,7 @@ jobs:
   # Marks the commit for the release gate (Task 32). A matrix entry with `experimental: true` does not block it.
   mark-nightly:
     needs: [e2e]
-    if: github.event_name != 'pull_request' && !inputs.dry_run
+    if: ${{ !inputs.dry_run }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

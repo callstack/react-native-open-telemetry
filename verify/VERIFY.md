@@ -262,8 +262,9 @@ an fmt workaround in the Podfile) or raise the peer minimum. Until then `rn-0.79
 **Verified only after merge to `main`.** `schedule` and `workflow_dispatch` run workflow files from the default branch
 only (R28). Before merge the file was checked with `actionlint` and one PR run through a temporary `pull_request`
 trigger (paths: the workflow file) in dry-run mode: every entry runs setup, the deps bump, app regeneration, packing and
-`expo prebuild`; builds, devices, the fast loop and the status are skipped. The first real nightly is the first proof of
-the builds and devices.
+`expo prebuild`; builds, devices, the fast loop and the status are skipped. It passed (Nightly run 45353782459, Release
+run 45353782465), and the trigger was then removed; a dry run is now `workflow_dispatch` with `dry_run`. The first real
+nightly is the first proof of the builds and devices.
 
 ## Android cold start with `RNOtel.start` (Task 24, 2026-11-24)
 

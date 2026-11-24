@@ -11,7 +11,8 @@ name: Release
 #   Actions -> Nightly -> Run workflow -> "Use workflow from" tag v<version>.
 # Both publishing jobs run in the `npm` environment, which holds NPM_TOKEN (a granular, publish-only token). Setup and
 # caveats (the version PR gets no CI): CONTRIBUTING.md "Publishing to npm".
-# Real publishing is first verified after merge to `main` (R28); until then only the dry run below has run.
+# Real publishing is first verified after merge to `main` (R28); until then only the dry run below has run (from the
+# PR, Release run 45353782465).
 on:
   workflow_run:
     workflows: [CI]
@@ -27,10 +28,6 @@ on:
         description: 'Dry run: evaluate the gates, version and pack; publish and promote nothing'
         type: boolean
         default: false
-  # TEMPORARY (R28): one forced dry run from the PR that adds this file; removed in the follow-up commit.
-  pull_request:
-    paths:
-      - .github/workflows/release.yml
 
 permissions:
   contents: read
@@ -49,7 +46,7 @@ env:
 
 jobs:
   dry-run:
-    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.dry_run)
+    if: github.event_name == 'workflow_dispatch' && inputs.dry_run
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
