@@ -1,6 +1,7 @@
 import type {HrTime, Tracer, TracerOptions} from '@opentelemetry/api';
 
-/** The example app's TestNative HybridObject (Task 26): app native code using the public `RNOtel` helpers. */
+/** The example app's TestNative HybridObject (Task 26): app native code using the public `RNOtel` helpers.
+ * Mirrors example/modules/test-native/src/TestNative.nitro.ts by hand, so the harness needs no Nitro import. */
 export interface TestNative {
   /** Starts and ends native `native.work` under `traceparent` ('' = a root), returns its traceparent. */
   doWork(traceparent: string, start: HrTime, end: HrTime): string;
