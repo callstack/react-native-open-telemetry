@@ -11,3 +11,4 @@ module.exports = {
   presets: ['module:@react-native/babel-preset'],
   plugins: [inlineTestMode],
 };
+module.exports.inlineTestMode = inlineTestMode; // reused by example-expo/babel.config.js

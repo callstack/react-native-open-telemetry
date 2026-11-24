@@ -10,7 +10,9 @@ module.exports = config => {
       c.modResults.contents = c.modResults.contents.replace(/^(target '.+' do\n)/m, `$1${CORE_POD}\n`);
     return c;
   });
-  // ponytail: cleartext to any host, not only 10.0.2.2 like the bare app's network_security_config; example-only
+  // EXAMPLE-ONLY, DO NOT COPY: app-wide cleartext so the e2e collector (plain http, also with test mode off) is reachable.
+  // ponytail: any host, not only 10.0.2.2 like the bare app's network_security_config. Only the CORE_POD step above is
+  // what a real Expo app needs.
   config = withAndroidManifest(config, c => {
     c.modResults.manifest.application[0].$['android:usesCleartextTraffic'] = 'true';
     return c;
