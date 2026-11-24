@@ -21,9 +21,13 @@ const stage: Stage = {
     const list: string[] = JSON.parse(out)[0].files.map((f: {path: string}) => f.path);
     const missing = packContents(list, REQUIRED);
     if (missing.length) throw new Error(`npm pack is missing: ${missing.join(', ')}`);
+    // iOS has no build-time access to package.json (Android reads it in Gradle): the Swift constant must match.
+    const root = path.join(import.meta.dirname, '..', '..');
+    const {version} = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+    if (!fs.readFileSync(path.join(root, 'ios', 'RNOtel', 'RNOtel.swift'), 'utf8').includes(`let packageVersion = "${version}"`))
+      throw new Error(`ios/RNOtel/RNOtel.swift: set packageVersion to "${version}" (package.json)`);
     sh(['bunx', 'jest', '--selectProjects', 'harness']);
     // SDK share of the example's release bundle (src/ + @opentelemetry/*), +10% budget; ~2-10s
-    const root = path.join(import.meta.dirname, '..', '..');
     const baselineFile = path.join(root, 'verify', 'static', 'bundle-baseline.json');
     const sdkBytes = measureSdkBytes(root);
     if (update) fs.writeFileSync(baselineFile, JSON.stringify({sdkBytes}, null, 2) + '\n');

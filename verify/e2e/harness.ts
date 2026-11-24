@@ -3,7 +3,7 @@ import path from 'node:path';
 import {test as base} from '@e2e-dev/mobile';
 import {expect, type App, type Screen} from 'e2e';
 
-// Device runs compare to the reviewed expected files (android: native-first; ios: .js until Task 25); never rewrite them.
+// Device runs compare to the reviewed expected files of their platform (native-first); never rewrite them.
 if (process.env.VERIFY_UPDATE === '1')
   throw new Error('verify/e2e is compare-only: unset VERIFY_UPDATE (`bun verify --update --e2e` already does)');
 
@@ -18,7 +18,7 @@ const {compareToExpected} = await import('../harness/compare');
 export const {allScenarios} = await import('../scenarios');
 type Collector = Awaited<ReturnType<typeof startCollector>>;
 
-/** Must match COLLECTOR_PORT in example/src/ScenariosScreen.tsx. */
+/** Must match the example apps' native init URLs (MainApplication.kt, AppDelegate.swift). */
 export const COLLECTOR_PORT = 4318;
 
 /** `android-bare` -> `android`. */
@@ -69,10 +69,9 @@ export async function expectScenario(
   } finally {
     actual = await collector.end();
   }
-  // android-* export through the native core (R13); ios-* stays JS-direct until Task 25.
+  // both apps export through the native core, so android-* compare to `android` files and ios-* to `ios` (R13).
   // VERIFY_E2E_DRAFT=1 writes a missing expected file and still fails (review it, then rerun)
-  const expected = platformOf(target) === 'android' ? 'android' : 'js';
-  const r = compareToExpected(name, expected, actual, {draft: process.env.VERIFY_E2E_DRAFT === '1'});
+  const r = compareToExpected(name, platformOf(target), actual, {draft: process.env.VERIFY_E2E_DRAFT === '1'});
   if (!r.ok) throw new Error('\n' + r.report);
 }
 

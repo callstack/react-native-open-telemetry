@@ -36,7 +36,7 @@ private final class LazyExporter: SpanExporter, @unchecked Sendable {
   func shutdown(explicitTimeout: TimeInterval?) async { await d?.shutdown(explicitTimeout: explicitTimeout) }
 }
 
-final class OtelCore {
+package final class OtelCore {
   /// The one resource of the app; in test mode built from config only (no `telemetry.*`).
   let resource: Resource
   /// The native TracerProvider; JS spans join its batch processor.
@@ -67,7 +67,7 @@ final class OtelCore {
   }
 
   /// JS-thread work: wrap and enqueue only; SpanData is built on the export queue.
-  func handOff(_ spans: [CoreSpan]) {
+  package func handOff(_ spans: [CoreSpan]) {
     for s in spans { bsp.onEnd(span: JsReadableSpan(s, resource: resource)) }
   }
 
@@ -76,7 +76,7 @@ final class OtelCore {
   // ponytail: upstream BatchWorker race: if its timer thread has just taken the queue but not yet scheduled the
   // export, forceFlush finds nothing and returns before that batch is sent (true while in flight). TracerProviderSdk
   // forceFlush goes through the same worker; fix upstream or track in-flight spans if flush-after-reload needs it.
-  func flush(timeoutMs: Double) -> Bool {
+  package func flush(timeoutMs: Double) -> Bool {
     let deadline = Date().addingTimeInterval(timeoutMs / 1000)
     bsp.forceFlush(timeout: timeoutMs / 1000)
     return exporter.flush(explicitTimeout: max(deadline.timeIntervalSinceNow, 0.001)) == .success
@@ -84,12 +84,12 @@ final class OtelCore {
 
   private static let lock = NSLock()
   private static var state: InitResult?
-  private(set) static var instance: OtelCore?
+  package private(set) static var instance: OtelCore?
 
   /// Idempotent. The first result sticks, a failed one too (R16): later calls never retry. A call without config
   /// before any init is an error but is not remembered, so the real init can still follow.
   @discardableResult
-  static func initialize(_ config: CoreConfig?, testMode: Bool = false, distroVersion: String = "unknown") -> InitResult {
+  package static func initialize(_ config: CoreConfig?, testMode: Bool = false, distroVersion: String = "unknown") -> InitResult {
     lock.withLock {
       if var s = state { s.alreadyInitialized = true; return s }
       guard let config else { return InitResult(alreadyInitialized: false, testMode: testMode, error: "not initialized: no config") }

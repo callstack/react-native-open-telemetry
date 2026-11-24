@@ -1,4 +1,4 @@
-export const REQUIRED = ['package.json', 'lib/', 'src/', 'nitrogen/', 'metro/', 'vite/', 'android/', 'ios/', 'Package.swift', 'ReactNativeOpenTelemetry.podspec'];
+export const REQUIRED = ['package.json', 'lib/', 'src/', 'nitrogen/', 'metro/', 'vite/', 'android/', 'ios/', 'Package.swift', 'ReactNativeOpenTelemetry.podspec', 'ReactNativeOpenTelemetryCore.podspec'];
 
 /** Returns the required paths missing from the `npm pack --dry-run --json` file list. */
 export function packContents(list: string[], required: string[] = REQUIRED): string[] {

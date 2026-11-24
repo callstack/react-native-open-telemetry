@@ -9,5 +9,5 @@ export default scenario(
   async ({tracer, at}) => {
     tracer.startSpan('headers', {startTime: at(0)}).end(at(10));
   },
-  {targets: ['android']}, // Tasks 25/23 add ios/web as each app's init sends the header
+  {targets: ['android', 'ios']}, // Task 23 adds web once its app's init sends the header
 );

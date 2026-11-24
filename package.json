@@ -52,6 +52,7 @@
     "ios",
     "Package.swift",
     "ReactNativeOpenTelemetry.podspec",
+    "ReactNativeOpenTelemetryCore.podspec",
     "nitro.json",
     "metro",
     "vite",

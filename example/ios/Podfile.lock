@@ -1789,7 +1789,9 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
+    - ReactNativeOpenTelemetryCore (= 0.2.0)
     - Yoga
+  - ReactNativeOpenTelemetryCore (0.2.0)
   - SocketRocket (0.7.1):
     - ReactNativeDependencies
   - Yoga (0.0.0):
@@ -1883,6 +1885,7 @@ DEPENDENCIES:
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
   - ReactNativeDependencies (from `../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec`)
   - ReactNativeOpenTelemetry (from `../..`)
+  - ReactNativeOpenTelemetryCore (from `../..`)
   - SocketRocket (from `build/rndeps-facades/SocketRocket`)
   - Yoga (from `build/rncore-facades/Yoga`)
 
@@ -2060,6 +2063,8 @@ EXTERNAL SOURCES:
     :podspec: "../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec"
   ReactNativeOpenTelemetry:
     :path: "../.."
+  ReactNativeOpenTelemetryCore:
+    :path: "../.."
   SocketRocket:
     :path: build/rndeps-facades/SocketRocket
   Yoga:
@@ -2151,10 +2156,11 @@ SPEC CHECKSUMS:
   ReactCodegen: 3840312f5071bb6b953b35a029c5c6dcf06b435e
   ReactCommon: b63ce798b898ed77c6cfdeb80b18080161f52ed5
   ReactNativeDependencies: a5164c3ebbe90d992022b5d9cbabbf770a6d7d05
-  ReactNativeOpenTelemetry: 41460d3f8f1e8fd6922cb815c46fb80c4843bd03
+  ReactNativeOpenTelemetry: cfbb4c9c5603eb925f23e6e601f21d0a41cb7271
+  ReactNativeOpenTelemetryCore: b9b1d5e27b1df7d86e4937554d2c9152e85df541
   SocketRocket: 37aec555668fb852ec12e3c0de59a86ca58f0871
   Yoga: d1c536142c5ff8ec8cd856ab2a7c227a1d875c8e
 
-PODFILE CHECKSUM: 2f80b8c0e897d23dcb020369108758aff0cbef0e
+PODFILE CHECKSUM: f0b2481a774a2b77e95776068d1d26bc682a7ba6
 
-COCOAPODS: 1.17.0
+COCOAPODS: 1.16.2

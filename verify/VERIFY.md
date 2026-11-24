@@ -39,11 +39,19 @@ it (Xcode scheme, `SIMCTL_CHILD_TRACEPARENT`); the verify stages unset it for na
 
 `verify/e2e/scenarios.e2e.ts` runs one test per scenario with runner `e2e`, not `pending`, on each target it lists,
 except the scenarios with their own e2e file. Each test cold-starts the app (R5). e2e is compare-only;
-`VERIFY_E2E_DRAFT=1` writes a **missing** `<name>.js.otlp.json` from the device run and still fails the test
+`VERIFY_E2E_DRAFT=1` writes a **missing** `<name>.<platform>.otlp.json` from the device run and still fails the test
 ("drafted …, review it"); existing files are never overwritten. Draft runs have no retries, so a drafting run always ends red.
-`android-*` targets compare to the `android` files: the bare app inits native first (`RNOtel.start` in
-`MainApplication`) and ScenariosScreen exports through `startReactNativeSdk` and the Kotlin core. `ios-*` stays
-JS-direct and compares to the `js` files until Task 25 (R13).
+Each target compares to its platform's files (`android-*` → `android`, `ios-*` → `ios`): the bare app inits native
+first (`RNOtel.start` in `MainApplication` / `AppDelegate`) and ScenariosScreen exports through `startReactNativeSdk`
+and the Kotlin or Swift core.
+
+**iOS pods (R24).** An app's Swift `AppDelegate` cannot `import ReactNativeOpenTelemetry`: the Nitro pod is built with
+C++ interop and the app is not (Task 25 Step 0: `'functional' file not found` while building `NitroModules`). So
+iOS ships two pods: `ReactNativeOpenTelemetryCore` (pure Swift: `ios/Core` + the public `RNOtel` in `ios/RNOtel`) and
+the Nitro adapter `ReactNativeOpenTelemetry` (`ios/Adapter`), which depends on it and reaches the core's `package`
+declarations through one `-package-name`. Autolinking links only the adapter, so the app's Podfile adds
+`pod 'ReactNativeOpenTelemetryCore', :path => '<package dir>'`. Both linkages build: the default static libraries
+(CI) and `USE_FRAMEWORKS=static` (checked locally in Task 25, not a CI job: e2e `ios-bare` 18/18 on that build).
 
 **`performance.timeOrigin` on Hermes (X17, Task 13).** Defined on both platforms (RN 0.88.1 release, Hermes),
 checked with a one-off `console.log` of `timeOrigin`, `performance.now()` and `Date.now()` at app start:
@@ -121,7 +129,7 @@ e2e targets are android, ios and web unless the Runners column names them.
 | `handoff-basic` | a span crosses the seam intact | 8, 15, 18 | jest, e2e | passing |
 | `rich-span` | every attribute type, events, links, status, scope survive the seam | 8, 15, 18 | jest, e2e | passing |
 | `odd-attributes` | NaN, ±Infinity, -0, big ints, empty arrays survive the seam | 8, 15, 18 | jest, e2e | passing |
-| `export-headers` | configured export headers are sent on every request | 16, 19, 24 | jest, e2e (android; ios/web with 25/23) | passing |
+| `export-headers` | configured export headers are sent on every request | 16, 19, 24, 25 | jest, e2e (android, ios; web with 23) | passing |
 | `cross-js-to-native` | a native span started from JS is a child of the JS span | 26 | e2e (android, ios) | pending |
 | `cross-native-to-js` | a JS span started under a native span's context is its child | 26 | e2e (android, ios) | pending |
 | `collector-down` | app never blocks; spans arrive exactly once when the collector is back | 27 | e2e | pending |

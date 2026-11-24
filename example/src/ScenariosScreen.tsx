@@ -1,41 +1,17 @@
 import {useEffect, useState} from 'react';
-import {Platform, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
-import {resourceFromAttributes} from '@opentelemetry/resources';
-import {SimpleSpanProcessor, TracerProvider} from '@opentelemetry/sdk-trace';
-import {OTLPTraceExporter} from '@opentelemetry/exporter-trace-otlp-proto';
+import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 // the package's entry imports its setup (context patch); withOtel keeps this import out of inline requires
 import {startReactNativeSdk} from 'react-native-open-telemetry';
 import {getOtel} from '../../src/native/otel';
-import {sequentialIds} from '../../src/internal/testMode';
 import {at} from '../../verify/harness/scenario';
 import {allScenarios} from '../../verify/scenarios';
 
-/** Must match COLLECTOR_PORT in verify/e2e/harness.ts. */
-const COLLECTOR_PORT = 4318;
-const COLLECTOR = `http://${Platform.OS === 'android' ? '10.0.2.2' : 'localhost'}:${COLLECTOR_PORT}`;
-
+// Native-first: MainApplication / AppDelegate ran RNOtel.start (collector URL there); attach and export through the native core.
 async function runScenario(name: string) {
   const s = allScenarios().find(x => x.name === name)!;
-  // Android: native-first (MainApplication ran RNOtel.start); attach and export through the native core.
-  // ponytail: iOS stays JS-direct until Task 25 (R13), then this branch becomes the only path.
-  if (Platform.OS === 'android') {
-    const sdk = startReactNativeSdk();
-    await s.run({tracer: sdk.tracerProvider.getTracer('verify'), getTracer: (n, v, o) => sdk.tracerProvider.getTracer(n, v, o), at});
-    await sdk.forceFlush();
-    return;
-  }
-  // JS-direct export, the same provider setup as verify/jest/scenarios.test.ts.
-  const provider = new TracerProvider({
-    idGenerator: sequentialIds('0a'),
-    resource: resourceFromAttributes({'service.name': 'verify'}),
-    spanProcessors: [new SimpleSpanProcessor({exporter: new OTLPTraceExporter({url: `${COLLECTOR}/v1/traces`})})],
-  });
-  try {
-    await s.run({tracer: provider.getTracer('verify'), getTracer: (n, v, o) => provider.getTracer(n, v, o), at});
-    await provider.forceFlush();
-  } finally {
-    await provider.shutdown();
-  }
+  const sdk = startReactNativeSdk();
+  await s.run({tracer: sdk.tracerProvider.getTracer('verify'), getTracer: (n, v, o) => sdk.tracerProvider.getTracer(n, v, o), at});
+  await sdk.forceFlush();
 }
 
 export function ScenariosScreen() {

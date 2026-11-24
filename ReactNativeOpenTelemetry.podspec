@@ -2,6 +2,7 @@ require "json"
 
 package = JSON.parse(File.read(File.join(__dir__, "package.json")))
 
+# The Nitro adapter (Swift with C++ interop) over the pure Swift core pod (R24, spec §4.2).
 Pod::Spec.new do |s|
   s.name         = "ReactNativeOpenTelemetry"
   s.version      = package["version"]
@@ -13,32 +14,36 @@ Pod::Spec.new do |s|
   s.platforms    = { :ios => min_ios_version_supported }
   s.source       = { :git => "https://github.com/callstack/react-native-open-telemetry.git", :tag => "#{s.version}" }
 
-  s.source_files = [
-    "ios/Core/**/*.swift",
-    "ios/Adapter/**/*.swift",
-  ]
+  s.source_files = ["ios/Adapter/**/*.swift"]
 
-  # Test mode is a build flag, never API: `OTEL_TEST_MODE=1 pod install`.
-  if ENV['OTEL_TEST_MODE'] == '1'
-    s.pod_target_xcconfig = {
-      'SWIFT_ACTIVE_COMPILATION_CONDITIONS' => '$(inherited) OTEL_TEST_MODE',
-    }
-  end
+  # The core pod uses spm_dependency, so in a static-library build React Native's spm.rb builds it straight into the
+  # products root, and rewrites the app's module map path to match, but not this pod's: CocoaPods still points it at
+  # `<root>/ReactNativeOpenTelemetryCore/ReactNativeOpenTelemetryCore.modulemap`. Forward that path to the real map, and
+  # search the root for the core's swiftmodule. Unused (and harmless) with frameworks.
+  # ponytail: drop when RN's spm.rb rewrites pod-target xcconfigs too.
+  core_map = '${PODS_CONFIGURATION_BUILD_DIR}/ReactNativeOpenTelemetryCore/ReactNativeOpenTelemetryCore.modulemap'
+  s.script_phase = {
+    :name => 'Forward the core module map',
+    :execution_position => :before_compile,
+    :output_files => [core_map],
+    :script => %Q{set -e
+if [ -f "${PODS_CONFIGURATION_BUILD_DIR}/ReactNativeOpenTelemetryCore.modulemap" ]; then
+  mkdir -p "${PODS_CONFIGURATION_BUILD_DIR}/ReactNativeOpenTelemetryCore"
+  echo 'extern module ReactNativeOpenTelemetryCore "../ReactNativeOpenTelemetryCore.modulemap"' > "#{core_map}"
+fi
+},
+  }
+  s.pod_target_xcconfig = {
+    # `package` declarations of the core are shared through one Swift package name.
+    'OTHER_SWIFT_FLAGS' => '$(inherited) -package-name ReactNativeOpenTelemetry',
+    'SWIFT_INCLUDE_PATHS' => '$(inherited) "${PODS_CONFIGURATION_BUILD_DIR}"',
+  }
 
   # Adds nitrogen/generated/ios/** and nitrogen/generated/shared/**.
   load 'nitrogen/generated/ios/ReactNativeOpenTelemetry+autolinking.rb'
   add_nitrogen_files(s)
 
-  # opentelemetry-swift 2.6 moved OpenTelemetryApi/OpenTelemetrySdk into opentelemetry-swift-core.
-  spm_dependency(s,
-    url: 'https://github.com/open-telemetry/opentelemetry-swift',
-    requirement: { kind: 'upToNextMinorVersion', minimumVersion: '2.6.0' },
-    products: ['OpenTelemetryProtocolExporterHTTP'])
-  spm_dependency(s,
-    url: 'https://github.com/open-telemetry/opentelemetry-swift-core',
-    requirement: { kind: 'upToNextMinorVersion', minimumVersion: '2.6.0' },
-    products: ['OpenTelemetrySdk'])
-
+  s.dependency 'ReactNativeOpenTelemetryCore', s.version.to_s
   s.dependency 'React-jsi'
   s.dependency 'React-callinvoker'
   install_modules_dependencies(s)
