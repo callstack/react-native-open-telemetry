@@ -109,6 +109,13 @@ android {
     }
 }
 
+// The bundle task's inputs are example/ only. It also bundles the package (lib/, src/) and the verify scenarios, and
+// babel.config.js inlines OTEL_TEST_MODE: without these, a change there or a test-mode switch reuses the old bundle.
+tasks.matching { it.name.startsWith("createBundle") }.configureEach {
+    inputs.property("otelTestMode", System.getenv("OTEL_TEST_MODE") ?: "")
+    inputs.files(fileTree("../../..") { include "lib/**", "src/**", "verify/scenarios/**", "verify/harness/*.ts" })
+}
+
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
