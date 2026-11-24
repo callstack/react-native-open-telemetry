@@ -91,6 +91,7 @@
   "devDependencies": {
     "@changesets/cli": "^2.28.1",
     "@e2e-dev/mobile": "0.12.8",
+    "@e2e-dev/web": "0.16.1",
     "@react-native/babel-preset": "^0.88.1",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.0.0",

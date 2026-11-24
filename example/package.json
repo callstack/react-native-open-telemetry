@@ -11,8 +11,10 @@
   },
   "dependencies": {
     "react": "19.3.0",
+    "react-dom": "19.3.0",
     "react-native": "0.88.1",
-    "react-native-nitro-modules": "0.37.2"
+    "react-native-nitro-modules": "0.37.2",
+    "react-native-web": "0.21.4"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

@@ -14,6 +14,7 @@
       "devDependencies": {
         "@changesets/cli": "^2.28.1",
         "@e2e-dev/mobile": "0.12.8",
+        "@e2e-dev/web": "0.16.1",
         "@react-native/babel-preset": "^0.88.1",
         "@types/jest": "^30.0.0",
         "@types/node": "^24.0.0",
@@ -350,6 +351,8 @@
     "@e2e-dev/core": ["@e2e-dev/core@0.24.0", "", { "dependencies": { "@napi-rs/image": "1.16.0", "pixelmatch": "8.0.0", "zod": "4.6.7" }, "peerDependencies": { "ai": "^7.0.0" }, "optionalPeers": ["ai"] }, "sha512-RSPX0RRiN8VFg3l34wN1gv12FIMoNTZ+YUAkW5SH1vUWwYdoo/8F2TtjqdffgdaGLH38yAuH11BPdmqHHiWuBA=="],
 
     "@e2e-dev/mobile": ["@e2e-dev/mobile@0.12.8", "", { "dependencies": { "@napi-rs/image": "1.16.0", "agent-device": "0.21.39", "zod": "4.6.7" }, "peerDependencies": { "@e2e-dev/core": ">=0.23.2 <1", "ai": "^7.0.0", "e2e": ">=0.23.2 <1" }, "optionalPeers": ["ai", "e2e"] }, "sha512-N9BuoUC0a+7pG1NbhTfL0janxqNf7blm+6TW/EQZ4IlURbYIZQFmSRK+2HEnH+FzrobqXBBI/egHYW9LIRfGsg=="],
+
+    "@e2e-dev/web": ["@e2e-dev/web@0.16.1", "", { "dependencies": { "playwright-core": "1.65.1" }, "peerDependencies": { "@e2e-dev/core": ">=0.23.2 <1", "e2e": ">=0.23.2 <1" }, "optionalPeers": ["e2e"], "bin": { "e2e-web": "./dist/bin.js" } }, "sha512-mWSzyWSNcoqOiy6BEaXOTe8rufCz6T+NyYkJej5JOz6yy3vcnG13wEwHgl7Kdw5rv8yUbSLqbuDBRVBBtkvqIA=="],
 
     "@esbuild/aix-ppc64": ["@esbuild/aix-ppc64@0.28.2", "", { "os": "aix", "cpu": "ppc64" }, "sha512-XExcO+dvLKvVtNTibSTBej1NCAbaGhWn9Ww1ZPx80qsahhPFe/8jgWP0IchNe0F3HwkU7n8ejhH8bjonqht8mQ=="],
 
@@ -1604,6 +1607,8 @@
     "pkg-dir": ["pkg-dir@4.2.0", "", { "dependencies": { "find-up": "^4.0.0" } }, "sha512-HRDzbaKjC+AOWVXxAU/x54COGeIv9eb+6CkDSQoNTt4XyWoIJvuPsXizxu/Fr23EiekbtZwmh1IcIG/l/a10GQ=="],
 
     "pkg-up": ["pkg-up@3.1.0", "", { "dependencies": { "find-up": "^3.0.0" } }, "sha512-nDywThFk1i4BQK4twPQ6TA4RT8bDY96yeuCVBWL3ePARCiEKDRSrNGbFIgUJpLp+XeIR65v8ra7WuJOFUBtkMA=="],
+
+    "playwright-core": ["playwright-core@1.65.1", "", { "bin": { "playwright-core": "cli.js" } }, "sha512-hqPpz7blSMPxWVdoeE1yiBSzXsKiVOd2k+kjCvmUywD2GPO2Dd9HfcWnq9NN0GHbNZDFgZ9JfBFr+X5/BLo0qw=="],
 
     "pngjs": ["pngjs@7.0.0", "", {}, "sha512-LKWqWJRhstyYo9pGvgor/ivk2w94eSjE3RGVuzLGlr3NmD8bf7RcYGze1mNdEHRP6TRP6rMuDHk5t44hnTRyow=="],
 
