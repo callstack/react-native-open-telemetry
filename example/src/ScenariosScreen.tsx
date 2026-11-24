@@ -1,16 +1,23 @@
 import {useEffect, useState} from 'react';
 import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {NitroModules} from 'react-native-nitro-modules';
 // the package's entry imports its setup (context patch); withOtel keeps this import out of inline requires
 import {startReactNativeSdk} from 'react-native-open-telemetry';
 import {getOtel} from '../../src/native/otel';
 import {at} from '../../verify/harness/scenario';
 import {allScenarios} from '../../verify/scenarios';
+import type {TestNative} from '../modules/test-native/src/TestNative.nitro';
 
 // Native-first: MainApplication / AppDelegate ran RNOtel.start (collector URL there); attach and export through the native core.
 async function runScenario(name: string) {
   const s = allScenarios().find(x => x.name === name)!;
   const sdk = startReactNativeSdk();
-  await s.run({tracer: sdk.tracerProvider.getTracer('verify'), getTracer: (n, v, o) => sdk.tracerProvider.getTracer(n, v, o), at});
+  await s.run({
+    tracer: sdk.tracerProvider.getTracer('verify'),
+    getTracer: (n, v, o) => sdk.tracerProvider.getTracer(n, v, o),
+    at,
+    native: NitroModules.createHybridObject<TestNative>('TestNative'),
+  });
   await sdk.forceFlush();
 }
 

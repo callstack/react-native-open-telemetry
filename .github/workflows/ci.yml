@@ -108,7 +108,7 @@ jobs:
             example/android/build
             example/node_modules/react-native-nitro-modules/android/build
             example/node_modules/react-native-nitro-modules/android/.cxx
-          key: android-native-${{ hashFiles('android/**', 'nitrogen/**', 'patches/**', 'example/android/**', 'bun.lock', 'example/bun.lock') }}
+          key: android-native-${{ hashFiles('android/**', 'nitrogen/**', 'patches/**', 'example/android/**', 'example/modules/**', 'bun.lock', 'example/bun.lock') }}
       - name: Build release APK (test mode)
         working-directory: example/android
         env:
@@ -186,7 +186,7 @@ jobs:
           path: |
             example/ios/Pods
             example/ios/build/Build
-          key: ios-native-${{ hashFiles('ios/**', 'nitrogen/**', 'ReactNativeOpenTelemetry.podspec', 'ReactNativeOpenTelemetryCore.podspec', 'example/ios/Podfile', 'example/ios/Podfile.lock', 'example/ios/OpenTelemetryExample/**', 'example/ios/OpenTelemetryExample.xcodeproj/**', 'bun.lock', 'example/bun.lock') }}
+          key: ios-native-${{ hashFiles('ios/**', 'nitrogen/**', 'ReactNativeOpenTelemetry.podspec', 'ReactNativeOpenTelemetryCore.podspec', 'example/ios/Podfile', 'example/ios/Podfile.lock', 'example/ios/OpenTelemetryExample/**', 'example/ios/OpenTelemetryExample.xcodeproj/**', 'example/modules/**', 'bun.lock', 'example/bun.lock') }}
       - name: pod install (test mode)
         working-directory: example/ios
         env:

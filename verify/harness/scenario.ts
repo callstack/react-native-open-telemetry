@@ -1,11 +1,18 @@
 import type {HrTime, Tracer, TracerOptions} from '@opentelemetry/api';
 
-// TestNative (ctx.native) arrives with Task 26.
+/** The example app's TestNative HybridObject (Task 26): app native code using the public `RNOtel` helpers. */
+export interface TestNative {
+  /** Starts and ends native `native.work` under `traceparent` ('' = a root), returns its traceparent. */
+  doWork(traceparent: string, start: HrTime, end: HrTime): string;
+}
+
 export type ScenarioCtx = {
   tracer: Tracer;
   /** Extra tracers, for scenarios that need their own scope (version, schemaUrl). */
   getTracer(name: string, version?: string, options?: TracerOptions): Tracer;
   at(us: number): HrTime;
+  /** Only on devices (the example app); e2e-only scenarios use it. */
+  native?: TestNative;
 };
 /** `jest-degraded`: the Jest project that keeps native `async` (Task 11). */
 export type Runner = 'jest' | 'jest-degraded' | 'e2e';
