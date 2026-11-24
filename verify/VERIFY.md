@@ -45,6 +45,11 @@ Each target compares to its platform's files (`android-*` → `android`, `ios-*`
 first (`RNOtel.start` in `MainApplication` / `AppDelegate`) and ScenariosScreen exports through `startReactNativeSdk`
 and the Kotlin or Swift core.
 
+**TestNative (R25, Task 26).** `cross-*` scenarios call `ctx.native`, the example-only Nitro HybridObject in
+`example/modules/test-native/` (own `nitro.json`, podspec, `build.gradle`; autolinked through
+`example/react-native.config.js`). It uses only the public `RNOtel` helpers. After editing its spec, regenerate with
+`bun run codegen` in that directory (the patched root nitrogen) and commit `nitrogen/generated`.
+
 **iOS pods (R24).** An app's Swift `AppDelegate` cannot `import ReactNativeOpenTelemetry`: the Nitro pod is built with
 C++ interop and the app is not (Task 25 Step 0: `'functional' file not found` while building `NitroModules`). So
 iOS ships two pods: `ReactNativeOpenTelemetryCore` (pure Swift: `ios/Core` + the public `RNOtel` in `ios/RNOtel`) and
@@ -130,8 +135,8 @@ e2e targets are android, ios and web unless the Runners column names them.
 | `rich-span` | every attribute type, events, links, status, scope survive the seam | 8, 15, 18 | jest, e2e | passing |
 | `odd-attributes` | NaN, ±Infinity, -0, big ints, empty arrays survive the seam | 8, 15, 18 | jest, e2e | passing |
 | `export-headers` | configured export headers are sent on every request | 16, 19, 24, 25 | jest, e2e (android, ios; web with 23) | passing |
-| `cross-js-to-native` | a native span started from JS is a child of the JS span | 26 | e2e (android, ios) | pending |
-| `cross-native-to-js` | a JS span started under a native span's context is its child | 26 | e2e (android, ios) | pending |
+| `cross-js-to-native` | a native span started from JS is a child of the JS span | 26 | e2e (android, ios) | passing |
+| `cross-native-to-js` | a JS span started under a native span's context is its child | 26 | e2e (android, ios) | passing |
 | `collector-down` | app never blocks; spans arrive exactly once when the collector is back | 27 | e2e | pending |
 | `native-init-failure` | one error log, no-op SDK, nothing exported | 27 | e2e (android, ios) | pending |
 | `flush-after-reload` | `forceFlush()` resolves across a JS reload; spans arrive once | 27 | e2e (android, ios) | pending |
