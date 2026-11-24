@@ -51,6 +51,8 @@ it (Xcode scheme, `SIMCTL_CHILD_TRACEPARENT`); the verify stages unset it for na
 
 `verify/e2e/scenarios.e2e.ts` runs one test per scenario with runner `e2e`, not `pending`, on each target it lists,
 except the scenarios with their own e2e file. Each test cold-starts the app (R5). e2e is compare-only;
+On web, `forceFlush` latency follows the OTLP exporter's own retries (about 10 s worst case), not a native flush timeout; `collector-down` allows 10 s there.
+
 `VERIFY_E2E_DRAFT=1` writes a **missing** `<name>.<platform>.otlp.json` from the device run and still fails the test
 ("drafted …, review it"); existing files are never overwritten. Draft runs have no retries, so a drafting run always ends red.
 Each target compares to its platform's files (`android-*` → `android`, `ios-*` → `ios`, `web` → `web`): the bare app inits native

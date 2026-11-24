@@ -8,8 +8,8 @@
     "lint": "eslint .",
     "start": "react-native start",
     "test": "jest",
-    "web": "vite -c web/vite.config.mjs",
-    "web:e2e": "vite build -c web/vite.config.mjs && vite preview -c web/vite.config.mjs --port 4173 --strictPort"
+    "web": "../node_modules/.bin/vite -c web/vite.config.mjs",
+    "web:e2e": "../node_modules/.bin/vite build -c web/vite.config.mjs && ../node_modules/.bin/vite preview -c web/vite.config.mjs --port 4173 --strictPort"
   },
   "dependencies": {
     "react": "19.3.0",
