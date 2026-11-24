@@ -66,6 +66,14 @@ test('missing exportConfig returns a no-op handle', () => {
   expect(err).toHaveBeenCalledTimes(1);
 });
 
+test.each(['not a url', 'ftp://c.example.com', 'collector:4318'])('invalid url %s: one error and a no-op handle', url => {
+  const h = startReactNativeSdk({...CONFIG, exportConfig: {url}});
+  expect(isNoop(h)).toBe(true);
+  expect(err).toHaveBeenCalledTimes(1);
+  expect(String(err.mock.calls[0])).toMatch(/invalid exportConfig\.url/);
+  expect(fetchMock).not.toHaveBeenCalled();
+});
+
 test('second call returns the first handle with one warning', () => {
   const h = startReactNativeSdk(CONFIG);
   expect(startReactNativeSdk(CONFIG)).toBe(h);

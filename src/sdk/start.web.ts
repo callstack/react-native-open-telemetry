@@ -7,9 +7,23 @@ import {DISTRO_VERSION, tracesUrl, type SdkConfig, type SdkHandle} from './confi
 import {noopHandle} from './noop';
 import {register, startOnce, TAG} from './shared';
 
+/** Eager check, like native's: http(s) scheme and a host. */
+function isHttpUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return (u.protocol === 'http:' || u.protocol === 'https:') && u.hostname !== '';
+  } catch {
+    return false;
+  }
+}
+
 function start(config: SdkConfig | undefined): SdkHandle {
   if (!config?.serviceName || !config.exportConfig?.url) {
     console.error(`${TAG} serviceName and exportConfig.url are required on web; telemetry is off.`);
+    return noopHandle();
+  }
+  if (!isHttpUrl(config.exportConfig.url)) {
+    console.error(`${TAG} invalid exportConfig.url "${config.exportConfig.url}": expected http(s)://host[:port]; telemetry is off.`);
     return noopHandle();
   }
   const testMode = isTestModeBuild();
