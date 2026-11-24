@@ -22,7 +22,7 @@ permissions:
 
 concurrency:
   group: nightly-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }} # never cancel a real nightly
 
 env:
   E2E_TELEMETRY_DISABLED: '1'
@@ -106,6 +106,7 @@ jobs:
             perl -0pi -e "s|($repo',\s*requirement: \{ kind: 'upToNextMinorVersion', minimumVersion: ')[\d.]+|\${1}$v|" \
               ReactNativeOpenTelemetryCore.podspec
             grep -qF "$repo\", .upToNextMinor(from: \"$v\")" Package.swift || { echo "::error::Package.swift: $repo not bumped"; exit 1; }
+            grep -qF "minimumVersion: '$v'" ReactNativeOpenTelemetryCore.podspec || { echo "::error::podspec: $repo not bumped"; exit 1; }
           done
           # resolve the bumped Swift packages afresh
           rm -f example/ios/OpenTelemetryExample.xcworkspace/xcshareddata/swiftpm/Package.resolved
