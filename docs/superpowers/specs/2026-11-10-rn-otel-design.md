@@ -196,6 +196,10 @@ class NativeHandOffProcessor implements SpanProcessor {
     and the OTLP exporter only.
   - iOS: core sources in e.g. `ios/Core/*.swift`, listed in the podspec `source_files`; a
     root `Package.swift` uses the same path for `swift test` on macOS.
+    *(R24, Task 25: the app's non-interop Swift `AppDelegate` cannot import a Nitro C++-interop module, so iOS ships
+    two pods: pure-Swift `ReactNativeOpenTelemetryCore` (`ios/Core` + `RNOtel`) and the Nitro adapter pod that
+    depends on it. Autolinking links one podspec per package, so apps add `pod 'ReactNativeOpenTelemetryCore',
+    :path => '../node_modules/react-native-open-telemetry'` to their Podfile.)*
 - **v0 uses otel-java directly, not opentelemetry-android** (Claude's call): otel-java is
   stable; opentelemetry-android is alpha, adds desugaring/AGP constraints, and v0 needs none
   of its instrumentation. Add it with v1 lifecycle work. Watch OkHttp version alignment
