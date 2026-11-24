@@ -194,6 +194,37 @@ Each has its own e2e file (R10); the ScenariosScreen does not `forceFlush()` aft
 
   If watchman reports recrawls, restart Metro: a dead watch never delivers the edit.
 
+## Smoke and performance (Task 29)
+
+**`smoke-device`** (`smoke.e2e.ts`, R20): the production pipeline, test mode **off** in native and JS. The test first
+checks the build (`native testMode=false`, no test-mode `flush` control, so a stale test-mode bundle fails too), taps
+the scenario and asserts the collector got exactly one span, `smoke`. No expected file: real ids, times and the
+`telemetry.*` resource. It needs a test-mode-off build; `E2E_SMOKE=1` makes the `e2e` stage run only `smoke.e2e.ts`
+(without it the test skips). Both apps share their bundle id, so the smoke build replaces the test-mode one.
+
+```sh
+cd example/android && ./gradlew :app:assembleRelease          # no OTEL_TEST_MODE, no -PotelTestMode
+cd example/ios && pod install && xcodebuild -workspace OpenTelemetryExample.xcworkspace -scheme OpenTelemetryExample \
+  -configuration Release -sdk iphonesimulator -derivedDataPath build build
+E2E_SMOKE=1 E2E_TARGET=android-bare bun verify --e2e e2e     # or ios-bare; E2E_ANDROID_APP / E2E_IOS_APP pick another build
+```
+
+CI (X11 interim): per PR on the bare targets only, as a variant inside `e2e-android-bare` / `e2e-ios-bare` (built
+before the test-mode build, copied to `$RUNNER_TEMP`, run after the main e2e); Expo smoke is the nightly's (Task 31).
+Android rebundles on a test-mode switch: `app/build.gradle` adds `OTEL_TEST_MODE` and the package/verify sources
+to the bundle task's inputs (they live outside `example/`, so a change there used to leave the old bundle in place).
+
+**Untested: API 26–27.** The Android process-name fallback (`/proc/self/cmdline`, for the main-process check below
+API 28) has not run on a device: no API 26/27 system image is installed locally, and CI uses API 35.
+
+**`perf-budget`** (`perf.e2e.ts`, R27): `android-bare` only, by target name. The scenario times (a) 100 warm-up +
+1,000 × `startSpan → setAttribute×10 → end()` with `performance.now()` per span, through the real synchronous
+hand-off (`end()` alone is reported too), and (b) 10,000 `await null` inside an active span with the patch on, then
+off (`Promise.prototype.then` restored from the patch marker, put back in `finally`; no extra build). The numbers
+leave as attributes of one `perf-result` span; the test writes `verify/artifacts/perf.json` (numbers, method, device)
+and fails only if hand-off p50 ≥ 100 µs or the ratio ≥ 3×. Pixel_9 emulator (API 36, arm64, release test-mode build),
+7 runs: p50 27.1–28.2 µs (p95 51–71 µs, `end()` alone p50 14–14.7 µs), ratio 1.57–2.28.
+
 ## Android cold start with `RNOtel.start` (Task 24, 2026-11-24)
 
 `adb shell am start -W -n opentelemetry.example/.MainActivity` after `am force-stop`, 6 launches each, Pixel_9
@@ -234,7 +265,7 @@ One file per guarantee in `verify/scenarios/`, named after it, with a hand-writt
 
 Shapes use the JS runner's resource, `["service.name"]`. Native test mode builds the resource from config only and
 the example inits with no `serviceVersion` (R2), so native-first device runs match the same shapes; `telemetry.*`
-outside test mode is Task 29's (`smoke-device`).
+outside test mode is `smoke-device`'s, which checks span count and names only (no expected file, R20).
 
 e2e targets are android, ios and web unless the Runners column names them.
 
@@ -267,8 +298,8 @@ e2e targets are android, ios and web unless the Runners column names them.
 | `flush-after-reload` | `forceFlush()` resolves across a JS reload; spans arrive once | 27 | e2e (android, ios) | passing |
 | `background-flush` | spans are exported on background without `forceFlush()` | 27 | e2e (android, ios) | passing |
 | `fast-refresh-idempotent` | fast refresh does not stack the patch: `then`/`setTimeout` keep their identity across refreshes | 27 | e2e (android-dev, ios-dev; local only) | passing (local only) |
-| `smoke-device` | production pipeline (no test mode) exports `smoke` spans | 29 | e2e (android, ios) | pending |
-| `perf-budget` | hand-off p50 < 100 µs/span, patch ratio < 3× (`artifacts/perf.json`, no shape) | 29 | e2e (android) | pending |
+| `smoke-device` | production pipeline (no test mode) exports `smoke` spans | 29 | e2e (android, ios; test-mode-off build, `E2E_SMOKE=1`) | passing (no expected file: count + names) |
+| `perf-budget` | hand-off p50 < 100 µs/span, patch ratio < 3× (`artifacts/perf.json`, no shape) | 29 | e2e (android-bare) | passing |
 
 ### Adding a scenario
 

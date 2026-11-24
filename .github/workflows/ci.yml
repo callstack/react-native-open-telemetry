@@ -72,7 +72,8 @@ jobs:
           if-no-files-found: ignore
           include-hidden-files: true # verify/e2e/.e2e is a dot dir
 
-  # Release builds with the JS bundle embedded (no Metro), test mode on.
+  # Release builds with the JS bundle embedded (no Metro), test mode on; the bare jobs also build test mode off for
+  # smoke-device (per PR on bare only, X11 interim; Expo smoke goes to the nightly). perf-budget runs on android-bare.
   # Every Task 27 failure scenario runs here except fast-refresh-idempotent: it needs dev builds + Metro, so it is
   # local only (verify/VERIFY.md), no per-PR jobs; a nightly can add it.
   # Native outputs are cached on native inputs only, so a JS-only change re-bundles but reuses the native build.
@@ -111,6 +112,14 @@ jobs:
             example/node_modules/react-native-nitro-modules/android/build
             example/node_modules/react-native-nitro-modules/android/.cxx
           key: android-native-${{ hashFiles('android/**', 'nitrogen/**', 'patches/**', 'example/android/**', 'example/modules/**', 'bun.lock', 'example/bun.lock') }}
+      # smoke-device (R20, X11): the production pipeline needs a test-mode-off build. Built first, so the test-mode
+      # build is what the native outputs cache keeps; the switch recompiles only Kotlin and the bundle.
+      - name: Build release APK (smoke, test mode off)
+        working-directory: example/android
+        run: |
+          ./gradlew :app:assembleRelease -PreactNativeArchitectures=x86_64 ||
+            ./gradlew :app:assembleRelease -PreactNativeArchitectures=x86_64
+          cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/smoke.apk"
       - name: Build release APK (test mode)
         working-directory: example/android
         env:
@@ -152,6 +161,7 @@ jobs:
           script: |
             adb shell settings put global hide_error_dialogs 1
             bun verify --e2e e2e
+            E2E_SMOKE=1 E2E_ANDROID_APP="$RUNNER_TEMP/smoke.apk" bun verify --e2e e2e
       - uses: actions/upload-artifact@v4
         if: always() # e2e retries once; keep traces of retried and failed attempts
         with:
@@ -189,6 +199,18 @@ jobs:
             example/ios/Pods
             example/ios/build/Build
           key: ios-native-${{ hashFiles('ios/**', 'nitrogen/**', 'ReactNativeOpenTelemetry.podspec', 'ReactNativeOpenTelemetryCore.podspec', 'example/ios/Podfile', 'example/ios/Podfile.lock', 'example/ios/OpenTelemetryExample/**', 'example/ios/OpenTelemetryExample.xcodeproj/**', 'example/modules/**', 'bun.lock', 'example/bun.lock') }}
+      # smoke-device (R20, X11): a test-mode-off build, first, so the cache keeps the test-mode one; the switch
+      # recompiles only the core pod, the adapter and the app.
+      - name: pod install (smoke, test mode off)
+        working-directory: example/ios
+        run: pod install
+      - name: Build release app (smoke, test mode off)
+        working-directory: example/ios
+        run: |
+          xcodebuild -workspace OpenTelemetryExample.xcworkspace -scheme OpenTelemetryExample \
+            -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build ARCHS=arm64 build
+          cp -R build/Build/Products/Release-iphonesimulator/OpenTelemetryExample.app "$RUNNER_TEMP/"
       - name: pod install (test mode)
         working-directory: example/ios
         env:
@@ -212,6 +234,12 @@ jobs:
           E2E_TARGET: ios-bare
           AGENT_DEVICE_DAEMON_STARTUP_TIMEOUT_MS: '600000' # the first daemon start on a cold runner outlasts the 120 s default
         run: bun verify --e2e e2e
+      - name: e2e smoke (ios-bare, test mode off)
+        env:
+          E2E_TARGET: ios-bare
+          E2E_SMOKE: '1'
+          AGENT_DEVICE_DAEMON_STARTUP_TIMEOUT_MS: '600000'
+        run: E2E_IOS_APP="$RUNNER_TEMP/OpenTelemetryExample.app" bun verify --e2e e2e
       - name: Diagnose the simulator log
         if: failure()
         run: |
