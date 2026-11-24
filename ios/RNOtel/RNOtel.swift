@@ -17,7 +17,9 @@ public enum RNOtel {
   public static func start(_ configure: (RNOtelConfig) -> Void) {
     let c = RNOtelConfig()
     configure(c)
-    if let err = initialize(c.toCore()).error { NSLog("RNOtel init failed; telemetry is off: %@", err) }
+    let r = initialize(c.toCore())
+    // alreadyInitialized: a repeat call; a sticky failure was logged by the first one
+    if let err = r.error, !r.alreadyInitialized { NSLog("RNOtel init failed; telemetry is off: %@", err) }
   }
 
   private static var observer: NSObjectProtocol?

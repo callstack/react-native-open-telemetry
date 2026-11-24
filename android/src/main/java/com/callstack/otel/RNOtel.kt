@@ -32,7 +32,8 @@ object RNOtel {
       val app = context.applicationContext
       if (processName() != app.packageName) return
       val r = initialize(RNOtelConfig().apply(block).toCore())
-      if (r.error != null) Log.e(TAG, "init failed; telemetry is off: ${r.error}")
+      // alreadyInitialized: a repeat call; a sticky failure was logged by the first one
+      if (r.error != null && !r.alreadyInitialized) Log.e(TAG, "init failed; telemetry is off: ${r.error}")
     } catch (e: Exception) {
       Log.e(TAG, "init failed; telemetry is off", e)
     }
