@@ -219,11 +219,12 @@ API 28) has not run on a device: no API 26/27 system image is installed locally,
 
 **`perf-budget`** (`perf.e2e.ts`, R27): `android-bare` only, by target name. The scenario times (a) 100 warm-up +
 1,000 × `startSpan → setAttribute×10 → end()` with `performance.now()` per span, through the real synchronous
-hand-off (`end()` alone is reported too), and (b) 10,000 `await null` inside an active span with the patch on, then
-off (`Promise.prototype.then` restored from the patch marker, put back in `finally`; no extra build). The numbers
-leave as attributes of one `perf-result` span; the test writes `verify/artifacts/perf.json` (numbers, method, device)
-and fails only if hand-off p50 ≥ 100 µs or the ratio ≥ 3×. Pixel_9 emulator (API 36, arm64, release test-mode build),
-7 runs: p50 27.1–28.2 µs (p95 51–71 µs, `end()` alone p50 14–14.7 µs), ratio 1.57–2.28.
+hand-off (`end()` alone is reported too), and (b) 5 alternating rounds (on, off, …) of 20,000 `await null` inside
+an active span, patch on vs off (`Promise.prototype.then` restored from the patch marker, put back in `finally` each
+round; no extra build). The numbers leave as attributes of one `perf-result` span; the test writes
+`verify/artifacts/perf.json` (every sample, method, device) and fails only if the unrounded hand-off p50 ≥ 100 µs or
+median(on) / median(off) ≥ 3×. It measures the test-mode build, which crosses the same hand-off seam as production.
+Pixel_9 emulator (API 36, arm64), 2 runs: p50 26.9–27.3 µs (p95 53–58 µs, `end()` alone p50 13.8–14.2 µs), ratio 1.70–1.71.
 
 ## Android cold start with `RNOtel.start` (Task 24, 2026-11-24)
 

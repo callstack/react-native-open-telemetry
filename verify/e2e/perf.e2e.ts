@@ -5,8 +5,17 @@ import {expect} from 'e2e';
 import {MOBILE, test} from './harness';
 
 const BUDGET = {handoffP50Us: 100, patchRatio: 3};
+/** Report only: the gates use the unrounded values. */
 const round = (x: number) => Math.round(x * 100) / 100;
+const median = (xs: number[]) => {
+  const s = [...xs].sort((a, b) => a - b);
+  const m = s.length >> 1;
+  return s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2;
+};
 const OUT = path.join(import.meta.dirname, '..', 'artifacts', 'perf.json');
+
+/** OTLP/JSON attribute value -> number or number[] (NaN when missing, which fails both budgets). */
+const num = (v: any): number => Number(v?.doubleValue ?? v?.intValue ?? NaN);
 
 // Performance guardrail (§9.2, R27): perf-budget sends its numbers as the attributes of one `perf-result` span;
 // this test writes them to verify/artifacts/perf.json and fails only on the loose budgets. No shape file, no compare.
@@ -26,16 +35,20 @@ test('perf-budget', {platforms: MOBILE}, async ({app, screen, collector, device,
     .flatMap(r => r.scopeSpans.flatMap((s: any) => s.spans))
     .find(s => s.name === 'perf-result');
   if (!span) throw new Error('no perf-result span arrived');
-  const m: Record<string, number> = Object.fromEntries(
-    span.attributes.map((a: any) => [a.key.replace(/^com\.callstack\.perf\./, ''), Number(a.value.doubleValue ?? a.value.intValue)]),
-  );
-  const n = (k: string) => m[k] ?? NaN; // NaN fails both budgets
+  const attrs = new Map<string, any>(span.attributes.map((a: any) => [a.key.replace(/^com\.callstack\.perf\./, ''), a.value]));
+  const n = (k: string) => num(attrs.get(k));
+  const ns = (k: string): number[] => (attrs.get(k)?.arrayValue?.values ?? []).map(num);
   const prop = (p: string) =>
     execFileSync('adb', ['-s', device.unstable_raw.deviceId, 'shell', 'getprop', p], {encoding: 'utf8'}).trim();
-  const ratio = n('await.on_ms') / n('await.off_ms');
+
+  const p50Us = n('handoff.p50_us');
+  const onMs = ns('await.on_ms');
+  const offMs = ns('await.off_ms');
+  const ratio = onMs.length && offMs.length ? median(onMs) / median(offMs) : NaN;
   const report = {
     scenario: 'perf-budget',
     target,
+    build: 'release, test mode on (test-mode ids and resource; the same JS -> Nitro hand-off seam as production)',
     measuredAt: new Date().toISOString(),
     device: {
       model: prop('ro.product.model'),
@@ -45,19 +58,22 @@ test('perf-budget', {platforms: MOBILE}, async ({app, screen, collector, device,
       apiLevel: Number(prop('ro.build.version.sdk')),
     },
     handoff: {
-      what: 'per span: tracer.startSpan -> setAttribute x10 -> end(), through NativeHandOffProcessor.onEnd -> Nitro handOff (synchronous on the JS thread); performance.now() around each span',
+      what: 'per span, in the test-mode build: tracer.startSpan -> setAttribute x10 -> end(), through NativeHandOffProcessor.onEnd -> Nitro handOff (synchronous on the JS thread, the production seam); performance.now() around each span',
       spans: n('handoff.spans'),
       warmupSpans: n('handoff.warmup'),
-      p50Us: n('handoff.p50_us'),
-      p95Us: n('handoff.p95_us'),
-      endOnlyP50Us: n('handoff.end_p50_us'), // end() alone: onEnd, isSampled, toSeamSpan, handOff
+      p50Us: round(p50Us),
+      p95Us: round(n('handoff.p95_us')),
+      endOnlyP50Us: round(n('handoff.end_p50_us')), // end() alone: onEnd, isSampled, toSeamSpan, handOff
       budgetP50Us: BUDGET.handoffP50Us,
     },
     patch: {
-      what: 'N sequential `await null` inside an active span (the wrapped path); off = Promise.prototype.then restored from the patch marker for the leg (R27)',
-      awaits: n('await.count'),
-      onMs: round(n('await.on_ms')),
-      offMs: round(n('await.off_ms')),
+      what: 'in the test-mode build: alternating rounds (on, off, on, off, …) of N sequential `await null` inside an active span (the wrapped path); off = Promise.prototype.then restored from the patch marker for the leg (R27); ratio = median(on) / median(off)',
+      awaitsPerLeg: n('await.count'),
+      rounds: n('await.rounds'),
+      onMs: onMs.map(round),
+      offMs: offMs.map(round),
+      medianOnMs: round(median(onMs)),
+      medianOffMs: round(median(offMs)),
       ratio: round(ratio),
       budgetRatio: BUDGET.patchRatio,
     },
@@ -65,6 +81,6 @@ test('perf-budget', {platforms: MOBILE}, async ({app, screen, collector, device,
   fs.mkdirSync(path.dirname(OUT), {recursive: true});
   fs.writeFileSync(OUT, JSON.stringify(report, null, 2) + '\n');
   console.log(`perf.json: ${JSON.stringify(report)}`);
-  expect(report.handoff.p50Us).toBeLessThan(BUDGET.handoffP50Us);
-  expect(report.patch.ratio).toBeLessThan(BUDGET.patchRatio);
+  expect(p50Us).toBeLessThan(BUDGET.handoffP50Us);
+  expect(ratio).toBeLessThan(BUDGET.patchRatio);
 });

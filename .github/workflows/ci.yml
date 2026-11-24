@@ -119,7 +119,7 @@ jobs:
         run: |
           ./gradlew :app:assembleRelease -PreactNativeArchitectures=x86_64 ||
             ./gradlew :app:assembleRelease -PreactNativeArchitectures=x86_64
-          cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/smoke.apk"
+          cp app/build/outputs/apk/release/app-release.apk '${{ runner.temp }}/smoke.apk'
       - name: Build release APK (test mode)
         working-directory: example/android
         env:
@@ -160,8 +160,9 @@ jobs:
           disable-animations: true
           script: |
             adb shell settings put global hide_error_dialogs 1
-            bun verify --e2e e2e
-            E2E_SMOKE=1 E2E_ANDROID_APP="$RUNNER_TEMP/smoke.apk" bun verify --e2e e2e
+            # one line (the runner runs each line in its own shell and stops at the first failure): smoke runs even
+            # when the main e2e failed, and the step exits with the first non-zero code
+            bun verify --e2e e2e; a=$?; E2E_SMOKE=1 E2E_ANDROID_APP='${{ runner.temp }}/smoke.apk' bun verify --e2e e2e; b=$?; exit $(( a ? a : b ))
       - uses: actions/upload-artifact@v4
         if: always() # e2e retries once; keep traces of retried and failed attempts
         with:
@@ -205,12 +206,13 @@ jobs:
         working-directory: example/ios
         run: pod install
       - name: Build release app (smoke, test mode off)
+        id: ios-smoke-build
         working-directory: example/ios
         run: |
           xcodebuild -workspace OpenTelemetryExample.xcworkspace -scheme OpenTelemetryExample \
             -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build ARCHS=arm64 build
-          cp -R build/Build/Products/Release-iphonesimulator/OpenTelemetryExample.app "$RUNNER_TEMP/"
+          cp -R build/Build/Products/Release-iphonesimulator/OpenTelemetryExample.app '${{ runner.temp }}/'
       - name: pod install (test mode)
         working-directory: example/ios
         env:
@@ -235,11 +237,13 @@ jobs:
           AGENT_DEVICE_DAEMON_STARTUP_TIMEOUT_MS: '600000' # the first daemon start on a cold runner outlasts the 120 s default
         run: bun verify --e2e e2e
       - name: e2e smoke (ios-bare, test mode off)
+        # also after a failed main e2e (that step already fails the job)
+        if: ${{ !cancelled() && steps.ios-smoke-build.outcome == 'success' }}
         env:
           E2E_TARGET: ios-bare
           E2E_SMOKE: '1'
           AGENT_DEVICE_DAEMON_STARTUP_TIMEOUT_MS: '600000'
-        run: E2E_IOS_APP="$RUNNER_TEMP/OpenTelemetryExample.app" bun verify --e2e e2e
+        run: E2E_IOS_APP='${{ runner.temp }}/OpenTelemetryExample.app' bun verify --e2e e2e
       - name: Diagnose the simulator log
         if: failure()
         run: |
