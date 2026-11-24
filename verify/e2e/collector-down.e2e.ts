@@ -6,10 +6,10 @@ import {expectScenario, tapFlush, test} from './harness';
 test('collector-down', async ({app, screen, collector, target}) => {
   await expectScenario('collector-down', target, {app, screen, collector}, {
     afterBegin: () => collector.refuse(503, 3), // after begin, which clears refusals (F15)
-    doneTimeout: 2_000,
     afterDone: async () => {
-      // each forceFlush resolves while the collector refuses (native flush timeout 5 s)
-      for (let n = 1; n <= 3; n++) await tapFlush(screen, n);
+      // the app never waits on the collector: each forceFlush resolves within the native flush timeout (5 s)
+      for (let n = 1; n <= 3; n++) await tapFlush(screen, n, 6_000);
+      await new Promise(r => setTimeout(r, 1_000)); // a late duplicate (iOS requeue) would now count against "once"
     },
   });
 });

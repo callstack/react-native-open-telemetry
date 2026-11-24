@@ -62,7 +62,7 @@ package final class OtelCore {
       }
     }
     // test mode: no timed export within a device test, so only flush and background export send (Task 27)
-    bsp = BatchSpanProcessor(spanExporter: exporter, scheduleDelay: testMode ? 120 : 5)
+    bsp = BatchSpanProcessor(spanExporter: exporter, scheduleDelay: testMode ? 120 : 5) // 5 s: upstream's default
     let b = TracerProviderBuilder().with(resource: resource).add(spanProcessor: bsp)
     tracerProvider = (testMode ? b.with(idGenerator: SequentialIds()) : b).build()
   }

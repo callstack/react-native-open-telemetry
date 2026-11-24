@@ -1,11 +1,12 @@
 import {execFileSync} from 'node:child_process';
 import {expect} from 'e2e';
-import {clearDeviceLog, deviceLog, expectScenario, platformOf, test, until} from './harness';
+import {ANDROID_EXPORT_URL_FILE, clearDeviceLog, deviceLog, expectScenario, platformOf, test, until} from './harness';
 
 const BAD_URL = 'not a url';
 // Android: Application.onCreate cannot see launch arguments, so the example reads this file instead (test mode only).
-// The app creates the directory itself (getExternalFilesDir on every test-mode launch, e.g. the harness warm-up).
-const ANDROID_FILE = '/sdcard/Android/data/opentelemetry.example/files/otel-export-url';
+// The app creates the directory itself (getExternalFilesDir on every test-mode launch, e.g. the harness warm-up),
+// and the harness's install fixture removes a file a killed run left behind.
+const ANDROID_FILE = ANDROID_EXPORT_URL_FILE;
 
 // Native init failure (§4.4, §9.4): the example's native-first init gets an invalid export URL. The SDK reports it
 // exactly once, the app keeps running on a no-op SDK, the no-op forceFlush() resolves (scenario-done), and nothing

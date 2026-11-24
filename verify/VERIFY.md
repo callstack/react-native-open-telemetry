@@ -88,7 +88,7 @@ Each has its own e2e file (R10); the ScenariosScreen does not `forceFlush()` aft
   iOS: launch argument `--otel-export-url=not a url` (AppDelegate, `#if OTEL_TEST_MODE`; the Podfile adds the
   condition to the app target). Android: `Application.onCreate` cannot see launch arguments (they reach the
   Activity), so the test writes `/sdcard/Android/data/opentelemetry.example/files/otel-export-url` (mode 644, removed
-  afterwards) and `MainApplication` reads it. Asserted: exactly one log line with `telemetry is off` (native `RNOtel`
+  afterwards and before each install's warm-up launch) and `MainApplication` reads it. Asserted: exactly one log line with `telemetry is off` (native `RNOtel`
   plus JS `[react-native-open-telemetry]` lines), `scenario-done` (the no-op `forceFlush()` resolved), and the empty
   expected file. JS no longer repeats a native-first failure that native already reported (`alreadyInitialized`).
 - `flush-after-reload`: `reload`, then `flush` must resolve within 5 s, the span arrives once.
@@ -101,7 +101,8 @@ Each has its own e2e file (R10); the ScenariosScreen does not `forceFlush()` aft
   edits of `lib/module/setup.js` appends `globalThis.__otelRefreshes += 1`; Metro hot-updates it, it re-runs
   `installContextPatch`, and `patch-identity` must read `same refreshes=<n>` (`then`/`setTimeout` are still the
   functions first seen; a full reload would reset the count). Then `nest-after-await` must match its own expected
-  file. Run it:
+  file. The test edits `lib/`, so run `bun run prepare` first; a killed run leaves the extra line in
+  `lib/module/setup.js`, which `bun run prepare` clears. Run it:
 
   ```sh
   cd example/android && OTEL_TEST_MODE=1 ./gradlew :app:assembleDebug -PotelTestMode=true

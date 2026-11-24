@@ -18,6 +18,9 @@ const {compareToExpected} = await import('../harness/compare');
 export const {allScenarios} = await import('../scenarios');
 type Collector = Awaited<ReturnType<typeof startCollector>>;
 
+/** Test-mode override of the Android example's export URL (MainApplication), written by native-init-failure.e2e.ts. */
+export const ANDROID_EXPORT_URL_FILE = '/sdcard/Android/data/opentelemetry.example/files/otel-export-url';
+
 /** Must match the example apps' native init URLs (MainApplication.kt, AppDelegate.swift). */
 export const COLLECTOR_PORT = 4318;
 
@@ -36,6 +39,9 @@ export const test = base.extend<{target: string}, {collector: Collector; install
   installed: [
     async ({device}, use) => {
       const {app} = await device.installApp();
+      // a killed native-init-failure run must not leave its bad export URL behind for later launches
+      if (device.unstable_raw.session.includes('android'))
+        execFileSync('adb', ['-s', device.unstable_raw.deviceId, 'shell', `rm -f ${ANDROID_EXPORT_URL_FILE}`]);
       // Warm-up launch: on Android the first relaunch right after an install can fail with
       // "remained foreground after close", and a test retry does not re-run this worker fixture.
       await device.openApp(app);
