@@ -148,6 +148,7 @@ jobs:
           disable-animations: false
           script: echo "AVD snapshot created"
       - name: e2e (android-bare)
+        timeout-minutes: 25 # a hung device run fails here, not at the job limit
         uses: reactivecircus/android-emulator-runner@v2
         env:
           E2E_TARGET: android-bare
@@ -232,11 +233,13 @@ jobs:
           xcrun simctl boot "$udid"
           xcrun simctl bootstatus "$udid" -b
       - name: e2e (ios-bare)
+        timeout-minutes: 30 # a hung device run fails here, not at the job limit
         env:
           E2E_TARGET: ios-bare
           AGENT_DEVICE_DAEMON_STARTUP_TIMEOUT_MS: '600000' # the first daemon start on a cold runner outlasts the 120 s default
         run: bun verify --e2e e2e
       - name: e2e smoke (ios-bare, test mode off)
+        timeout-minutes: 10 # a hung device run fails here, not at the job limit
         # also after a failed main e2e (that step already fails the job)
         if: ${{ !cancelled() && steps.ios-smoke-build.outcome == 'success' }}
         env:
@@ -246,9 +249,10 @@ jobs:
         run: E2E_IOS_APP='${{ runner.temp }}/OpenTelemetryExample.app' bun verify --e2e e2e
       - name: Diagnose the simulator log
         if: failure()
+        timeout-minutes: 4 # `log show` scans the whole store: ~1 min per call on a runner
         run: |
-          echo "--- RNOtel lines"; xcrun simctl spawn booted log show --last 30m --info --style compact --predicate 'eventMessage CONTAINS "RNOtel"' | tail -20
-          echo "--- app process lines"; xcrun simctl spawn booted log show --last 30m --info --style compact --predicate 'process == "OpenTelemetryExample"' | tail -20
+          echo "--- RNOtel lines"; xcrun simctl spawn booted log show --last 10m --info --style compact --predicate 'eventMessage CONTAINS "RNOtel"' | tail -20
+          echo "--- app process lines"; xcrun simctl spawn booted log show --last 10m --info --style compact --predicate 'process == "OpenTelemetryExample"' | tail -20
           date; echo "$TZ"
       - uses: actions/upload-artifact@v4
         if: failure()
@@ -338,6 +342,7 @@ jobs:
           disable-animations: false
           script: echo "AVD snapshot created"
       - name: e2e (android-expo)
+        timeout-minutes: 25 # a hung device run fails here, not at the job limit
         uses: reactivecircus/android-emulator-runner@v2
         env:
           E2E_TARGET: android-expo
@@ -406,6 +411,7 @@ jobs:
           xcrun simctl boot "$udid"
           xcrun simctl bootstatus "$udid" -b
       - name: e2e (ios-expo)
+        timeout-minutes: 30 # a hung device run fails here, not at the job limit
         env:
           E2E_TARGET: ios-expo
           AGENT_DEVICE_DAEMON_STARTUP_TIMEOUT_MS: '600000' # the first daemon start on a cold runner outlasts the 120 s default
