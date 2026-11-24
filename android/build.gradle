@@ -32,6 +32,8 @@ android {
     targetSdkVersion getExtOrIntegerDefault("targetSdkVersion")
     buildConfigField "boolean", "OTEL_TEST_MODE", otelTestMode.toString()
     buildConfigField "String", "OTEL_DISTRO_VERSION", "\"${otelDistroVersion}\""
+    // apps that minify (Expo's release default) need these
+    consumerProguardFiles "consumer-rules.pro"
 
     externalNativeBuild {
       cmake {
