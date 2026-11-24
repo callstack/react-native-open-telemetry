@@ -34,10 +34,16 @@ function start(config: SdkConfig | undefined): SdkHandle {
     console.error(`${TAG} native module not found (Expo Go or a build without it); telemetry is off.`);
     return noopHandle();
   }
-  const result = native.initialize(config && toSeamConfig(config));
+  const seam = config && toSeamConfig(config);
+  const result = native.initialize(seam);
   if (result.error) {
     // alreadyInitialized: a failed native-first init sticks (R16) and native already reported it, once
-    if (!result.alreadyInitialized) console.error(`${TAG} native init failed; telemetry is off: ${result.error}`);
+    if (result.alreadyInitialized) return noopHandle();
+    if (config && !seam) {
+      console.error(`${TAG} serviceName and exportConfig.url are required to initialize native; telemetry is off.`);
+    } else {
+      console.error(`${TAG} native init failed; telemetry is off: ${result.error}`);
+    }
     return noopHandle();
   }
   if (result.alreadyInitialized && config?.exportConfig) {

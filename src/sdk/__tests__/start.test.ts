@@ -101,6 +101,14 @@ test('init error returns a no-op handle and logs once', () => {
   expect(isNoop(h)).toBe(true);
 });
 
+test('a partial config names the missing fields, not native\'s "no config"', () => {
+  const {calls} = fakeOtel();
+  expect(isNoop(startReactNativeSdk({serviceName: 'shop'}))).toBe(true);
+  expect(calls).toEqual([undefined]);
+  expect(err).toHaveBeenCalledTimes(1);
+  expect(String(err.mock.calls[0])).toMatch(/serviceName and exportConfig\.url are required/);
+});
+
 test('a failed native-first init (sticky, R16) was reported by native: no second report', () => {
   fakeOtel({initialized: true, error: 'invalid exportUrl'});
   const h = startReactNativeSdk();
