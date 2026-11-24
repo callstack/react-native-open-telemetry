@@ -4,6 +4,7 @@
   "private": true,
   "main": "index.js",
   "scripts": {
+    "postinstall": "test -e node_modules/react-native-open-telemetry || ln -sfn ../.. node_modules/react-native-open-telemetry",
     "prebuild": "expo prebuild --clean --no-install"
   },
   "dependencies": {

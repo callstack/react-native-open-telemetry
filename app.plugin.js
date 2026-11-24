@@ -13,8 +13,12 @@ function addCorePod(podfile, podPath) {
   return out;
 }
 
+// The app's own `expo`, not one beside this file: a linked or pnpm-installed package has none of its own.
+const configPlugins = config =>
+  require(require.resolve('expo/config-plugins', {paths: [config._internal?.projectRoot ?? process.cwd(), __dirname]}));
+
 module.exports = config =>
-  require('expo/config-plugins').withPodfile(config, c => {
+  configPlugins(config).withPodfile(config, c => {
     c.modResults.contents = addCorePod(c.modResults.contents, path.relative(c.modRequest.platformProjectRoot, __dirname));
     return c;
   });

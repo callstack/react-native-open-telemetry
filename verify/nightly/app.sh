@@ -83,7 +83,11 @@ pack() {
   npm pack --pack-destination "$tmp" >/dev/null
   tgz=$(ls "$tmp"/*.tgz)
   echo "pack: $(basename "$tgz") -> $app"
+  # example-expo's postinstall links the repo root there (its plugin resolves by package name); unlink, never write
+  # through the link into the checkout
+  rm -f "$app/node_modules/react-native-open-telemetry"
   (cd "$app" && bun add "$tgz")
+  [ ! -L "$app/node_modules/react-native-open-telemetry" ] || die "$app: still links the root"
   # autolink and bundle the installed package, not the repo root
   edit "$app/react-native.config.js" 's/^.*react-native-open-telemetry.*root:.*\n//m' 'react-native-test-native'
   if grep -qF "'react-native-open-telemetry'" "$app/react-native.config.js"; then die "$app: still links the root"; fi
@@ -91,11 +95,12 @@ pack() {
     "s|require\('\.\./metro'\)|require('react-native-open-telemetry/metro')|; s/, 'react-native-open-telemetry': root//" \
     "require('react-native-open-telemetry/metro')"
   if grep -qF "'react-native-open-telemetry': root" "$app/metro.config.js"; then die "$app: metro still maps the root"; fi
-  # the Core pod (R24) from the installed package, as an app using the npm package declares it
-  local pod="pod 'ReactNativeOpenTelemetryCore', :path => '../node_modules/react-native-open-telemetry'"
-  local file=$app/ios/Podfile
-  [ "$app" = example-expo ] && file=$app/plugins/withOtelExample.js
-  edit "$file" "s|pod 'ReactNativeOpenTelemetryCore', :path => '\.\./\.\.'|$pod|" "$pod"
+  # the Core pod (R24) from the installed package, as an app using the npm package declares it. The Expo app gets it
+  # from the package's own plugin at prebuild, relative to wherever the package is installed.
+  if [ "$app" = example ]; then
+    local pod="pod 'ReactNativeOpenTelemetryCore', :path => '../node_modules/react-native-open-telemetry'"
+    edit "$app/ios/Podfile" "s|pod 'ReactNativeOpenTelemetryCore', :path => '\.\./\.\.'|$pod|" "$pod"
+  fi
 }
 
 case "${1:-}" in

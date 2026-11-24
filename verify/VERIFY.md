@@ -106,10 +106,13 @@ unproven until their first CI run.
   plus the bare example's `OTEL_TEST_MODE` inline plugin.
 - **Autolinking:** Expo autolinking reads `example-expo/react-native.config.js`, which points at the repo root and at
   the bare example's TestNative, so the `cross-*` scenarios run on Expo too.
-- **Local config plugin** (`example-expo/plugins/withOtelExample.js`, applied at prebuild): adds
-  `pod 'ReactNativeOpenTelemetryCore', :path => '../..'` to the Podfile (R24; `withPodfile`, no `expo-build-properties`
-  dependency); sets `usesCleartextTraffic` (the collector is plain HTTP); and with `OTEL_TEST_MODE=1` at prebuild
-  writes `otelTestMode=true` to `gradle.properties`. iOS takes test mode at `OTEL_TEST_MODE=1 pod install`.
+- **Config plugins** (`app.json`): the package's own `react-native-open-telemetry` (`app.plugin.js`) adds
+  `pod 'ReactNativeOpenTelemetryCore', :path => '../..'` to the Podfile (R24), as in any Expo app. Expo resolves it by
+  package name: `example-expo`'s `postinstall` links `node_modules/react-native-open-telemetry` to the repo root (bun
+  cannot install the root as a `file:` dependency: it looks for the root's `patches/` relative to the app). Then the
+  example-only `example-expo/plugins/withOtelExample.js` sets `usesCleartextTraffic` (the collector is plain HTTP), adds
+  the bundle task inputs, and with `OTEL_TEST_MODE=1` at prebuild writes `otelTestMode=true` to `gradle.properties`.
+  iOS takes test mode at `OTEL_TEST_MODE=1 pod install`.
 - **R8:** Expo release builds minify (`android.enableMinifyInReleaseBuilds=true`). The library now ships
   `android/consumer-rules.pro`: `-dontwarn` for otel-java's optional compile-only classes, and a keep rule for
   `io.opentelemetry.sdk.resources.**`, which otel-java's `ResourceMarshaler` reaches by reflection

@@ -34,6 +34,7 @@
       "default": "./lib/module/index.js"
     },
     "./metro": "./metro/index.js",
+    "./app.plugin.js": "./app.plugin.js",
     "./vite": {
       "types": "./vite/index.d.ts",
       "default": "./vite/index.js"
