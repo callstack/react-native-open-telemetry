@@ -395,8 +395,36 @@ jobs:
           if-no-files-found: ignore
           include-hidden-files: true # verify/e2e/.e2e is a dot dir
 
+  # The bare example's ScenariosScreen through react-native-web and the web SDK (example/web), headless Chromium.
+  # The runner builds the Vite app in test mode and serves it (e2e.config.ts `command`).
+  e2e-web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.19
+      - run: bun install --frozen-lockfile
+      - run: bun install --frozen-lockfile
+        working-directory: example
+      - run: bun run prepare # the web app resolves the package through exports -> lib/ (browser condition)
+      - run: bunx e2e-web install chromium --with-deps
+      - run: bun verify --e2e e2e
+        env:
+          E2E_TARGET: web
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: verify-artifacts-e2e-web
+          path: |
+            verify/artifacts/
+            verify/e2e/.e2e/
+          if-no-files-found: ignore
+          include-hidden-files: true # verify/e2e/.e2e is a dot dir
+
   budget:
-    needs: [static-fast, fast-swift, e2e-android-bare, e2e-ios-bare, e2e-android-expo, e2e-ios-expo] # every other job; extend when jobs are added
+    needs: [static-fast, fast-swift, e2e-android-bare, e2e-ios-bare, e2e-android-expo, e2e-ios-expo, e2e-web] # every other job; extend when jobs are added
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

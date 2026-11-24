@@ -1,10 +1,10 @@
 import {expect} from 'e2e';
-import {expectScenario, tapFlush, test} from './harness';
+import {expectScenario, MOBILE, tapFlush, test} from './harness';
 
 // forceFlush() across a JS reload (§9.4): the span handed off before the reload is still queued in native (JS keeps
 // no buffer); after the reload a new JS SDK attaches and its forceFlush() resolves within 5 s and sends it exactly once.
 // Test mode has no timed export (scheduleDelay 120 s), so only that flush can have sent it.
-test('flush-after-reload', async ({app, screen, collector, target}) => {
+test('flush-after-reload', {platforms: MOBILE}, async ({app, screen, collector, target}) => {
   await expectScenario('flush-after-reload', target, {app, screen, collector}, {
     afterDone: async () => {
       await screen.getByTestId('reload').tap(); // native reload (TestNative), test-mode builds only

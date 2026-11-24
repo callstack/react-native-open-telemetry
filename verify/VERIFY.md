@@ -13,8 +13,11 @@ cd example/android && OTEL_TEST_MODE=1 ./gradlew :app:assembleRelease -PotelTest
 # iOS
 cd example/ios && OTEL_TEST_MODE=1 pod install && OTEL_TEST_MODE=1 xcodebuild -workspace OpenTelemetryExample.xcworkspace \
   -scheme OpenTelemetryExample -configuration Release -sdk iphonesimulator -derivedDataPath build build
-E2E_TARGET=android-bare bun verify --e2e e2e   # or ios-bare, android-expo, ios-expo; omit E2E_TARGET for all four
+E2E_TARGET=android-bare bun verify --e2e e2e   # or ios-bare, android-expo, ios-expo, web; omit E2E_TARGET for all five
 ```
+
+Web (`web` target) needs only `lib/` and a Playwright Chromium (`bunx e2e-web install chromium`); the runner builds and
+serves `example/web` itself (below).
 
 The Expo app (`example-expo/`, `android-expo` / `ios-expo`) is CNG: `android/` and `ios/` are generated, not committed.
 
@@ -50,11 +53,16 @@ it (Xcode scheme, `SIMCTL_CHILD_TRACEPARENT`); the verify stages unset it for na
 except the scenarios with their own e2e file. Each test cold-starts the app (R5). e2e is compare-only;
 `VERIFY_E2E_DRAFT=1` writes a **missing** `<name>.<platform>.otlp.json` from the device run and still fails the test
 ("drafted …, review it"); existing files are never overwritten. Draft runs have no retries, so a drafting run always ends red.
-Each target compares to its platform's files (`android-*` → `android`, `ios-*` → `ios`): the bare app inits native
+Each target compares to its platform's files (`android-*` → `android`, `ios-*` → `ios`, `web` → `web`): the bare app inits native
 first (`RNOtel.start` in `MainApplication` / `AppDelegate`), the Expo app inits from JS (below), and ScenariosScreen
 exports through `startReactNativeSdk` and the Kotlin or Swift core. One set of files for both apps is the proof that
 the two init paths are equivalent. A scenario that only one app can run names targets (`android-bare`) instead of
 platforms in `targets`.
+
+**Fixtures by target kind (Task 23).** `harness.ts` has two chains: `test` (device targets: its auto `installed`
+fixture and `target` name `device`, so every `test(…)` passes `{platforms: MOBILE}`) and `webTest` (a fresh browser
+context per test; `target` is the platform, `web`). `anyTarget(title, body)` registers one body on both; e2e titles must
+be unique, so the web copy is `web › <title>`.
 
 **TestNative (R25, Task 26).** `cross-*` scenarios call `ctx.native`, the example-only Nitro HybridObject in
 `example/modules/test-native/` (own `nitro.json`, podspec, `build.gradle`; autolinked through
@@ -106,6 +114,38 @@ unproven until their first CI run.
   (`EntityUtil.getEntities`). Without it every export threw `Error calling getEntities on Resource` and nothing arrived.
 - **Not on Expo:** `native-init-failure` (`targets: ['android-bare', 'ios-bare']`): the bad URL goes to the bare app's
   native init, and the Expo app has none. `fast-refresh-idempotent` is local-only on the bare dev builds.
+
+## Web (Task 23)
+
+`example/web/` is a Vite 7 app (`vite.config.mjs`, wrapped in the package's `withOtel`) that renders the bare
+example's `ScenariosScreen` through react-native-web 0.21.4 (react-dom 19.3.0). `index.tsx` inits first with
+`startReactNativeSdk({serviceName: 'verify', exportConfig: {url: 'http://localhost:4318', headers: {'x-api-key':
+'test'}}})`, so every scenario runs through the **web SDK** (own `TracerProvider`, `BatchSpanProcessor`, OTLP/proto
+exporter, R7), not a harness provider. Resolution: `react-native` → `react-native-web`; `react-native-open-telemetry`
+→ the repo root directory, which Vite resolves through its `exports` (`browser` → `lib/module/index.web.js`);
+`/setup` → `lib/module/setup.js`; `react-native-nitro-modules` → `nitro-stub.ts` (no HybridObjects: no native
+`testMode` line, scenarios get no `native`).
+
+- **Test mode:** `isTestModeBuild()` reads plain `process.env.OTEL_TEST_MODE` inside a `try` (a browser has no
+  `process`). That one form is what Metro's Babel plugin (`example/inlineTestMode.js`), Vite's
+  `define: {'process.env.OTEL_TEST_MODE': …}` and Jest's real `process` all see. The e2e config builds with
+  `OTEL_TEST_MODE=1`.
+- **Runner:** the `web` target (`web({browser: 'chromium'})`) starts `bun run web:e2e` in `example/`
+  (`vite build` + `vite preview` on `localhost:4173`); its log is `verify/e2e/.e2e/logs/web.log`. `app.restart()`
+  opens a new page, the cold start (R5). The collector answers CORS (`OPTIONS` 204, `allow-headers: *`).
+- **Probe:** the bundle has no native `async`/`for await` (lowered by `withOtel`); no `com.callstack.context.degraded`
+  scope attribute in any web file.
+- **Files:** every `*.web.otlp.json` is byte-identical to the scenario's `.js` file (`collector-down`, which has no
+  `.js`, equals its `.android` file). The proto exporter and the web resource (`service.name` only in test mode)
+  change nothing visible.
+- **collector-down:** the OTel JS exporter retries a 503 inside the export (backoff 1 s ×1.5, ±20 %), so the first
+  `flush` resolves after the three refusals (~4.7 s; up to 5.7 s): the web flush timeout is 10 s.
+- **nest-timers-microtasks:** browsers have no `setImmediate`; there the `immediate` step is one more `setTimeout(0)`,
+  so all runners keep one shape.
+- **Not on web:** `cross-*` (TestNative is native), `native-init-failure` (bare native init), `flush-after-reload`
+  (the native reload; a page reload drops the JS context, a different guarantee), `background-flush` (app
+  background; the browser `pagehide` flush is not covered), `event-emitter-listener` (its lazy `require('react-native')`
+  has no `require` in a Vite ESM bundle), `fast-refresh-idempotent`, `native test mode reaches initialize`.
 
 ## Failure scenarios (Task 27)
 
@@ -217,10 +257,10 @@ e2e targets are android, ios and web unless the Runners column names them.
 | `handoff-basic` | a span crosses the seam intact | 8, 15, 18 | jest, e2e | passing |
 | `rich-span` | every attribute type, events, links, status, scope survive the seam | 8, 15, 18 | jest, e2e | passing |
 | `odd-attributes` | NaN, ±Infinity, -0, big ints, empty arrays survive the seam | 8, 15, 18 | jest, e2e | passing |
-| `export-headers` | configured export headers are sent on every request | 16, 19, 24, 25 | jest, e2e (android, ios; web with 23) | passing |
+| `export-headers` | configured export headers are sent on every request | 16, 19, 23, 24, 25 | jest, e2e | passing |
 | `cross-js-to-native` | a native span started from JS is a child of the JS span | 26 | e2e (android, ios) | passing |
 | `cross-native-to-js` | a JS span started under a native span's context is its child | 26 | e2e (android, ios) | passing |
-| `collector-down` | app never blocks; spans arrive exactly once when the collector is back | 27 | e2e (android, ios; web with 23) | passing |
+| `collector-down` | app never blocks; spans arrive exactly once when the collector is back | 23, 27 | e2e | passing |
 | `native-init-failure` | one error log, no-op SDK, nothing exported | 27 | e2e (android-bare, ios-bare) | passing |
 | `flush-after-reload` | `forceFlush()` resolves across a JS reload; spans arrive once | 27 | e2e (android, ios) | passing |
 | `background-flush` | spans are exported on background without `forceFlush()` | 27 | e2e (android, ios) | passing |

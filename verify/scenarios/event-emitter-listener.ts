@@ -18,6 +18,6 @@ export default scenario(
       sub.remove();
     }
   },
-  // web: DeviceEventEmitter on react-native-web not confirmed
+  // web: react-native-web has DeviceEventEmitter, but this lazy require() has no require in a Vite ESM bundle
   {runners: ['e2e'], targets: ['android', 'ios']}
 );

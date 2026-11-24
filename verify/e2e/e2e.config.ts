@@ -1,5 +1,6 @@
 import type {E2EConfig} from 'e2e';
 import {mobile} from '@e2e-dev/mobile';
+import {web} from '@e2e-dev/web';
 
 const bundleId = 'opentelemetry.example';
 const example = '../../example';
@@ -46,6 +47,23 @@ export default {
       app: {
         bundleId: 'opentelemetry.example.expo',
         appPath: process.env.E2E_IOS_EXPO_APP ?? `${expo}/ios/build/Build/Products/Release-iphonesimulator/OpenTelemetryExpo.app`,
+      },
+    },
+    // The bare example's ScenariosScreen through react-native-web, exporting with the web SDK (example/web, Task 23).
+    // The runner builds it in test mode (lib/ first: `bun run prepare`) and serves it with `vite preview`.
+    {
+      name: 'web',
+      engine: web({browser: 'chromium'}),
+      app: {
+        url: 'http://localhost:4173',
+        command: {
+          executable: 'bun',
+          args: ['run', 'web:e2e'],
+          cwd: example,
+          env: {OTEL_TEST_MODE: '1'},
+          log: '.e2e/logs/web.log',
+          startupTimeout: 120_000,
+        },
       },
     },
     // Dev builds (Debug + Metro), local only: fast-refresh-idempotent (Task 27). See VERIFY.md.

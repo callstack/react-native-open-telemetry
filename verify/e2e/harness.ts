@@ -1,7 +1,8 @@
 import {execFileSync, spawn} from 'node:child_process';
 import path from 'node:path';
-import {test as base} from '@e2e-dev/mobile';
-import {expect, type App, type Screen} from 'e2e';
+import {test as mobileBase} from '@e2e-dev/mobile';
+import {test as webBase} from '@e2e-dev/web';
+import {describe, expect, type App, type Screen} from 'e2e';
 import type {Target} from '../harness/scenario';
 
 // Device runs compare to the reviewed expected files of their platform (native-first); never rewrite them.
@@ -28,18 +29,33 @@ export const COLLECTOR_PORT = 4318;
 /** Must match e2e.config.ts: the bare example, or the Expo app (`*-expo`). */
 export const bundleIdOf = (targetName: string) => (targetName.endsWith('-expo') ? 'opentelemetry.example.expo' : 'opentelemetry.example');
 
-/** `android-bare` -> `android`. */
-export const platformOf = (targetName: string) => targetName.split('-')[0] as 'android' | 'ios';
+/** `android-bare` -> `android`; `web` stays `web`. */
+export const platformOf = (targetName: string) => targetName.split('-')[0] as 'android' | 'ios' | 'web';
 
-export const test = base.extend<{target: string}, {collector: Collector; installed: void}>({
-  collector: [
-    async ({}, use) => {
-      const c = await startCollector({port: COLLECTOR_PORT, artifactsDir: path.join(verifyDir, 'artifacts')});
-      await use(c);
-      await c.close();
-    },
-    {scope: 'worker'},
-  ],
+/** Platforms of the targets `test` runs on; a test on web goes through `webTest` or `anyTarget`. */
+export const MOBILE = ['android', 'ios'];
+
+// One collector per worker. Each chain below declares it; a target runs only one chain's tests (`platforms`).
+const collector = [
+  async ({}, use: (c: Collector) => Promise<void>) => {
+    const c = await startCollector({port: COLLECTOR_PORT, artifactsDir: path.join(verifyDir, 'artifacts')});
+    await use(c);
+    await c.close();
+  },
+  {scope: 'worker'},
+] as const;
+
+/** Web targets (`web`): a fresh browser context per test; `platform` is the target name. */
+export const webTest = webBase.extend<{target: string}, {collector: Collector}>({
+  collector,
+  target: async ({platform}, use) => {
+    await use(platform);
+  },
+});
+
+/** Device targets: installs the app once per worker. Pass `{platforms: MOBILE}`: its fixtures name `device`. */
+export const test = mobileBase.extend<{target: string}, {collector: Collector; installed: void}>({
+  collector,
   installed: [
     async ({device}, use) => {
       const {app} = await device.installApp();
@@ -59,6 +75,16 @@ export const test = base.extend<{target: string}, {collector: Collector; install
     await use(device.unstable_raw.session.replace(/^e2e-/, '').replace(/-\d+$/, ''));
   },
 });
+
+type Fixtures = {app: App; screen: Screen; collector: Collector; target: string};
+
+/** Registers `body` on device targets (`test`, title as is) and on web (`webTest`, as `web › <title>`: titles are unique). */
+export function anyTarget(title: string, body: (f: Fixtures) => Promise<void>) {
+  test(title, {platforms: MOBILE}, async ({app, screen, collector, target}) => body({app, screen, collector, target}));
+  describe('web', {platforms: ['web']}, () =>
+    webTest(title, async ({app, screen, collector, target}) => body({app, screen, collector, target})),
+  );
+}
 
 /** Steps the failure scenarios (Task 27) add around the tap-and-compare. */
 export type ScenarioSteps = {

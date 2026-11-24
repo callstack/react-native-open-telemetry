@@ -16,7 +16,8 @@ export default scenario(
           }),
         );
       await inCallback(cb => setTimeout(cb, 0), 'timeout', 10);
-      await inCallback(cb => setImmediate(cb), 'immediate', 20);
+      // browsers have no setImmediate: there the step is one more setTimeout, so every runner keeps one shape
+      await inCallback(cb => (typeof setImmediate === 'function' ? setImmediate(cb) : setTimeout(cb, 0)), 'immediate', 20);
       await inCallback(cb => queueMicrotask(cb), 'microtask', 30);
       // scheduled from inside a callback: the context is carried twice
       await inCallback(cb => setTimeout(() => queueMicrotask(cb), 0), 'timeout.microtask', 40);

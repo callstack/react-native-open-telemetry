@@ -7,7 +7,9 @@
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start",
-    "test": "jest"
+    "test": "jest",
+    "web": "vite -c web/vite.config.mjs",
+    "web:e2e": "vite build -c web/vite.config.mjs && vite preview -c web/vite.config.mjs --port 4173 --strictPort"
   },
   "dependencies": {
     "react": "19.3.0",
