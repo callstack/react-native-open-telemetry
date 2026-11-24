@@ -22,7 +22,9 @@ export function markDegraded(): boolean {
  * `tracer.instrumentationScope` at runtime. Every tracer the SDK hands out goes through here (mobile and web).
  */
 export function stampScope<T extends Tracer>(tracer: T, extra: Attributes = {}): T {
-  const scope = (tracer as unknown as {instrumentationScope: {attributes?: Attributes}}).instrumentationScope;
+  const scope = (tracer as unknown as {instrumentationScope?: {attributes?: Attributes}}).instrumentationScope;
+  // an upstream change or a foreign tracer: no scope attributes, but never throw into the app
+  if (typeof scope !== 'object' || scope === null) return tracer;
   const merged = {...stamped.get(scope), ...extra};
   stamped.set(scope, merged);
   scope.attributes = {...merged, ...scopeAttributes()};
