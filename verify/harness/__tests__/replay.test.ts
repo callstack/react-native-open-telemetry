@@ -4,7 +4,7 @@ import path from 'path';
 import {startCollector} from '../collector';
 import {replay} from '../../compliance/replay';
 
-test('replay posts raw + expected files, fails on a non-2xx, tolerates only listed JSON exceptions', async () => {
+test('replay posts raw + expected files, fails on a non-2xx', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'replay-'));
   const c = await startCollector({port: 0, artifactsDir: path.join(dir, 'sink')});
   try {
@@ -17,15 +17,11 @@ test('replay posts raw + expected files, fails on a non-2xx, tolerates only list
     fs.mkdirSync(exp);
     fs.writeFileSync(path.join(exp, 'a.js.otlp.json'), good);
     const ok = await replay({url: c.url, dirs: [path.join(dir, 'dl')], expected: exp});
-    expect(ok).toEqual({raw: 1, expected: 1, failures: [], tolerated: []});
+    expect(ok).toEqual({raw: 1, expected: 1, failures: []});
 
     fs.writeFileSync(path.join(exp, 'b.js.otlp.json'), '{not json');
     const bad = await replay({url: c.url, dirs: [path.join(dir, 'dl')], expected: exp});
     expect(bad.failures).toHaveLength(1);
-    fs.renameSync(path.join(exp, 'b.js.otlp.json'), path.join(exp, 'odd-attributes.js.otlp.json'));
-    const exc = await replay({url: c.url, dirs: [path.join(dir, 'dl')], expected: exp});
-    expect(exc.failures).toEqual([]);
-    expect(exc.tolerated).toHaveLength(1);
   } finally {
     await c.close();
   }

@@ -230,7 +230,9 @@ round; no extra build). The numbers leave as attributes of one `perf-result` spa
 median(on) / median(off) ≥ 3×. It measures the test-mode build, which crosses the same hand-off seam as production.
 Pixel_9 emulator (API 36, arm64), 2 runs: p50 26.9–27.3 µs (p95 53–58 µs, `end()` alone p50 13.8–14.2 µs), ratio 1.70–1.71.
 CI: the `perf.json` of record is the `verify-artifacts-e2e-android-bare` artifact of the PR's latest green run
-(RUN LINK: TO BE FILLED IN).
+([run 45358145497, artifact](https://github.com/callstack/react-native-open-telemetry/actions/runs/45358145497/artifacts/14904400776)):
+hosted x86_64 emulator (API 35): p50 76.9 µs (p95 686 µs, `end()` alone 41.8 µs), ratio 2.19. CI emulators are ~3× slower
+than the local arm64 one, so the 100 µs gate has less headroom there.
 
 **Bundle size** (`static`, `bundle-size`): `@opentelemetry/semantic-conventions` is about 56 % of the SDK share of the
 release bundle (146,789 of 264,120 B). Upstream barrel imports pull in the whole stable entry, though the SDK uses a few
@@ -316,9 +318,9 @@ CI job `compliance` (needs every e2e job) downloads their `verify-artifacts-e2e-
 `verbosity: detailed`) and runs `bun verify/compliance/replay.ts --url http://localhost:4318 --dirs <dir>...`. It POSTs every
 `raw/*/<n>.pb` as `application/x-protobuf`, every raw `.json` and every `verify/expected/*.otlp.json` as `application/json`;
 a non-2xx or a `\terror\t` collector log line fails the job. Needs docker, so it is not in `bun verify`.
-X9: `JSON_EXCEPTIONS` in `replay.ts` names the `odd-attributes.*.otlp.json` files (NaN/Infinity `doubleValue` strings) whose
-JSON rejection is only warned about; the protobuf raw requests still prove the value. Delete the list once CI shows the
-Collector accepts them.
+X9 settled: Collector 0.165.0 accepts the NaN/Infinity `doubleValue` strings in `odd-attributes.*.otlp.json` (run
+[45358145497](https://github.com/callstack/react-native-open-telemetry/actions/runs/45358145497): 110 raw requests and
+84 expected files, no errors), so every file must be 2xx.
 
 ## Scenarios
 
