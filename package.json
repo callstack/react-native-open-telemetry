@@ -56,6 +56,7 @@
     "nitro.json",
     "metro",
     "vite",
+    "app.plugin.js",
     "!ios/build",
     "!android/build",
     "!android/core-jvm",
@@ -78,7 +79,7 @@
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "prepare": "bunx bob build && (git config core.hooksPath .githooks || true)",
     "version": "bunx changeset version && node scripts/sync-distro-version.js",
-    "publish": "bunx changeset publish"
+    "release": "bunx changeset publish --tag next"
   },
   "dependencies": {
     "@opentelemetry/api": "~1.10.0",
