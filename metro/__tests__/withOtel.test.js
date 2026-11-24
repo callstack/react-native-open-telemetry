@@ -35,3 +35,9 @@ test('keeps the package out of inline requires, after the existing entries', asy
   const bare = await withOtel(base, {setupPath: SETUP}).transformer.getTransformOptions([], {}, () => []);
   expect(bare.transform.nonInlinedRequires).toEqual(['react-native-open-telemetry']);
 });
+
+test('throws on an unmerged config instead of dropping InitializeCore', () => {
+  expect(() => withOtel({resolver: {x: 1}}, {setupPath: SETUP})).toThrow(
+    'apply withOtel to the merged config: withOtel(mergeConfig(getDefaultConfig(__dirname), config))',
+  );
+});
