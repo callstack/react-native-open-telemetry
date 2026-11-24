@@ -229,6 +229,12 @@ round; no extra build). The numbers leave as attributes of one `perf-result` spa
 `verify/artifacts/perf.json` (every sample, method, device) and fails only if the unrounded hand-off p50 ≥ 100 µs or
 median(on) / median(off) ≥ 3×. It measures the test-mode build, which crosses the same hand-off seam as production.
 Pixel_9 emulator (API 36, arm64), 2 runs: p50 26.9–27.3 µs (p95 53–58 µs, `end()` alone p50 13.8–14.2 µs), ratio 1.70–1.71.
+CI: the `perf.json` of record is the `verify-artifacts-e2e-android-bare` artifact of the PR's latest green run
+(RUN LINK: TO BE FILLED IN).
+
+**Bundle size** (`static`, `bundle-size`): `@opentelemetry/semantic-conventions` is about 56 % of the SDK share of the
+release bundle (146,789 of 264,120 B). Upstream barrel imports pull in the whole stable entry, though the SDK uses a few
+keys. Follow-up: a Metro/Babel rewrite of those imports to per-key modules, or an upstream fix.
 
 ## Nightly (Task 31)
 
