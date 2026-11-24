@@ -1,6 +1,6 @@
 import {execFileSync} from 'node:child_process';
 import {expect} from 'e2e';
-import {clearDeviceLog, expectScenario, platformOf, tapFlush, test, until} from './harness';
+import {bundleIdOf, clearDeviceLog, expectScenario, platformOf, tapFlush, test, until} from './harness';
 
 // Spans handed off right before the app goes to background are exported without forceFlush() (§9.4). Test mode has
 // no timed export (scheduleDelay 120 s), so within the wait only the background hook can have sent them.
@@ -13,13 +13,13 @@ test('background-flush', async ({app, screen, collector, device, target}) => {
       await device.home();
       if (!(await until(() => collector.received() > 0, 15_000))) throw new Error('nothing exported within 15 s of going to background');
       // back in the foreground the app answers a tap at once: the background flush left the main thread free
-      await device.openApp('opentelemetry.example');
+      await device.openApp(bundleIdOf(target)); // foreground only (app.open() relaunches)
       await tapFlush(screen, 1, 2_000);
     },
   });
   // and Android recorded no ANR for the app
   if (android)
     expect(execFileSync('adb', ['-s', deviceId, 'logcat', '-d', '-b', 'events', '-s', 'am_anr'], {encoding: 'utf8'})).not.toContain(
-      'opentelemetry.example',
+      bundleIdOf(target),
     );
 });

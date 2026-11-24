@@ -13,7 +13,16 @@ cd example/android && OTEL_TEST_MODE=1 ./gradlew :app:assembleRelease -PotelTest
 # iOS
 cd example/ios && OTEL_TEST_MODE=1 pod install && OTEL_TEST_MODE=1 xcodebuild -workspace OpenTelemetryExample.xcworkspace \
   -scheme OpenTelemetryExample -configuration Release -sdk iphonesimulator -derivedDataPath build build
-E2E_TARGET=android-bare bun verify --e2e e2e   # or ios-bare; omit E2E_TARGET for both
+E2E_TARGET=android-bare bun verify --e2e e2e   # or ios-bare, android-expo, ios-expo; omit E2E_TARGET for all four
+```
+
+The Expo app (`example-expo/`, `android-expo` / `ios-expo`) is CNG: `android/` and `ios/` are generated, not committed.
+
+```sh
+cd example-expo && bun install && OTEL_TEST_MODE=1 bunx expo prebuild --clean --no-install
+cd android && OTEL_TEST_MODE=1 ./gradlew :app:assembleRelease     # otelTestMode=true comes from the prebuild
+cd ../ios && OTEL_TEST_MODE=1 pod install && OTEL_TEST_MODE=1 xcodebuild -workspace OpenTelemetryExpo.xcworkspace \
+  -scheme OpenTelemetryExpo -configuration Release -sdk iphonesimulator -derivedDataPath build build
 ```
 
 `fast-jvm` replays every `verify/fixtures/<name>.handoff.json` through the Kotlin core (`android/core-jvm`, its own
@@ -42,8 +51,10 @@ except the scenarios with their own e2e file. Each test cold-starts the app (R5)
 `VERIFY_E2E_DRAFT=1` writes a **missing** `<name>.<platform>.otlp.json` from the device run and still fails the test
 ("drafted …, review it"); existing files are never overwritten. Draft runs have no retries, so a drafting run always ends red.
 Each target compares to its platform's files (`android-*` → `android`, `ios-*` → `ios`): the bare app inits native
-first (`RNOtel.start` in `MainApplication` / `AppDelegate`) and ScenariosScreen exports through `startReactNativeSdk`
-and the Kotlin or Swift core.
+first (`RNOtel.start` in `MainApplication` / `AppDelegate`), the Expo app inits from JS (below), and ScenariosScreen
+exports through `startReactNativeSdk` and the Kotlin or Swift core. One set of files for both apps is the proof that
+the two init paths are equivalent. A scenario that only one app can run names targets (`android-bare`) instead of
+platforms in `targets`.
 
 **TestNative (R25, Task 26).** `cross-*` scenarios call `ctx.native`, the example-only Nitro HybridObject in
 `example/modules/test-native/` (own `nitro.json`, podspec, `build.gradle`; autolinked through
@@ -68,6 +79,33 @@ so explicit times, default times and `addEvent(name, perfNumber)` stay correct. 
 an argument) can be off by that skew on iOS.
 
 The fake collector listens on port 4318; the app reaches it at `10.0.2.2` (Android emulator) or `localhost` (iOS simulator).
+
+## Expo app (Task 28)
+
+`example-expo/`: **Expo SDK 58** (`expo` 58.0.26), **React Native 0.88.1**, React 19.3.0, `react-native-nitro-modules`
+0.37.2, all pinned exactly. SDK 58 is the newest Expo SDK (npm `latest`, 2026-11-24) and bundles the same RN as the bare
+app. Built locally with Xcode 27.1; the CI jobs `e2e-android-expo` / `e2e-ios-expo` (`xcode-27`, Xcode 27.0) are
+unproven until their first CI run.
+
+- **Init: JS fallback.** No native init. `index.js` calls `startReactNativeSdk({serviceName: 'verify', exportConfig:
+  {url, headers: {'x-api-key': 'test'}}})` (no `serviceVersion`, R2) before registering the bare example's
+  `ScenariosScreen`, whose later `startReactNativeSdk()` calls get that first handle. Native reports `testMode` from its
+  build flag; the config has no test fields.
+- **Metro:** `withOtel(mergeConfig(getDefaultConfig(__dirname), …))` with Expo's `getDefaultConfig`; same single-copy
+  resolver setup as the bare app (blocks the root's and `example/`'s React Native copies). Babel: `babel-preset-expo`
+  plus the bare example's `OTEL_TEST_MODE` inline plugin.
+- **Autolinking:** Expo autolinking reads `example-expo/react-native.config.js`, which points at the repo root and at
+  the bare example's TestNative, so the `cross-*` scenarios run on Expo too.
+- **Local config plugin** (`example-expo/plugins/withOtelExample.js`, applied at prebuild): adds
+  `pod 'ReactNativeOpenTelemetryCore', :path => '../..'` to the Podfile (R24; `withPodfile`, no `expo-build-properties`
+  dependency); sets `usesCleartextTraffic` (the collector is plain HTTP); and with `OTEL_TEST_MODE=1` at prebuild
+  writes `otelTestMode=true` to `gradle.properties`. iOS takes test mode at `OTEL_TEST_MODE=1 pod install`.
+- **R8:** Expo release builds minify (`android.enableMinifyInReleaseBuilds=true`). The library now ships
+  `android/consumer-rules.pro`: `-dontwarn` for otel-java's optional compile-only classes, and a keep rule for
+  `io.opentelemetry.sdk.resources.**`, which otel-java's `ResourceMarshaler` reaches by reflection
+  (`EntityUtil.getEntities`). Without it every export threw `Error calling getEntities on Resource` and nothing arrived.
+- **Not on Expo:** `native-init-failure` (`targets: ['android-bare', 'ios-bare']`): the bad URL goes to the bare app's
+  native init, and the Expo app has none. `fast-refresh-idempotent` is local-only on the bare dev builds.
 
 ## Failure scenarios (Task 27)
 
@@ -183,7 +221,7 @@ e2e targets are android, ios and web unless the Runners column names them.
 | `cross-js-to-native` | a native span started from JS is a child of the JS span | 26 | e2e (android, ios) | passing |
 | `cross-native-to-js` | a JS span started under a native span's context is its child | 26 | e2e (android, ios) | passing |
 | `collector-down` | app never blocks; spans arrive exactly once when the collector is back | 27 | e2e (android, ios; web with 23) | passing |
-| `native-init-failure` | one error log, no-op SDK, nothing exported | 27 | e2e (android, ios) | passing |
+| `native-init-failure` | one error log, no-op SDK, nothing exported | 27 | e2e (android-bare, ios-bare) | passing |
 | `flush-after-reload` | `forceFlush()` resolves across a JS reload; spans arrive once | 27 | e2e (android, ios) | passing |
 | `background-flush` | spans are exported on background without `forceFlush()` | 27 | e2e (android, ios) | passing |
 | `fast-refresh-idempotent` | fast refresh does not stack the patch: `then`/`setTimeout` keep their identity across refreshes | 27 | e2e (android-dev, ios-dev; local only) | passing (local only) |
@@ -195,7 +233,7 @@ e2e targets are android, ios and web unless the Runners column names them.
 1. `verify/scenarios/<guarantee-id>.ts`: `export default scenario('<guarantee-id>', async ({tracer, at}) => {…}, opts)`.
    Explicit `at(µs)` start/end times on every span; parents through `context.active()` (`startActiveSpan`), not
    explicit parent contexts. `opts.runners` defaults to `['jest', 'e2e']` (`'jest-degraded'` is the native-`async` project), `opts.targets` to
-   `['android', 'ios', 'web']` (the e2e harness skips other targets); `pending: true` until it passes.
+   `['android', 'ios', 'web']` (platforms or target names like `android-bare`; the e2e harness skips other targets); `pending: true` until it passes.
 2. Hand-write `verify/expected/<guarantee-id>.shape.json` in exactly `shapeOf()`'s format (traces ordered by first
    span start, spans sorted by name, `kind` 1 = INTERNAL) and get it reviewed.
 3. `bun verify` regenerates `verify/scenarios/index.ts`. Un-pend, draft the exact files with `VERIFY_UPDATE=1 bun verify`

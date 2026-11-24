@@ -235,8 +235,168 @@ jobs:
           if-no-files-found: ignore
           include-hidden-files: true # verify/e2e/.e2e is a dot dir
 
+  # The Expo app (Task 28): JS-fallback init, CNG (`expo prebuild` every run; android/ and ios/ are not committed),
+  # same scenarios and the same android/ios expected files as the bare app. Test mode: OTEL_TEST_MODE=1 at prebuild
+  # (the local config plugin writes otelTestMode=true to gradle.properties) and at pod install.
+  e2e-android-expo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.19
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: bun install --frozen-lockfile
+      - run: bun install --frozen-lockfile
+        working-directory: example-expo
+      - run: bun run prepare # the app bundles the package through exports -> lib/ (R4)
+      - name: expo prebuild (test mode)
+        working-directory: example-expo
+        env:
+          OTEL_TEST_MODE: '1'
+        run: bunx expo prebuild --clean --no-install --platform android
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Enable the Gradle build cache (setup-gradle persists it)
+        run: printf '\norg.gradle.caching=true\n' >> example-expo/android/gradle.properties
+      - name: Cache native build outputs # after prebuild, which regenerates android/
+        uses: actions/cache@v4
+        with:
+          path: |
+            android/build
+            android/.cxx
+            example-expo/android/app/.cxx
+            example-expo/android/build
+            example-expo/node_modules/react-native-nitro-modules/android/build
+            example-expo/node_modules/react-native-nitro-modules/android/.cxx
+          key: android-expo-native-${{ hashFiles('android/**', 'nitrogen/**', 'patches/**', 'example-expo/app.json', 'example-expo/plugins/**', 'example/modules/**', 'bun.lock', 'example-expo/bun.lock') }}
+      - name: Build release APK (test mode)
+        working-directory: example-expo/android
+        env:
+          OTEL_TEST_MODE: '1'
+        # one retry: plugin and NDK downloads fail transiently on hosted runners
+        run: |
+          ./gradlew :app:assembleRelease -PreactNativeArchitectures=x86_64 ||
+            ./gradlew :app:assembleRelease -PreactNativeArchitectures=x86_64
+      - name: Cache AVD snapshot
+        uses: actions/cache@v4
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-35-x86_64-google_apis
+      - name: Create AVD snapshot
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: false
+          script: echo "AVD snapshot created"
+      - name: e2e (android-expo)
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          E2E_TARGET: android-expo
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: |
+            adb shell settings put global hide_error_dialogs 1
+            bun verify --e2e e2e
+      - uses: actions/upload-artifact@v4
+        if: always() # e2e retries once; keep traces of retried and failed attempts
+        with:
+          name: verify-artifacts-e2e-android-expo
+          path: |
+            verify/artifacts/
+            verify/e2e/.e2e/
+          if-no-files-found: ignore
+          include-hidden-files: true # verify/e2e/.e2e is a dot dir
+
+  e2e-ios-expo:
+    runs-on: xcode-27
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '27.0'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.19
+      - run: bun install --frozen-lockfile
+      - run: bun install --frozen-lockfile
+        working-directory: example-expo
+      - run: bun run prepare # the app bundles the package through exports -> lib/ (R4)
+      - name: expo prebuild
+        working-directory: example-expo
+        run: bunx expo prebuild --clean --no-install --platform ios
+      - name: Cache native build outputs # after prebuild, which regenerates ios/
+        uses: actions/cache@v4
+        with:
+          path: |
+            example-expo/ios/Pods
+            example-expo/ios/build/Build
+            example-expo/ios/build/SourcePackages
+          key: ios-expo-native-${{ hashFiles('ios/**', 'nitrogen/**', 'Package.swift', 'ReactNativeOpenTelemetry.podspec', 'ReactNativeOpenTelemetryCore.podspec', 'example-expo/app.json', 'example-expo/plugins/**', 'example/modules/**', 'bun.lock', 'example-expo/bun.lock') }}
+      - name: pod install (test mode)
+        working-directory: example-expo/ios
+        env:
+          OTEL_TEST_MODE: '1'
+        run: pod install
+      - name: Build release app (test mode)
+        working-directory: example-expo/ios
+        env:
+          OTEL_TEST_MODE: '1'
+        run: >
+          xcodebuild -workspace OpenTelemetryExpo.xcworkspace -scheme OpenTelemetryExpo
+          -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator'
+          -derivedDataPath build ARCHS=arm64 build
+      - name: Pre-boot the simulator (a cold boot on the runner outlasts agent-device's boot timeout)
+        run: |
+          udid=$(xcrun simctl list devices available -j | jq -r '[.devices[][] | select(.name | startswith("iPhone"))][0].udid')
+          xcrun simctl boot "$udid"
+          xcrun simctl bootstatus "$udid" -b
+      - name: e2e (ios-expo)
+        env:
+          E2E_TARGET: ios-expo
+          AGENT_DEVICE_DAEMON_STARTUP_TIMEOUT_MS: '600000' # the first daemon start on a cold runner outlasts the 120 s default
+        run: bun verify --e2e e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: agent-device-state-e2e-ios-expo
+          path: ~/.agent-device/
+          if-no-files-found: ignore
+          include-hidden-files: true
+      - uses: actions/upload-artifact@v4
+        if: always() # e2e retries once; keep traces of retried and failed attempts
+        with:
+          name: verify-artifacts-e2e-ios-expo
+          path: |
+            verify/artifacts/
+            verify/e2e/.e2e/
+          if-no-files-found: ignore
+          include-hidden-files: true # verify/e2e/.e2e is a dot dir
+
   budget:
-    needs: [static-fast, fast-swift, e2e-android-bare, e2e-ios-bare] # every other job; extend when jobs are added
+    needs: [static-fast, fast-swift, e2e-android-bare, e2e-ios-bare, e2e-android-expo, e2e-ios-expo] # every other job; extend when jobs are added
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

@@ -9,5 +9,6 @@ export default scenario(
   async ({tracer, at}) => {
     tracer.startSpan('dropped', {startTime: at(0)}).end(at(10));
   },
-  {runners: ['e2e'], targets: ['android', 'ios']},
+  // bare only: the bad URL goes to the bare example's native init; the Expo app has none (it inits from JS)
+  {runners: ['e2e'], targets: ['android-bare', 'ios-bare']},
 );

@@ -17,12 +17,13 @@ export type ScenarioCtx = {
 };
 /** `jest-degraded`: the Jest project that keeps native `async` (Task 11). */
 export type Runner = 'jest' | 'jest-degraded' | 'e2e';
-export type Target = 'android' | 'ios' | 'web';
+/** A platform, or one e2e target (`android-bare`, `ios-expo`, …) for what only one app can run. */
+export type Target = 'android' | 'ios' | 'web' | `${'android' | 'ios'}-${'bare' | 'expo'}`;
 export type Scenario = {
   name: string;
   run: (ctx: ScenarioCtx) => Promise<void>;
   runners: Runner[];
-  /** e2e targets it runs on. */
+  /** e2e targets it runs on: platforms or target names. */
   targets: Target[];
   pending: boolean;
 };

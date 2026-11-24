@@ -3,6 +3,8 @@ import {mobile} from '@e2e-dev/mobile';
 
 const bundleId = 'opentelemetry.example';
 const example = '../../example';
+// Expo prebuild app (JS-fallback init, Task 28): same scenarios, same android/ios expected files
+const expo = '../../example-expo';
 
 export default {
   projectId: 'react-native-open-telemetry',
@@ -28,6 +30,22 @@ export default {
       app: {
         bundleId,
         appPath: process.env.E2E_IOS_APP ?? `${example}/ios/build/Build/Products/Release-iphonesimulator/OpenTelemetryExample.app`,
+      },
+    },
+    {
+      name: 'android-expo',
+      engine: mobile({platform: 'android', device: process.env.E2E_ANDROID_DEVICE}),
+      app: {
+        bundleId: 'opentelemetry.example.expo',
+        appPath: process.env.E2E_ANDROID_EXPO_APP ?? `${expo}/android/app/build/outputs/apk/release/app-release.apk`,
+      },
+    },
+    {
+      name: 'ios-expo',
+      engine: mobile({platform: 'ios', device: process.env.E2E_IOS_DEVICE}),
+      app: {
+        bundleId: 'opentelemetry.example.expo',
+        appPath: process.env.E2E_IOS_EXPO_APP ?? `${expo}/ios/build/Build/Products/Release-iphonesimulator/OpenTelemetryExpo.app`,
       },
     },
     // Dev builds (Debug + Metro), local only: fast-refresh-idempotent (Task 27). See VERIFY.md.

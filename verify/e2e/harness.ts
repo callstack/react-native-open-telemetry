@@ -2,6 +2,7 @@ import {execFileSync, spawn} from 'node:child_process';
 import path from 'node:path';
 import {test as base} from '@e2e-dev/mobile';
 import {expect, type App, type Screen} from 'e2e';
+import type {Target} from '../harness/scenario';
 
 // Device runs compare to the reviewed expected files of their platform (native-first); never rewrite them.
 if (process.env.VERIFY_UPDATE === '1')
@@ -23,6 +24,9 @@ export const ANDROID_EXPORT_URL_FILE = '/sdcard/Android/data/opentelemetry.examp
 
 /** Must match the example apps' native init URLs (MainApplication.kt, AppDelegate.swift). */
 export const COLLECTOR_PORT = 4318;
+
+/** Must match e2e.config.ts: the bare example, or the Expo app (`*-expo`). */
+export const bundleIdOf = (targetName: string) => (targetName.endsWith('-expo') ? 'opentelemetry.example.expo' : 'opentelemetry.example');
 
 /** `android-bare` -> `android`. */
 export const platformOf = (targetName: string) => targetName.split('-')[0] as 'android' | 'ios';
@@ -77,7 +81,7 @@ export async function expectScenario(
 ) {
   const s = allScenarios().find(x => x.name === name);
   if (!s) throw new Error(`unknown scenario ${name}`);
-  test.skip(!s.targets.includes(platformOf(target)), `${name} does not run on ${platformOf(target)}`);
+  test.skip(!s.targets.includes(platformOf(target)) && !s.targets.includes(target as Target), `${name} does not run on ${target}`);
   // cold start per scenario (R5): no SDK state or ID counters carried over
   await (steps.launch ? steps.launch() : app.restart());
 
@@ -91,7 +95,8 @@ export async function expectScenario(
   } finally {
     actual = await collector.end();
   }
-  // both apps export through the native core, so android-* compare to `android` files and ios-* to `ios` (R13).
+  // every app exports through the native core (bare: native-first init, Expo: JS-fallback init), so android-* compare
+  // to `android` files and ios-* to `ios` (R13): one set of files proves both init paths equivalent (Task 28).
   // VERIFY_E2E_DRAFT=1 writes a missing expected file and still fails (review it, then rerun)
   const r = compareToExpected(name, platformOf(target), actual, {draft: process.env.VERIFY_E2E_DRAFT === '1'});
   if (!r.ok) throw new Error('\n' + r.report);
