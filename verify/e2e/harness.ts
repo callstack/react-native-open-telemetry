@@ -20,10 +20,10 @@ const {compareToExpected} = await import('../harness/compare');
 export const {allScenarios} = await import('../scenarios');
 type Collector = Awaited<ReturnType<typeof startCollector>>;
 
-/** Test-mode override of the Android example's export URL (MainApplication), written by native-init-failure.e2e.ts. */
+/** Test-mode override of the Android example's export URL (OtelInit.kt), written by native-init-failure.e2e.ts. */
 export const ANDROID_EXPORT_URL_FILE = '/sdcard/Android/data/opentelemetry.example/files/otel-export-url';
 
-/** Must match the example apps' native init URLs (MainApplication.kt, AppDelegate.swift). */
+/** Must match the example apps' native init URLs (OtelInit.kt, AppDelegate.swift). */
 export const COLLECTOR_PORT = 4318;
 
 /** Must match e2e.config.ts: the bare example, or the Expo app (`*-expo`). */

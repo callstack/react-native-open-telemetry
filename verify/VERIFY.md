@@ -115,7 +115,7 @@ unproven until their first CI run.
   `io.opentelemetry.sdk.resources.**`, which otel-java's `ResourceMarshaler` reaches by reflection
   (`EntityUtil.getEntities`). Without it every export threw `Error calling getEntities on Resource` and nothing arrived.
 - **Not on Expo:** `native-init-failure` (`targets: ['android-bare', 'ios-bare']`): the bad URL goes to the bare app's
-  native init, and the Expo app has none. `fast-refresh-idempotent` is local-only on the bare dev builds.
+  native init, and the Expo app has none. `fast-refresh-idempotent` runs on the bare dev builds only (local and nightly).
 
 ## Web (Task 23)
 
@@ -168,7 +168,7 @@ Each has its own e2e file (R10); the ScenariosScreen does not `forceFlush()` aft
   iOS: launch argument `--otel-export-url=not a url` (AppDelegate, `#if OTEL_TEST_MODE`; the Podfile adds the
   condition to the app target). Android: `Application.onCreate` cannot see launch arguments (they reach the
   Activity), so the test writes `/sdcard/Android/data/opentelemetry.example/files/otel-export-url` (mode 644, removed
-  afterwards and before each install's warm-up launch) and `MainApplication` reads it. Asserted: exactly one log line with `telemetry is off` (native `RNOtel`
+  afterwards and before each install's warm-up launch) and `OtelInit.kt` (called from `MainApplication`) reads it. Asserted: exactly one log line with `telemetry is off` (native `RNOtel`
   plus JS `[react-native-open-telemetry]` lines), `scenario-done` (the no-op `forceFlush()` resolved), and the empty
   expected file. JS no longer repeats a native-first failure that native already reported (`alreadyInitialized`).
 - `flush-after-reload`: `reload`, then `flush` must resolve within 5 s, the span arrives once.
@@ -177,7 +177,7 @@ Each has its own e2e file (R10); the ScenariosScreen does not `forceFlush()` aft
   that OTA updaters use, so this runs on the release builds, per PR, with no extra build.
 - `background-flush`: `device.home()` right after `scenario-done`; something must arrive within 15 s. Android: no
   `am_anr` for the app in the events log. Checked: without `home()` nothing arrives within 15 s on either platform.
-- `fast-refresh-idempotent` (**local only**: dev builds + Metro, not in CI; nightly can add it, Task 31): each of two
+- `fast-refresh-idempotent` (dev builds + Metro: not per PR; local, and the nightly's `dev-android` / `dev-ios`, Task 31): each of two
   edits of `lib/module/setup.js` appends `globalThis.__otelRefreshes += 1`; Metro hot-updates it, it re-runs
   `installContextPatch`, and `patch-identity` must read `same refreshes=<n>` (`then`/`setTimeout` are still the
   functions first seen; a full reload would reset the count). Then `nest-after-await` must match its own expected
@@ -210,12 +210,13 @@ E2E_SMOKE=1 E2E_TARGET=android-bare bun verify --e2e e2e     # or ios-bare; E2E_
 ```
 
 CI (X11 interim): per PR on the bare targets only, as a variant inside `e2e-android-bare` / `e2e-ios-bare` (built
-before the test-mode build, copied to `$RUNNER_TEMP`, run after the main e2e); Expo smoke is the nightly's (Task 31).
+before the test-mode build, copied to `$RUNNER_TEMP`, run after the main e2e); Expo smoke is the nightly's (`pack-expo-*`, Task 31).
 Android rebundles on a test-mode switch: `app/build.gradle` adds `OTEL_TEST_MODE` and the package/verify sources
 to the bundle task's inputs (they live outside `example/`, so a change there used to leave the old bundle in place).
 
 **Untested: API 26–27.** The Android process-name fallback (`/proc/self/cmdline`, for the main-process check below
-API 28) has not run on a device: no API 26/27 system image is installed locally, and CI uses API 35.
+API 28) has not run on a device: no API 26/27 system image is installed locally, and PR CI uses API 35. The nightly's
+`api26-android-smoke` runs smoke-device on an API 26 emulator (unproven until its first run on `main`).
 
 **`perf-budget`** (`perf.e2e.ts`, R27): `android-bare` only, by target name. The scenario times (a) 100 warm-up +
 1,000 × `startSpan → setAttribute×10 → end()` with `performance.now()` per span, through the real synchronous
@@ -225,6 +226,44 @@ round; no extra build). The numbers leave as attributes of one `perf-result` spa
 `verify/artifacts/perf.json` (every sample, method, device) and fails only if the unrounded hand-off p50 ≥ 100 µs or
 median(on) / median(off) ≥ 3×. It measures the test-mode build, which crosses the same hand-off seam as production.
 Pixel_9 emulator (API 36, arm64), 2 runs: p50 26.9–27.3 µs (p95 53–58 µs, `end()` alone p50 13.8–14.2 µs), ratio 1.70–1.71.
+
+## Nightly (Task 31)
+
+`.github/workflows/scheduled.yml`, 02:00 UTC and `workflow_dispatch` (input `dry_run`). One matrix job `e2e`, one
+entry per row; `mark-nightly` then sets the commit status `nightly` (context `nightly`, the release gate of Task 32).
+
+| entry | what |
+|---|---|
+| `rn-0.79-{android,ios}`, `rn-latest-{android,ios}` | `example/` regenerated from the RN template at that version, full e2e (test mode) |
+| `deps-latest-{android,ios}` | `@opentelemetry/*`, the otel-java BOM and opentelemetry-swift(-core) bumped to latest; fast loop (`bun verify` on Linux, `fast-swift` on macOS) + e2e |
+| `pack-bare-{android,ios}` | `npm pack` → tarball into a fresh bare app (template at latest) → smoke-device, test mode off |
+| `pack-expo-{android,ios}` | tarball into the Expo app (`prebuild --clean`) → smoke-device, test mode off (the Expo smoke, X11) |
+| `api26-android-smoke` | smoke-device on API 26: the process-name fallback (Task 24) |
+| `dev-{android,ios}` | Debug + Metro: `fast-refresh-idempotent` (Task 27) |
+
+`verify/nightly/app.sh` does the app surgery, in place, so the e2e config and paths stay the same (run it on a
+throwaway checkout only): `bare <rn>` regenerates `example/android` and `example/ios` with the RN CLI and re-applies the
+example's native edits (X13): `OtelInit.kt` + `startOtel()` in `MainApplication`, `AppDelegate.swift` from its
+`// otel-init:` line + `startOtel()`, the network config, minSdk 26, the test-mode `buildConfigField` and bundle inputs,
+the committed Podfile (Core pod, R24), the bundle id. A native edit to the example that `app.sh` does not know about is
+lost in the nightly: add it there too. `pack <app>` installs the tarball and points autolinking, Metro and the Core pod
+at `node_modules/react-native-open-telemetry`. The scenarios still import two test helpers from `src/` directly
+(`src/native/otel`, `src/context/scope`); the SDK itself comes from the tarball.
+
+**RN 0.79 on iOS (AUTHOR GATE, 2026-11-24, Xcode 27.1, RN 0.79.7, Nitro 0.37.2).** Regeneration and `pod install`
+work; `xcodebuild` fails twice over: (1) `Multiple commands produce …/ReactNativeOpenTelemetryCore/ReactNativeOpenTelemetryCore.modulemap`:
+on 0.79, CocoaPods' own "Copy generated compatibility header" phase writes the path that the adapter podspec's
+"Forward the core module map" phase declares as `:output_files` (0.88's spm.rb builds the core into the products root
+instead). Dropping `:output_files` locally got past it. (2) RN 0.79's `fmt` pod: `call to consteval function
+'fmt::basic_format_string…' is not a constant expression` (the newer Clang). Either fix both for 0.79 users (podspec;
+an fmt workaround in the Podfile) or raise the peer minimum. Until then `rn-0.79-ios` is `experimental`
+(`continue-on-error`, does not block `nightly`).
+
+**Verified only after merge to `main`.** `schedule` and `workflow_dispatch` run workflow files from the default branch
+only (R28). Before merge the file was checked with `actionlint` and one PR run through a temporary `pull_request`
+trigger (paths: the workflow file) in dry-run mode: every entry runs setup, the deps bump, app regeneration, packing and
+`expo prebuild`; builds, devices, the fast loop and the status are skipped. The first real nightly is the first proof of
+the builds and devices.
 
 ## Android cold start with `RNOtel.start` (Task 24, 2026-11-24)
 
@@ -309,7 +348,7 @@ e2e targets are android, ios and web unless the Runners column names them.
 | `native-init-failure` | one error log, no-op SDK, nothing exported | 27 | e2e (android-bare, ios-bare) | passing |
 | `flush-after-reload` | `forceFlush()` resolves across a JS reload; spans arrive once | 27 | e2e (android, ios) | passing |
 | `background-flush` | spans are exported on background without `forceFlush()` | 27 | e2e (android, ios) | passing |
-| `fast-refresh-idempotent` | fast refresh does not stack the patch: `then`/`setTimeout` keep their identity across refreshes | 27 | e2e (android-dev, ios-dev; local only) | passing (local only) |
+| `fast-refresh-idempotent` | fast refresh does not stack the patch: `then`/`setTimeout` keep their identity across refreshes | 27 | e2e (android-dev, ios-dev; local + nightly) | passing (local; nightly unproven) |
 | `smoke-device` | production pipeline (no test mode) exports `smoke` spans | 29 | e2e (android, ios; test-mode-off build, `E2E_SMOKE=1`) | passing (no expected file: count + names) |
 | `perf-budget` | hand-off p50 < 100 µs/span, patch ratio < 3× (`artifacts/perf.json`, no shape) | 29 | e2e (android-bare) | passing |
 
