@@ -25,7 +25,6 @@ Pod::Spec.new do |s|
   s.script_phase = {
     :name => 'Forward the core module map',
     :execution_position => :before_compile,
-    :output_files => [core_map],
     :always_out_of_date => '1', # no inputs: run every build on purpose (silences the Xcode warning)
     :script => %Q{set -e
 if [ -f "${PODS_CONFIGURATION_BUILD_DIR}/ReactNativeOpenTelemetryCore.modulemap" ]; then
