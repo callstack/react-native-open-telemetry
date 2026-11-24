@@ -40,7 +40,10 @@ it (Xcode scheme, `SIMCTL_CHILD_TRACEPARENT`); the verify stages unset it for na
 `verify/e2e/scenarios.e2e.ts` runs one test per scenario with runner `e2e`, not `pending`, on each target it lists,
 except the scenarios with their own e2e file. Each test cold-starts the app (R5). e2e is compare-only;
 `VERIFY_E2E_DRAFT=1` writes a **missing** `<name>.js.otlp.json` from the device run and still fails the test
-("drafted …, review it"); existing files are never overwritten. Draft runs have no retries, so a drafting run always ends red. Until Tasks 24/25 device runs compare to the `js` files.
+("drafted …, review it"); existing files are never overwritten. Draft runs have no retries, so a drafting run always ends red.
+`android-*` targets compare to the `android` files: the bare app inits native first (`RNOtel.start` in
+`MainApplication`) and ScenariosScreen exports through `startReactNativeSdk` and the Kotlin core. `ios-*` stays
+JS-direct and compares to the `js` files until Task 25 (R13).
 
 **`performance.timeOrigin` on Hermes (X17, Task 13).** Defined on both platforms (RN 0.88.1 release, Hermes),
 checked with a one-off `console.log` of `timeOrigin`, `performance.now()` and `Date.now()` at app start:
@@ -53,6 +56,20 @@ an argument) can be off by that skew on iOS.
 
 The fake collector listens on port 4318; the app reaches it at `10.0.2.2` (Android emulator) or `localhost` (iOS simulator).
 
+## Android cold start with `RNOtel.start` (Task 24, 2026-11-24)
+
+`adb shell am start -W -n opentelemetry.example/.MainActivity` after `am force-stop`, 6 launches each, Pixel_9
+emulator (API 36, arm64), release test-mode build. `TotalTime` (ms):
+
+| Build | runs | min | median |
+| --- | --- | --- | --- |
+| before (no `RNOtel.start`, JS-direct) | 178, 194, 401, 327, 228, 180 | 178 | 211 |
+| after (`RNOtel.start` in `MainApplication.onCreate`) | 265, 206, 234, 293, 316, 191 | 191 | 250 |
+
+Emulator noise (±100 ms between runs) is larger than the difference; `RNOtel.start` builds the resource, the
+batch processor and the provider, but no exporter or OkHttp client (built on the first export, on the BSP thread).
+Task 29 measures properly on a device.
+
 ## Device capability check (Task 7, 2026-11-23)
 
 What Task 27 (reload, fast refresh, background flush) needs from agent-device.
@@ -63,7 +80,7 @@ iOS: iPhone 18 Pro simulator, iOS 27.0, Xcode 27.1, agent-device 0.21.36 (T3 dev
 | JS reload | ✓ `agent-device metro reload` (Metro re-bundled; screen state reset) | not checked: blocked, see below |
 | Fast refresh (dev build) | ✓ editing `ScenariosScreen.tsx` text showed on device with React state kept | not checked |
 | Background and back | ✓ `agent-device home`, then `open opentelemetry.example`: UIKit logged the background task end and `UIApplicationWillEnterForegroundNotification`; state kept. `appstate` still says `runningForeground` after `home` (known iOS quirk, documented by e2e), so check lifecycle in the log, not `appstate` | not checked |
-| Read logs | ✓ `agent-device logs start/stop` captures the app's unified log, `NSLog` lines included (`RNOtel handOff …`). The e2e harness reads with `xcrun simctl spawn <udid> log show --predicate 'process == "OpenTelemetryExample" …'` | ✓ via the e2e harness: `adb logcat -d -s RNOtel:I` (tracer-bullet test green) |
+| Read logs | ✓ `agent-device logs start/stop` captures the app's unified log, `NSLog` lines included (`RNOtel handOff …`). The e2e harness reads with `xcrun simctl spawn <udid> log show --predicate 'process == "OpenTelemetryExample" …'` | ✓ via the e2e harness: `adb logcat -d -s RNOtel:I` (tracer-bullet test green; the test was retired in Task 24, R14) |
 
 **Blocker (Android, interactive only):** the T3 device panel could not open `Pixel_9`:
 `Failed to allocate an emulator port for Pixel_9 … avdmanager: … Unable to locate a Java Runtime.`
@@ -77,9 +94,9 @@ One file per guarantee in `verify/scenarios/`, named after it, with a hand-writt
 (the cross-platform parity contract). Exact `<name>.<platform>.otlp.json` files are drafted by the owning task with
 `VERIFY_UPDATE=1` and reviewed by the author. `pending` scenarios report as `todo`; the owning task flips `pending` off.
 
-Shapes use the JS runner's resource, `["service.name"]`. Native-first and device runs add resource keys
-(`service.version`, and `telemetry.*` outside test mode): Tasks 24/25 (and 29 for `smoke-device`) revise those
-shape files with the author.
+Shapes use the JS runner's resource, `["service.name"]`. Native test mode builds the resource from config only and
+the example inits with no `serviceVersion` (R2), so native-first device runs match the same shapes; `telemetry.*`
+outside test mode is Task 29's (`smoke-device`).
 
 e2e targets are android, ios and web unless the Runners column names them.
 
@@ -104,7 +121,7 @@ e2e targets are android, ios and web unless the Runners column names them.
 | `handoff-basic` | a span crosses the seam intact | 8, 15, 18 | jest, e2e | passing |
 | `rich-span` | every attribute type, events, links, status, scope survive the seam | 8, 15, 18 | jest, e2e | passing |
 | `odd-attributes` | NaN, ±Infinity, -0, big ints, empty arrays survive the seam | 8, 15, 18 | jest, e2e | passing |
-| `export-headers` | configured export headers are sent on every request | 16, 19 | e2e | pending |
+| `export-headers` | configured export headers are sent on every request | 16, 19, 24 | jest, e2e (android; ios/web with 25/23) | passing |
 | `cross-js-to-native` | a native span started from JS is a child of the JS span | 26 | e2e (android, ios) | pending |
 | `cross-native-to-js` | a JS span started under a native span's context is its child | 26 | e2e (android, ios) | pending |
 | `collector-down` | app never blocks; spans arrive exactly once when the collector is back | 27 | e2e | pending |

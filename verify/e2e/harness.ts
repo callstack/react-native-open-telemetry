@@ -3,7 +3,7 @@ import path from 'node:path';
 import {test as base} from '@e2e-dev/mobile';
 import {expect, type App, type Screen} from 'e2e';
 
-// Device runs compare to the reviewed .js expected files until Tasks 24/25; they must never rewrite them.
+// Device runs compare to the reviewed expected files (android: native-first; ios: .js until Task 25); never rewrite them.
 if (process.env.VERIFY_UPDATE === '1')
   throw new Error('verify/e2e is compare-only: unset VERIFY_UPDATE (`bun verify --update --e2e` already does)');
 
@@ -69,9 +69,10 @@ export async function expectScenario(
   } finally {
     actual = await collector.end();
   }
-  // Until Tasks 24/25 device runs compare to the JS expected files.
+  // android-* export through the native core (R13); ios-* stays JS-direct until Task 25.
   // VERIFY_E2E_DRAFT=1 writes a missing expected file and still fails (review it, then rerun)
-  const r = compareToExpected(name, 'js', actual, {draft: process.env.VERIFY_E2E_DRAFT === '1'});
+  const expected = platformOf(target) === 'android' ? 'android' : 'js';
+  const r = compareToExpected(name, expected, actual, {draft: process.env.VERIFY_E2E_DRAFT === '1'});
   if (!r.ok) throw new Error('\n' + r.report);
 }
 

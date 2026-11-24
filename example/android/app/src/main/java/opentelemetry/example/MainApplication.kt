@@ -1,6 +1,7 @@
 package opentelemetry.example
 
 import android.app.Application
+import com.callstack.otel.RNOtel
 import com.facebook.react.PackageList
 import com.facebook.react.ReactApplication
 import com.facebook.react.ReactHost
@@ -22,6 +23,14 @@ class MainApplication : Application(), ReactApplication {
 
   override fun onCreate() {
     super.onCreate()
+    // Native-first init, before React Native. No serviceVersion: the test-mode resource is service.name only (R2).
+    RNOtel.start(this) {
+      serviceName = "verify"
+      export {
+        url = "http://10.0.2.2:4318" // the e2e collector on the host
+        headers = mapOf("x-api-key" to "test") // asserted by verify/e2e/export-headers.e2e.ts
+      }
+    }
     loadReactNative(this)
   }
 }
