@@ -113,7 +113,7 @@ and returns a no-op handle. The SDK never throws into your app.
 docker compose -f example/collector/docker-compose.yaml up
 ```
 
-This runs the OpenTelemetry Collector with OTLP/HTTP on port 4318 and Zipkin at http://localhost:9411. Point `url` at
+This runs the OpenTelemetry Collector with OTLP/HTTP on port 4318 and Jaeger at http://localhost:16686. Point `url` at
 `http://localhost:4318/v1/traces` (the Android emulator reaches the host at `10.0.2.2`). The Collector also prints
 every span it receives.
 

@@ -6,6 +6,8 @@ receivers:
         cors:
           allowed_origins:
             - http://localhost:*
+          allowed_headers:
+            - "*"
 
 processors:
   batch:
@@ -13,12 +15,14 @@ processors:
 exporters:
   debug:
     verbosity: detailed
-  zipkin:
-    endpoint: http://zipkin:9411/api/v2/spans
+  otlp:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [debug, zipkin]
+      exporters: [debug, otlp]

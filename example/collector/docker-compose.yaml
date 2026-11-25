@@ -7,9 +7,9 @@ services:
     ports:
       - "4318:4318"
     depends_on:
-      - zipkin
+      - jaeger
 
-  zipkin:
-    image: openzipkin/zipkin:3.6.1
+  jaeger:
+    image: jaegertracing/jaeger:2.23.0
     ports:
-      - "9411:9411"
+      - "16686:16686"
