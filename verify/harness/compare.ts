@@ -5,20 +5,16 @@ import type {OtlpJson} from './otlpJson';
 export type Platform = 'js' | 'android' | 'ios' | 'web';
 export type Diff = {spanId?: string; spanName?: string; path: string; expected: unknown; actual: unknown};
 
-/** Scenarios not implemented yet; runners turn these into test.todo. */
 export const pendingScenarios = new Set<string>();
 export const pending = (scenario: string) => void pendingScenarios.add(scenario);
 
-// VERIFY_DIR overrides the verify/ root (tests use temp dirs)
 const root = () => process.env.VERIFY_DIR ?? path.join(__dirname, '..');
 const rel = (sub: string, scenario: string, suffix: string) => `verify/${sub}/${scenario}.${suffix}`;
 const abs = (sub: string, scenario: string, suffix: string) => path.join(root(), sub, `${scenario}.${suffix}`);
 
-/** One expected file per scenario: every platform reports the same OTLP (see `iosView` for iOS's known gaps). */
 export const expectedPath = (scenario: string): string => abs('expected', scenario, 'otlp.json');
 
 const isObj = (v: unknown): v is Record<string, any> => !!v && typeof v === 'object' && !Array.isArray(v);
-// arrays of {key,...} (attributes) diff by key, not by index
 const byKey = (v: unknown) =>
   Array.isArray(v) && v.length && v.every(x => isObj(x) && typeof x.key === 'string')
     ? Object.fromEntries(v.map(x => [x.key, x]))
@@ -38,7 +34,6 @@ export function diffValues(e: unknown, a: unknown, p = ''): Diff[] {
   return JSON.stringify(e) === JSON.stringify(a) ? [] : [{path: p, expected: e, actual: a}];
 }
 
-// one record per span, with its resource and scope attached
 function spansOf(o: OtlpJson): Map<string, any> {
   const m = new Map<string, any>();
   for (const rs of o.resourceSpans ?? [])
@@ -54,7 +49,6 @@ function spansOf(o: OtlpJson): Map<string, any> {
   return m;
 }
 
-/** opentelemetry-swift keeps times as `Date`: whole-µs times come back rounded to a ~256 ns grid, either way (R22). */
 const IOS_TIME_STEP_NS = 256n;
 const TIME_KEYS = ['startTimeUnixNano', 'endTimeUnixNano'] as const;
 const snapTime = (e: any, a: any, k: string) => {
@@ -63,11 +57,6 @@ const snapTime = (e: any, a: any, k: string) => {
   if (d >= -IOS_TIME_STEP_NS && d <= IOS_TIME_STEP_NS) a[k] = e[k];
 };
 
-/**
- * iOS's known upstream gaps (verify/VERIFY.md), applied to one matched span pair: opentelemetry-swift's OTLP encoder
- * never writes span flags, span traceState, link flags, link traceState or the scope schemaUrl, and its times are
- * rounded to the `Date` grid. Everything else must match exactly.
- */
 function iosView(e: any, a: any): [any, any] {
   e = structuredClone(e);
   a = structuredClone(a);
@@ -125,11 +114,6 @@ const write = (f: string, o: unknown) => {
   fs.writeFileSync(f, JSON.stringify(o, null, 2) + '\n');
 };
 
-/**
- * Compares `actual` to the scenario's one expected file. `VERIFY_UPDATE=1` rewrites it; `draft` (e2e only,
- * `VERIFY_E2E_DRAFT=1`) writes a missing one and still fails, so a draft never passes unreviewed. iOS never writes the
- * shared file: its times are rounded, so its output is not the reference.
- */
 export function compareToExpected(
   scenario: string,
   platform: Platform,

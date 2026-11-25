@@ -109,7 +109,6 @@ describe('iOS known gaps', () => {
     events: [{name: 'e', timeUnixNano: '1767225600000010000'}],
   });
   (full.resourceSpans[0]!.scopeSpans[0] as any).schemaUrl = 'https://opentelemetry.io/schemas/1.40.0';
-  // what opentelemetry-swift writes for the same span
   const ios = otlp({
     startTimeUnixNano: '1767225600000099840',
     links: [{traceId: '0f01', spanId: '0f02'}],
