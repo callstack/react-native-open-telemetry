@@ -2186,7 +2186,7 @@ SPEC CHECKSUMS:
   ReactCodegen: 3840312f5071bb6b953b35a029c5c6dcf06b435e
   ReactCommon: b63ce798b898ed77c6cfdeb80b18080161f52ed5
   ReactNativeDependencies: a5164c3ebbe90d992022b5d9cbabbf770a6d7d05
-  ReactNativeOpenTelemetry: ca8cf471e09f5c90d61a9105e163ee8a4f66160d
+  ReactNativeOpenTelemetry: 43d7fab91827b9a012ba5b1b34e64b79a1aeae9d
   ReactNativeOpenTelemetryCore: b9b1d5e27b1df7d86e4937554d2c9152e85df541
   SocketRocket: 37aec555668fb852ec12e3c0de59a86ca58f0871
   TestNative: 256fa8cff013c95afd55f46437705c7387ad6b16
