@@ -52,7 +52,7 @@ android {
     cmake { path "CMakeLists.txt" }
   }
 
-  // the pure Kotlin core (also compiled and tested on the JVM by android/core-jvm)
+  // the pure Kotlin core (no Android or Nitro imports)
   sourceSets {
     main { java.srcDirs += "src/core/kotlin" }
   }

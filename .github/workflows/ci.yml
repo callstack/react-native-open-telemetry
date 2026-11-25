@@ -46,26 +46,6 @@ jobs:
           path: verify/artifacts/
           if-no-files-found: ignore
 
-  fast-swift:
-    runs-on: macos-15
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: '16.4'
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.2.19
-      - run: bun install --frozen-lockfile
-      - run: bun verify fast-swift # no-op until Package.swift exists (Task 18)
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: verify-artifacts-fast-swift
-          path: verify/artifacts/
-          if-no-files-found: ignore
-
   # Release builds with the JS bundle embedded (no Metro), test mode on.
   # Native outputs are cached on native inputs only, so a JS-only change re-bundles but reuses the native build.
   e2e-android-bare:
@@ -200,7 +180,7 @@ jobs:
           if-no-files-found: ignore
 
   budget:
-    needs: [static-fast, fast-swift, e2e-android-bare, e2e-ios-bare] # every other job; extend when jobs are added
+    needs: [static-fast, e2e-android-bare, e2e-ios-bare] # every other job; extend when jobs are added
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

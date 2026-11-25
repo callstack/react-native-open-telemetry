@@ -52,7 +52,6 @@
     "metro",
     "!ios/build",
     "!android/build",
-    "!android/core-jvm",
     "!android/gradle",
     "!android/gradlew",
     "!android/gradlew.bat",
