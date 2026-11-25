@@ -30,7 +30,7 @@
         "typescript": "^5.8.3",
       },
       "peerDependencies": {
-        "react-native": ">=0.79",
+        "react-native": ">=0.88",
         "react-native-nitro-modules": "~0.37.0",
       },
     },

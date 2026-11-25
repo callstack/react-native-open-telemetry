@@ -7,13 +7,10 @@ v0 is tracing only. If you used 0.x, read [MIGRATION.md](MIGRATION.md) first.
 
 ## Requirements
 
-- React Native **0.79+**, New Architecture, Hermes
+- React Native **0.88+** (0.88.1 is verified on every PR), New Architecture, Hermes
 - `react-native-nitro-modules` **~0.37**
-- iOS: Xcode **27.0+** (verified; Xcode 16.4 fails on the Swift packages' tools versions, Xcode 26 is untested), with a
-  React Native version that builds on your Xcode (verified on Xcode 27: **0.88.1**). React Native 0.79 does not build
-  on Xcode 27: its `fmt` pod fails on the newer Clang (`consteval`). RN 0.79 on iOS needs an older Xcode, which is
-  untested here.
-- Android: minSdk **26**, React Native 0.79+ (0.88.1 is verified per PR; 0.79.7 runs on every push to `main`)
+- iOS: Xcode **27.0+** (verified; Xcode 16.4 fails on the Swift packages' tools versions, Xcode 26 is untested)
+- Android: minSdk **26**
 
 ## Install
 
@@ -209,7 +206,6 @@ Documented exceptions:
 - `requestIdleCallback` is not patched.
 - `InteractionManager` has no coverage: React Native 0.88 removed it.
 - **Web:** the flush on browser `pagehide` is not tested.
-- **React Native 0.79 on iOS** does not build with Xcode 27 (see Requirements). Use a newer React Native on iOS.
 
 ## Releasing
 

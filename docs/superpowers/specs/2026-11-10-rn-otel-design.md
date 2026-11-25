@@ -63,9 +63,8 @@ nesting**, to a collector — on iOS, Android and web.
 ## 3. Constraints and context
 
 - RN New Architecture, Hermes. Research was done against RN 0.84–0.88 / Hermes V1.
-  Minimum supported RN version: builder's choice, but upstream OTel JS 3.x requires
-  Metro ≥ 0.81.3 (RN ≥ 0.79) for `package.json` `imports` resolution, and Nitro requires
-  RN ≥ 0.75.
+  Minimum supported RN version: **0.88**, the version every PR tests (decided). No older
+  React Native is tested.
 - Upstream versions at time of writing: `@opentelemetry/api` 1.10, OTel JS stable 3.1.x /
   experimental 0.301.x (`@opentelemetry/sdk-trace` replaced `sdk-trace-base`/`-web` in 3.0),
   `@opentelemetry/browser-sdk` (lives in `open-telemetry/opentelemetry-browser`, pre-1.0),
@@ -752,16 +751,14 @@ Everything below is automated; nothing needs a person except reviewing expected 
 ```mermaid
 flowchart LR
   s1["1 · Static<br/>every push"] --> s2["2 · Fast loop<br/>every iteration"] --> s3["3 · E2E matrix<br/>every PR"] --> s4["4 · OTLP compliance<br/>every PR"]
-  s5["5 · Main matrix<br/>every push to main"]
 ```
 
 | Stage | Runs | Checks |
 |---|---|---|
-| **1. Static** (seconds) | pre-commit hook, and every push | `tsc`; `oxlint`; Nitro codegen is current (`nitrogen && git diff --exit-code nitrogen/`); `npm pack` contents include `lib/`, `nitrogen/`, `android/`, `ios/`, `Package.swift`, the podspec and the `metro/` helper; unit tests of the fake collector's normalizer (it sorts and merges, so a bug there would hide or invent diffs everywhere) |
+| **1. Static** (seconds) | pre-commit hook, and every push | `tsc`; `oxlint`; Nitro codegen is current (`nitrogen && git diff --exit-code nitrogen/`); `npm pack` contents include `lib/`, `nitrogen/`, `android/`, `ios/`, the podspecs and the `metro/` helper; unit tests of the fake collector's normalizer (it sorts and merges, so a bug there would hide or invent diffs everywhere) |
 | **2. Fast loop** (seconds) | every iteration, local and CI | Jest (Node) through the fake collector against expected files; the handful of unit tests (int vs double, `HrTime`, endpoint) |
 | **3. E2E matrix** (minutes) | every PR | `e2e` on five targets: **bare app** (native-first init) on iOS and Android, **Expo prebuild app** (JS-fallback init) on iOS and Android, **web** (the Expo app's Metro web export). All golden scenarios, the failure scenarios below, and one smoke scenario per target without test mode. Parity check across all five outputs. `perf-budget` on Android. |
 | **4. OTLP compliance** | every PR, Linux runner with Docker | The fake collector keeps every raw request it received. They are replayed, together with every expected file, to the **official OTel Collector** image (pinned) with an OTLP receiver; the job fails on any rejected request or decode error in its logs. Proves both our output and our spec files are real OTLP. |
-| **5. Main matrix** | every push to `main` | Pinned versions only: E2E on the **minimum supported RN** (0.79.7); the **packed tarball** (`npm pack`) in the bare and Expo apps, running the smoke scenario with test mode off (catches missing files and broken autolinking); API 26; Debug + Metro for fast refresh. No job tests the latest upstream release. |
 
 Two apps cover both init paths: the bare example inits natively in
 `MainApplication`/`AppDelegate`; the Expo app has no native init and relies on the JS
@@ -775,7 +772,7 @@ one final `needs:` job that checks total wall-clock time. When a PR run exceeds 
 matrix on every PR is decided.
 
 **Releases:** manual with changesets (`bun run version`, then `bun run publish`), from `main`
-once its PR pipeline and the main matrix are green. No release workflow.
+once its PR pipeline is green. No release workflow.
 
 **Failure scenarios** (E2E; the fake collector can refuse requests on demand):
 - collector down: the app doesn't block or crash; spans arrive once it is back.

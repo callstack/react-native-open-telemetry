@@ -16,7 +16,7 @@ had. The version stays in 0.x (0.2.0 → 0.3.0), but expect breaking changes.
 
 ## New requirements
 
-- React Native 0.79+, New Architecture, Hermes, and the peer `react-native-nitro-modules` ~0.37.
+- React Native 0.88+, New Architecture, Hermes, and the peer `react-native-nitro-modules` ~0.37.
 - iOS: add `pod 'ReactNativeOpenTelemetryCore', :path => '../node_modules/react-native-open-telemetry'` to the
   Podfile. On Expo, add the `"react-native-open-telemetry"` config plugin instead. See the [README](README.md#install).
 - Android: minSdk 26.

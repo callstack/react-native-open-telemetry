@@ -12,7 +12,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   }
 }
 
-// otel-init:
 func startOtel() {
   RNOtel.start { c in
     c.serviceName = "verify"
