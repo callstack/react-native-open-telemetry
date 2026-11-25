@@ -1,0 +1,62 @@
+{
+  "resourceSpans": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "verify"
+            }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "verify"
+          },
+          "spans": [
+            {
+              "traceId": "0a000000000000000000000000000001",
+              "spanId": "0a00000000000001",
+              "name": "parent",
+              "kind": 1,
+              "startTimeUnixNano": "1767225600000000000",
+              "endTimeUnixNano": "1767225600000019968",
+              "status": {}
+            },
+            {
+              "traceId": "0a000000000000000000000000000001",
+              "spanId": "0a00000000000002",
+              "parentSpanId": "0a00000000000001",
+              "name": "child",
+              "kind": 1,
+              "startTimeUnixNano": "1767225600000009984",
+              "endTimeUnixNano": "1767225600000011008",
+              "status": {}
+            },
+            {
+              "traceId": "0a000000000000000000000000000002",
+              "spanId": "0a00000000000003",
+              "name": "later.await",
+              "kind": 1,
+              "startTimeUnixNano": "1767225600000029952",
+              "endTimeUnixNano": "1767225600000030976",
+              "status": {}
+            },
+            {
+              "traceId": "0a000000000000000000000000000003",
+              "spanId": "0a00000000000004",
+              "name": "later.timeout",
+              "kind": 1,
+              "startTimeUnixNano": "1767225600000039936",
+              "endTimeUnixNano": "1767225600000040960",
+              "status": {}
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

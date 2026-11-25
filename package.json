@@ -34,6 +34,7 @@
       "default": "./lib/module/index.js"
     },
     "./metro": "./metro/index.js",
+    "./app.plugin.js": "./app.plugin.js",
     "./setup": {
       "types": "./lib/typescript/src/setup.d.ts",
       "default": "./lib/module/setup.js"
@@ -48,10 +49,14 @@
     "ios",
     "Package.swift",
     "ReactNativeOpenTelemetry.podspec",
+    "ReactNativeOpenTelemetryCore.podspec",
     "nitro.json",
     "metro",
+    "app.plugin.js",
+    "react-native.config.js",
     "!ios/build",
     "!android/build",
+    "!ios/CoreTests",
     "!android/gradle",
     "!android/gradlew",
     "!android/gradlew.bat",

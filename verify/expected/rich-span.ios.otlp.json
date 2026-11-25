@@ -1,0 +1,187 @@
+{
+  "resourceSpans": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "verify"
+            }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "verify.rich",
+            "version": "1.2.3",
+            "attributes": [
+              {
+                "key": "scope.key",
+                "value": {
+                  "stringValue": "scope-value"
+                }
+              }
+            ]
+          },
+          "spans": [
+            {
+              "traceId": "0a000000000000000000000000000001",
+              "spanId": "0a00000000000001",
+              "name": "rich",
+              "kind": 3,
+              "startTimeUnixNano": "1767225600000000000",
+              "endTimeUnixNano": "1767225600000099840",
+              "attributes": [
+                {
+                  "key": "bool",
+                  "value": {
+                    "boolValue": true
+                  }
+                },
+                {
+                  "key": "bools",
+                  "value": {
+                    "arrayValue": {
+                      "values": [
+                        {
+                          "boolValue": true
+                        },
+                        {
+                          "boolValue": false
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "key": "double",
+                  "value": {
+                    "doubleValue": 1.5
+                  }
+                },
+                {
+                  "key": "doubles",
+                  "value": {
+                    "arrayValue": {
+                      "values": [
+                        {
+                          "doubleValue": 1.5
+                        },
+                        {
+                          "doubleValue": 2.5
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "key": "int",
+                  "value": {
+                    "intValue": "42"
+                  }
+                },
+                {
+                  "key": "ints",
+                  "value": {
+                    "arrayValue": {
+                      "values": [
+                        {
+                          "intValue": "1"
+                        },
+                        {
+                          "intValue": "2"
+                        },
+                        {
+                          "intValue": "3"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "key": "str",
+                  "value": {
+                    "stringValue": "zażółć 🚀"
+                  }
+                },
+                {
+                  "key": "strs",
+                  "value": {
+                    "arrayValue": {
+                      "values": [
+                        {
+                          "stringValue": "a"
+                        },
+                        {
+                          "stringValue": "b"
+                        }
+                      ]
+                    }
+                  }
+                }
+              ],
+              "events": [
+                {
+                  "timeUnixNano": "1767225600000009984",
+                  "name": "first",
+                  "attributes": [
+                    {
+                      "key": "event.key",
+                      "value": {
+                        "stringValue": "e1"
+                      }
+                    },
+                    {
+                      "key": "event.n",
+                      "value": {
+                        "intValue": "1"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "timeUnixNano": "1767225600000019968",
+                  "name": "second",
+                  "attributes": [
+                    {
+                      "key": "event.ok",
+                      "value": {
+                        "boolValue": true
+                      }
+                    }
+                  ]
+                }
+              ],
+              "links": [
+                {
+                  "traceId": "0f111111111111111111111111111111",
+                  "spanId": "0f22222222222222",
+                  "attributes": [
+                    {
+                      "key": "link.key",
+                      "value": {
+                        "stringValue": "link-value"
+                      }
+                    },
+                    {
+                      "key": "link.n",
+                      "value": {
+                        "intValue": "7"
+                      }
+                    }
+                  ]
+                }
+              ],
+              "status": {
+                "message": "boom",
+                "code": 2
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
