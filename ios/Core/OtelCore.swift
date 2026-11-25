@@ -38,14 +38,14 @@ private final class LazyExporter: SpanExporter, @unchecked Sendable {
 
 package final class OtelCore {
   /// The one resource of the app; in test mode built from config only (no `telemetry.*`).
-  let resource: Resource
+  package let resource: Resource
   /// The native TracerProvider; JS spans join its batch processor.
   let tracerProvider: TracerProviderSdk
   private let bsp: BatchSpanProcessor
   private let exporter: LazyExporter
 
   init(config: CoreConfig, testMode: Bool = false, distroVersion: String = "unknown") {
-    var attrs = attributes(of: config.resourceAttributes)
+    var attrs = config.resourceAttributes
     attrs["service.name"] = .string(config.serviceName)
     if let v = config.serviceVersion { attrs["service.version"] = .string(v) }
     if !testMode {
@@ -67,9 +67,9 @@ package final class OtelCore {
     tracerProvider = (testMode ? b.with(idGenerator: SequentialIds()) : b).build()
   }
 
-  /// JS-thread work: wrap and enqueue only; SpanData is built on the export queue.
-  package func handOff(_ spans: [CoreSpan]) {
-    for s in spans { bsp.onEnd(span: JsReadableSpan(s, resource: resource)) }
+  /// JS-thread work: enqueue finished spans; the adapter's wrappers build SpanData on the export queue.
+  package func handOff(_ spans: [ReadableSpan]) {
+    for s in spans { bsp.onEnd(span: s) }
   }
 
   /// Blocks the caller up to `timeoutMs`. True when nothing is left unsent: the exporter requeues a failed batch,

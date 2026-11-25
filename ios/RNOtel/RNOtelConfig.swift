@@ -1,3 +1,5 @@
+import OpenTelemetryApi
+
 /// Native-first config (spec §4.4): `RNOtel.start { c in c.serviceName = …; c.export = .init(url: …) }`.
 public final class RNOtelConfig {
   public var serviceName = ""
@@ -16,7 +18,7 @@ public final class RNOtelConfig {
 
   func toCore() -> CoreConfig {
     CoreConfig(serviceName: serviceName, serviceVersion: serviceVersion,
-               resourceAttributes: resourceAttributes.map { CoreAttribute(key: $0.key, value: .string($0.value)) },
+               resourceAttributes: resourceAttributes.mapValues { .string($0) },
                exportUrl: export.url, exportHeaders: export.headers)
   }
 }

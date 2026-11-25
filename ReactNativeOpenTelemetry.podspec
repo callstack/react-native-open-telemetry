@@ -43,6 +43,8 @@ fi
   load 'nitrogen/generated/ios/ReactNativeOpenTelemetry+autolinking.rb'
   add_nitrogen_files(s)
 
+  # JsReadableSpan imports opentelemetry-swift too. No spm_dependency here (it would move this pod's module map, see
+  # above): the core pod's SwiftPM products are built into the products root, which SWIFT_INCLUDE_PATHS searches.
   s.dependency 'ReactNativeOpenTelemetryCore', s.version.to_s
   s.dependency 'React-jsi'
   s.dependency 'React-callinvoker'
