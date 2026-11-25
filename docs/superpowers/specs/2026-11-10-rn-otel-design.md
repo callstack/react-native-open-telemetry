@@ -184,17 +184,15 @@ class NativeHandOffProcessor implements SpanProcessor {
 ```
 
 ### 4.2 Native core and the seam
-- A **pure Kotlin** module and a **pure Swift** module hold all native logic (span
-  hand-off → `SpanData`, SDK setup, export config, the native parenting helper). They do
-  not import React Native or Nitro. Nitro HybridObjects are thin adapters over them.
-  **(Claude's call, required by the verification design.)**
-- Layout that works with autolinking (Claude's call, from review): shared sources, two
-  build entry points.
-  - Android: core sources in e.g. `android/src/core/kotlin`, compiled into the library by the
-    normal `android/` project. Core depends on `opentelemetry-sdk` and the OTLP exporter
-    only.
-  - iOS: core sources in e.g. `ios/Core/*.swift`, listed in the podspec `source_files`.
-    *(R24, Task 25: the app's non-interop Swift `AppDelegate` cannot import a Nitro C++-interop module, so iOS ships
+- A native core per platform holds all native logic (span hand-off → `SpanData`, SDK
+  setup, export config, the native parenting helper); the Nitro HybridObject is a thin
+  adapter over it.
+  - Android: the core (`android/src/main/java/com/callstack/otel/core`) reads Nitro's
+    generated seam structs directly; no hand-kept copy of the seam types. Core depends on
+    `opentelemetry-sdk` and the OTLP exporter.
+  - iOS: core sources in `ios/Core/*.swift`, with its own copy of the seam types: Nitro's
+    generated Swift structs are typealiases of C++ structs, so code using them needs C++
+    interop, and the core must not (below). *(R24, Task 25: the app's non-interop Swift `AppDelegate` cannot import a Nitro C++-interop module, so iOS ships
     two pods: pure-Swift `ReactNativeOpenTelemetryCore` (`ios/Core` + `RNOtel`) and the Nitro adapter pod that
     depends on it. Autolinking links one podspec per package, so apps add `pod 'ReactNativeOpenTelemetryCore',
     :path => '../node_modules/react-native-open-telemetry'` to their Podfile.)*
@@ -916,4 +914,4 @@ direct precedent was found; treat those as the highest-risk parts.
 | P20 | Protected expected files (9.3) | GitHub `CODEOWNERS` | [About code owners](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners) |
 | P21 | *(removed: the mutant meta-check was cut from v0, see 9.3)* | | |
 | P22 | Hermetic fake collector decoding the official protos (9.2) | Official OTLP protobuf definitions | [opentelemetry-proto](https://github.com/open-telemetry/opentelemetry-proto) |
-| P23 | Pure Kotlin/Swift core + thin Nitro adapters; shared-sources layout (4.2) | **Ours**: no direct precedent found in the RN OTel SDKs reviewed | — |
+| P23 | Native core + thin Nitro adapter; on iOS a Nitro-free core pod (4.2) | **Ours**: no direct precedent found in the RN OTel SDKs reviewed | — |
