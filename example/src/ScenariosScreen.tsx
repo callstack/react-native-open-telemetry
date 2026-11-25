@@ -5,11 +5,8 @@ import {SimpleSpanProcessor, TracerProvider} from '@opentelemetry/sdk-trace';
 import {OTLPTraceExporter} from '@opentelemetry/exporter-trace-otlp-proto';
 import {getOtel} from '../../src/native/otel';
 import {sequentialIds} from '../../src/internal/testMode';
-import type {SeamSpan} from '../../src/native/Otel.nitro';
 import {at} from '../../verify/harness/scenario';
-import {decodeFixture} from '../../verify/harness/fixtureJson';
 import {allScenarios} from '../../verify/scenarios';
-import richSpan from '../../verify/fixtures/rich-span.handoff.json';
 
 /** Must match COLLECTOR_PORT in verify/e2e/harness.ts. */
 const COLLECTOR_PORT = 4318;
@@ -55,12 +52,6 @@ export function ScenariosScreen() {
     setRunning(name);
   };
 
-  const handOff = () => {
-    const {spans} = decodeFixture(JSON.stringify(richSpan)) as {spans: SeamSpan[]};
-    getOtel()!.handOff(spans);
-    setStatus('handoff');
-  };
-
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text testID="native-test-mode">{testMode}</Text>
@@ -69,12 +60,7 @@ export function ScenariosScreen() {
           <Text>{s.name}</Text>
         </Pressable>
       ))}
-      {/* hidden: driven by verify/e2e/tracer-bullet.e2e.ts */}
-      <Pressable testID="tracer-bullet-handoff" onPress={handOff} style={styles.hidden}>
-        <Text>tracer bullet</Text>
-      </Pressable>
       {status === 'done' && <Text testID="scenario-done">done</Text>}
-      {status === 'handoff' && <Text testID="tracer-bullet-done">handed off</Text>}
       {status.startsWith('error') && <Text testID="scenario-error">{status}</Text>}
     </ScrollView>
   );
@@ -83,6 +69,4 @@ export function ScenariosScreen() {
 const styles = StyleSheet.create({
   container: {padding: 24, paddingTop: 80, gap: 8},
   button: {padding: 12, backgroundColor: '#ddd'},
-  // tappable for the e2e runner, invisible to people
-  hidden: {opacity: 0.02, padding: 12},
 });

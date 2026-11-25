@@ -1,26 +1,10 @@
-import fs from 'fs';
-import path from 'path';
 import {SamplingDecision} from '@opentelemetry/sdk-trace';
 import {resourceFromAttributes} from '@opentelemetry/resources';
 import {TracerProvider} from '@opentelemetry/sdk-trace';
-import {decodeFixture, encodeFixture} from '../harness/fixtureJson';
 import {at} from '../harness/scenario';
 import {sequentialIds} from '../../src/internal/testMode';
 import {NativeHandOffProcessor} from '../../src/handoff/NativeHandOffProcessor';
 import type {Otel, SeamSpan} from '../../src/native/Otel.nitro';
-import {allScenarios} from '../scenarios';
-import {pendingScenarios} from '../harness/compare';
-
-const CONFIG = {
-  serviceName: 'verify',
-  resourceAttributes: [],
-  exportUrl: '<collector>',
-  exportHeaders: [],
-};
-// R11: per-scenario config; export-headers proves the headers reach the collector (fast-jvm asserts headers.json)
-const configFor = (name: string) =>
-  name === 'export-headers' ? {...CONFIG, exportHeaders: [{key: 'x-api-key', value: 'test'}]} : CONFIG;
-const dir = path.join(process.env.VERIFY_DIR ?? path.join(__dirname, '..'), 'fixtures');
 
 function setup() {
   const calls: SeamSpan[][] = [];
@@ -81,24 +65,3 @@ describe('NativeHandOffProcessor', () => {
     expect(() => { t.startSpan('a').end(); t.startSpan('b').end(); }).not.toThrow();
   });
 });
-
-// R6: every active Jest scenario has a seam fixture
-for (const s of allScenarios().filter(x => !x.pending && (x.runners.includes('jest') || x.runners.includes('seam')))) {
-  const name = s.name;
-  // a pending body is not its final version yet: keep the reviewed fixture until the owning task un-pends it
-  if (pendingScenarios.has(name)) {
-    test.todo(`${name} fixture matches hand-off payloads`);
-    continue;
-  }
-  test(`${name} fixture matches hand-off payloads`, async () => {
-    const {calls, provider} = setup();
-    await s.run({tracer: provider.getTracer('verify'), getTracer: (n, v, o) => provider.getTracer(n, v, o), at});
-    const actual = calls.flat();
-    const file = path.join(dir, `${name}.handoff.json`);
-    if (process.env.VERIFY_UPDATE === '1') {
-      fs.mkdirSync(dir, {recursive: true});
-      fs.writeFileSync(file, encodeFixture({config: configFor(name), spans: actual}) + '\n');
-    }
-    expect(decodeFixture(fs.readFileSync(file, 'utf8'))).toStrictEqual({config: configFor(name), spans: actual});
-  });
-}

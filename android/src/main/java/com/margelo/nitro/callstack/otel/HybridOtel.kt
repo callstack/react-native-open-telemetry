@@ -1,29 +1,43 @@
 package com.margelo.nitro.callstack.otel
 
-import android.util.Log
 import androidx.annotation.Keep
+import com.callstack.otel.RNOtel
+import com.callstack.otel.core.CoreConfig
+import com.callstack.otel.core.OtelCore
+import com.callstack.otel.core.attributesOf
 import com.facebook.proguard.annotations.DoNotStrip
 import com.margelo.nitro.core.Promise
-import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 
-/** Tracer-bullet stub (Task 7): proves the seam and the otel-java link; the real adapter is Task 24. */
+/** The seam: the core reads Nitro's structs directly. */
 // Constructed from JNI by name (ReactNativeOpenTelemetryOnLoad.cpp): keep it through R8.
 @DoNotStrip
 @Keep
 class HybridOtel : HybridOtelSpec() {
   override fun initialize(config: SeamConfig?): SeamInitResult {
-    // Touch otel-java + its OkHttp sender so a broken dependency fails here, not in Task 24.
-    OtlpHttpSpanExporter.builder().build().shutdown()
-    return SeamInitResult(alreadyInitialized = false, testMode = BuildConfig.OTEL_TEST_MODE, error = null)
+    val r = RNOtel.initialize(config?.let {
+      CoreConfig(
+        serviceName = it.serviceName,
+        serviceVersion = it.serviceVersion,
+        resourceAttributes = attributesOf(it.resourceAttributes),
+        exportUrl = it.exportUrl,
+        exportHeaders = it.exportHeaders.mapNotNull { h -> h.value.asFifthOrNull()?.let { v -> h.key to v } }.toMap(),
+      )
+    })
+    return SeamInitResult(r.alreadyInitialized, r.testMode, r.error)
   }
 
+  /** JS thread: enqueue only; SpanData is built on the export thread. */
   override fun handOff(spans: Array<SeamSpan>) {
-    Log.i(
-      "RNOtel",
-      "RNOtel handOff spans=${spans.size} attrs=${spans.sumOf { it.attributes.size }} " +
-        "events=${spans.sumOf { it.events.size }} links=${spans.sumOf { it.links.size }}",
-    )
+    OtelCore.instance?.handOff(spans)
   }
 
-  override fun flush(timeoutMs: Double): Promise<Unit> = Promise.resolved(Unit)
+  // Off the JS and main threads (the join blocks, so on IO); resolves even when native never initialized.
+  override fun flush(timeoutMs: Double): Promise<Unit> = Promise.async(io) {
+    OtelCore.instance?.flush(timeoutMs.toLong())
+    Unit
+  }
+
+  private val io = CoroutineScope(Dispatchers.IO)
 }

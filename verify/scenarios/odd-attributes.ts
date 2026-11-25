@@ -7,4 +7,4 @@ export default scenario('odd-attributes', async ({tracer, at}) => {
       attributes: {nan: NaN, inf: Infinity, negZero: -0, big: 2 ** 53 + 2, empty: []},
     })
     .end(at(10));
-}, {runners: ['seam', 'e2e']});
+}, {runners: ['e2e']});

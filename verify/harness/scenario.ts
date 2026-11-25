@@ -15,11 +15,8 @@ export type ScenarioCtx = {
   /** Only on devices (the example app); e2e-only scenarios use it. */
   native?: TestNative;
 };
-/**
- * `jest`: Jest records the hand-off fixture and compares the JS output to `<name>.js.otlp.json`.
- * `seam`: Jest records only the hand-off fixture, for scenarios whose JS output would be upstream's alone.
- */
-export type Runner = 'jest' | 'seam' | 'e2e';
+/** `jest`: Jest compares the JS output to `<name>.js.otlp.json`. `e2e`: the example apps on devices and web. */
+export type Runner = 'jest' | 'e2e';
 /** A platform, or one e2e target (`android-bare`, `ios-expo`, …) for what only one app can run. */
 export type Target = 'android' | 'ios' | 'web' | `${'android' | 'ios'}-${'bare' | 'expo'}`;
 export type Scenario = {
