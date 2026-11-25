@@ -4,7 +4,7 @@ data class CoreConfig(
   val serviceName: String,
   val serviceVersion: String? = null,
   val resourceAttributes: List<SeamAttribute> = emptyList(),
-  /** Base URL; see [tracesUrl]. */
+  /** The OTLP/HTTP traces endpoint, used as given. */
   val exportUrl: String,
   val exportHeaders: Map<String, String> = emptyMap(),
 )

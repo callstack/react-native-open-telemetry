@@ -48,7 +48,7 @@ class OtelCore(config: CoreConfig, testMode: Boolean = false, distroVersion: Str
 
   private val bsp = BatchSpanProcessor.builder(
     LazyExporter {
-      OtlpHttpSpanExporter.builder().setEndpoint(tracesUrl(config.exportUrl))
+      OtlpHttpSpanExporter.builder().setEndpoint(config.exportUrl)
         .apply { config.exportHeaders.forEach { (k, v) -> addHeader(k, v) } }.build()
     },
   // test mode: no timed export within a device test, so only flush and background export send (Task 27)

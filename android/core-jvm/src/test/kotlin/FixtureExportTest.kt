@@ -26,7 +26,7 @@ class FixtureExportTest {
     assertTrue(fixtures.isNotEmpty())
     for (f in fixtures) {
       val name = f.name.removeSuffix(".handoff.json")
-      val (config, spans) = FixtureJson.parse(f.readText(), collector)
+      val (config, spans) = FixtureJson.parse(f.readText(), "$collector/v1/traces")
       control("begin", """{"scenario":"$name","platform":"android"}""")
       val core = OtelCore(config, testMode = true)
       core.handOff(spans)

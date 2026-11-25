@@ -12,7 +12,7 @@ class RNOtelConfig {
   private var export = Export()
 
   class Export {
-    /** OTLP base URL; `/v1/traces` is appended unless present. */
+    /** The OTLP/HTTP traces endpoint (e.g. `https://collector:4318/v1/traces`), used as given. */
     var url: String = ""
     var headers: Map<String, String> = emptyMap()
   }
