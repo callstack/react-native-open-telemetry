@@ -32,10 +32,13 @@ public enum RNOtel {
     return r
   }
 
-  /// Exports what is queued when the app goes to the background, inside a background task so iOS lets it finish.
-  /// The flush blocks a global queue, never the main thread.
+  /// Exports what is queued when the app is about to go to the background, inside a background task so iOS lets it
+  /// finish. The flush blocks a global queue, never the main thread.
+  /// Starts on `willResignActive`, not `didEnterBackground`: once backgrounded, a loaded system can starve the app for
+  /// 15 s and more despite the background task (seen on CI simulators: the export stalls until the app is reopened).
+  /// It also fires for transient interruptions (Control Center, a call); an extra flush there is harmless.
   private static func flushOnBackground(_ core: OtelCore) -> NSObjectProtocol {
-    NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { _ in
+    NotificationCenter.default.addObserver(forName: UIApplication.willResignActiveNotification, object: nil, queue: .main) { _ in
       let app = UIApplication.shared
       var task = UIBackgroundTaskIdentifier.invalid
       // begin/end/expiration all run on the main thread, so `task` needs no lock
