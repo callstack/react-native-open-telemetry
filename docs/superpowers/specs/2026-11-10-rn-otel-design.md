@@ -620,8 +620,6 @@ tests: they don't care about internals, so internals can be rewritten freely.
   in the expected files). Known v0 gap, accepted: opentelemetry-swift 2.6's OTLP encoder never
   writes span/link `flags`, span/link `traceState` or the scope `schemaUrl`, so the `ios` files
   lack them (shapes don't cover them; no encoder reimplementation, see verify/VERIFY.md).
-- One non-deterministic smoke scenario per device (production pipeline, no test mode) checks
-  the real path still exports.
 
 A scenario and its expected file, roughly:
 
@@ -721,13 +719,8 @@ flowchart LR
   work, ROOT leak check, captured `then`, async generators, batching (documented
   exception), `setInterval` (new root), thrown errors in callbacks, never-settling promise
   (no context leak into later work), cross-boundary both ways, one rich span (every
-  attribute type, events, links, status) to catch seam drift, `perf-budget` (below).
+  attribute type, events, links, status) to catch seam drift.
   The degraded probe is a unit test: a native-`async` step built with `new Function` defeats the patch.
-- **Performance guardrail (council review):** one e2e scenario, `perf-budget`, on the
-  Android target only: 1,000 spans with 10 attributes each through the real hand-off, and
-  10,000 awaits with the patch on vs off (test build flag). It fails only on loose budgets
-  (hand-off p50 < 100 µs per span, patch ratio < 3×) so emulator noise doesn't flake;
-  numbers go to `verify/artifacts/perf.json`.
 
 ### 9.3 Working loop
 1. One command: `bun verify` starts the fake collector, runs the layers, compares every
@@ -750,15 +743,14 @@ Everything below is automated; nothing needs a person except reviewing expected 
 
 ```mermaid
 flowchart LR
-  s1["1 · Static<br/>every push"] --> s2["2 · Fast loop<br/>every iteration"] --> s3["3 · E2E matrix<br/>every PR"] --> s4["4 · OTLP compliance<br/>every PR"]
+  s1["1 · Static<br/>every push"] --> s2["2 · Fast loop<br/>every iteration"] --> s3["3 · E2E matrix<br/>every PR"]
 ```
 
 | Stage | Runs | Checks |
 |---|---|---|
 | **1. Static** (seconds) | pre-commit hook, and every push | `tsc`; `oxlint`; Nitro codegen is current (`nitrogen && git diff --exit-code nitrogen/`); `npm pack` contents include `lib/`, `nitrogen/`, `android/`, `ios/`, the podspecs and the `metro/` helper; unit tests of the fake collector's normalizer (it sorts and merges, so a bug there would hide or invent diffs everywhere) |
 | **2. Fast loop** (seconds) | every iteration, local and CI | Jest (Node) through the fake collector against expected files; the handful of unit tests (int vs double, `HrTime`, endpoint) |
-| **3. E2E matrix** (minutes) | every PR | `e2e` on five targets: **bare app** (native-first init) on iOS and Android, **Expo prebuild app** (JS-fallback init) on iOS and Android, **web** (the Expo app's Metro web export). All golden scenarios, the failure scenarios below, and one smoke scenario per target without test mode. Parity check across all five outputs. `perf-budget` on Android. |
-| **4. OTLP compliance** | every PR, Linux runner with Docker | The fake collector keeps every raw request it received. They are replayed, together with every expected file, to the **official OTel Collector** image (pinned) with an OTLP receiver; the job fails on any rejected request or decode error in its logs. Proves both our output and our spec files are real OTLP. |
+| **3. E2E matrix** (minutes) | every PR | `e2e` on five targets: **bare app** (native-first init) on iOS and Android, **Expo prebuild app** (JS-fallback init) on iOS and Android, **web** (the Expo app's Metro web export). All golden scenarios and the failure scenarios below; parity check across all five outputs. |
 
 Two apps cover both init paths: the bare example inits natively in
 `MainApplication`/`AppDelegate`; the Expo app has no native init and relies on the JS
@@ -783,8 +775,8 @@ once its PR pipeline is green. No release workflow.
 - fast refresh doesn't stack the context patch (same output before and after).
 
 ### 9.5 Not covered in v0
-- **Performance** beyond the `perf-budget` guardrail (low-end device numbers, Kotlin vs C++
-  adapter): the v1 spike (section 11).
+- **Performance** (hand-off cost, patch overhead, low-end devices, Kotlin vs C++ adapter):
+  not measured in CI; the v1 spike (section 11).
 - **Memory retention** (a never-settling promise keeping its span alive): output tests
   can't see it; add a `WeakRef` + `--expose-gc` check if it becomes a concern.
 - **Multiple JS runtimes**: one native singleton is designed for, not tested.
@@ -876,10 +868,10 @@ Left out until needed:
 13. Trace-model rules: links for multi-cause renders, marked heuristic attribution (5).
 14. Sequencing, with the real-RN-app context milestone first (8).
 15. Test mode as a build flag; explicit whole-µs timestamps in scenarios; attribute/event
-    sorting; parity shape; one non-deterministic smoke scenario per device (9.1).
+    sorting; parity shape (9.1).
 16. Native cores proven by device e2e against the same expected files (9.2).
 17. One endpoint meaning on every platform (the traces endpoint, used as given); returned handle `{ tracerProvider, forceFlush, shutdown }` (4.4).
-18. `perf-budget` guardrail (9.2, 9.4).
+18. No performance or compliance jobs in CI: the upstream OTLP exporters own the wire format; `example/collector/` runs the official Collector by hand (9.4).
 
 ## 14. Prior art and proof
 

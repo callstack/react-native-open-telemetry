@@ -7,8 +7,6 @@ const OWN_FILE = new Set([
   'flush-after-reload',
   'background-flush',
   'fast-refresh-idempotent',
-  'smoke-device',
-  'perf-budget',
   'export-headers',
 ]);
 

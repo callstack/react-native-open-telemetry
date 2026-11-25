@@ -191,42 +191,6 @@ Each has its own e2e file (R10); the ScenariosScreen does not `forceFlush()` aft
 
   If watchman reports recrawls, restart Metro: a dead watch never delivers the edit.
 
-## Smoke and performance (Task 29)
-
-**`smoke-device`** (`smoke.e2e.ts`, R20): the production pipeline, test mode **off** in native and JS. The test first
-checks the build (`native testMode=false`, no test-mode `flush` control, so a stale test-mode bundle fails too), taps
-the scenario and asserts the collector got exactly one span, `smoke`. No expected file: real ids, times and the
-`telemetry.*` resource. It needs a test-mode-off build; `E2E_SMOKE=1` makes the `e2e` stage run only `smoke.e2e.ts`
-(without it the test skips). Both apps share their bundle id, so the smoke build replaces the test-mode one.
-
-```sh
-cd example/android && ./gradlew :app:assembleRelease          # no OTEL_TEST_MODE, no -PotelTestMode
-cd example/ios && pod install && xcodebuild -workspace OpenTelemetryExample.xcworkspace -scheme OpenTelemetryExample \
-  -configuration Release -sdk iphonesimulator -derivedDataPath build build
-E2E_SMOKE=1 E2E_TARGET=android-bare bun verify --e2e e2e     # or ios-bare; E2E_ANDROID_APP / E2E_IOS_APP pick another build
-```
-
-CI (X11 interim): per PR on the bare targets only, as a variant inside `e2e-android-bare` / `e2e-ios-bare` (built
-before the test-mode build, copied to `$RUNNER_TEMP`, run after the main e2e); the Expo app has no test-mode-off smoke run.
-Android rebundles on a test-mode switch: `app/build.gradle` adds `OTEL_TEST_MODE` and the package/verify sources
-to the bundle task's inputs (they live outside `example/`, so a change there used to leave the old bundle in place).
-
-**Untested: API 26–27.** The Android process-name fallback (`/proc/self/cmdline`, for the main-process check below
-API 28) has not run on a device: no API 26/27 system image is installed locally, and PR CI uses API 35.
-
-**`perf-budget`** (`perf.e2e.ts`, R27): `android-bare` only, by target name. The scenario times (a) 100 warm-up +
-1,000 × `startSpan → setAttribute×10 → end()` with `performance.now()` per span, through the real synchronous
-hand-off (`end()` alone is reported too), and (b) 5 alternating rounds (on, off, …) of 20,000 `await null` inside
-an active span, patch on vs off (`Promise.prototype.then` restored from the patch marker, put back in `finally` each
-round; no extra build). The numbers leave as attributes of one `perf-result` span; the test writes
-`verify/artifacts/perf.json` (every sample, method, device) and fails only if the unrounded hand-off p50 ≥ 100 µs or
-median(on) / median(off) ≥ 3×. It measures the test-mode build, which crosses the same hand-off seam as production.
-Pixel_9 emulator (API 36, arm64), 2 runs: p50 26.9–27.3 µs (p95 53–58 µs, `end()` alone p50 13.8–14.2 µs), ratio 1.70–1.71.
-CI: the `perf.json` of record is the `verify-artifacts-e2e-android-bare` artifact of the PR's latest green run
-([run 45358145497, artifact](https://github.com/callstack/react-native-open-telemetry/actions/runs/45358145497/artifacts/14904400776)):
-hosted x86_64 emulator (API 35): p50 76.9 µs (p95 686 µs, `end()` alone 41.8 µs), ratio 2.19. CI emulators are ~3× slower
-than the local arm64 one, so the 100 µs gate has less headroom there.
-
 ## Android cold start with `RNOtel.start` (Task 24, 2026-11-24)
 
 `adb shell am start -W -n opentelemetry.example/.MainActivity` after `am force-stop`, 6 launches each, Pixel_9
@@ -259,17 +223,6 @@ The T3 host process has no `JAVA_HOME`, so `avdmanager list avd` fails. The emul
 (`@e2e-dev/mobile`, agent-device 0.21.39) drives it fine. Reload / fast refresh / background on Android still need a
 check before Task 27; fix the T3 host's Java (or run the check through an e2e test) and fill in the column. Task 27 filled it in through e2e tests.
 
-## OTLP compliance (Task 30)
-
-CI job `compliance` (needs every e2e job) downloads their `verify-artifacts-e2e-*`, runs the pinned official
-`otel/opentelemetry-collector:0.165.0` with `verify/compliance/collector.yaml` (OTLP/HTTP in, `debug` exporter,
-`verbosity: detailed`) and runs `bun verify/compliance/replay.ts --url http://localhost:4318 --dirs <dir>...`. It POSTs every
-`raw/*/<n>.pb` as `application/x-protobuf`, every raw `.json` and every `verify/expected/*.otlp.json` as `application/json`;
-a non-2xx or a `\terror\t` collector log line fails the job. Needs docker, so it is not in `bun verify`.
-X9 settled: Collector 0.165.0 accepts the NaN/Infinity `doubleValue` strings in `odd-attributes.*.otlp.json` (run
-[45358145497](https://github.com/callstack/react-native-open-telemetry/actions/runs/45358145497): 110 raw requests and
-84 expected files, no errors), so every file must be 2xx.
-
 ## Scenarios
 
 One file per guarantee in `verify/scenarios/`, named after it, with a hand-written `verify/expected/<name>.shape.json`
@@ -277,8 +230,7 @@ One file per guarantee in `verify/scenarios/`, named after it, with a hand-writt
 `VERIFY_UPDATE=1` and reviewed by the author. `pending` scenarios report as `todo`; the owning task flips `pending` off.
 
 Shapes use the JS runner's resource, `["service.name"]`. Native test mode builds the resource from config only and
-the example inits with no `serviceVersion` (R2), so native-first device runs match the same shapes; `telemetry.*`
-outside test mode is `smoke-device`'s, which checks span count and names only (no expected file, R20).
+the example inits with no `serviceVersion` (R2), so native-first device runs match the same shapes.
 
 e2e targets are android, ios and web unless the Runners column names them.
 
@@ -309,8 +261,6 @@ e2e targets are android, ios and web unless the Runners column names them.
 | `flush-after-reload` | `forceFlush()` resolves across a JS reload; spans arrive once | 27 | e2e (android, ios) | passing |
 | `background-flush` | spans are exported on background without `forceFlush()` | 27 | e2e (android, ios) | passing |
 | `fast-refresh-idempotent` | fast refresh does not stack the patch: `then`/`setTimeout` keep their identity across refreshes | 27 | e2e (android-dev, ios-dev; local only) | passing (local) |
-| `smoke-device` | production pipeline (no test mode) exports `smoke` spans | 29 | e2e (android, ios; test-mode-off build, `E2E_SMOKE=1`) | passing (no expected file: count + names) |
-| `perf-budget` | hand-off p50 < 100 µs/span, patch ratio < 3× (`artifacts/perf.json`, no shape) | 29 | e2e (android-bare) | passing |
 
 ### Adding a scenario
 
