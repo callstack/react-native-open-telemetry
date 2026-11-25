@@ -83,7 +83,7 @@ describe('NativeHandOffProcessor', () => {
 });
 
 // R6: every active Jest scenario has a seam fixture
-for (const s of allScenarios().filter(x => !x.pending && x.runners.includes('jest'))) {
+for (const s of allScenarios().filter(x => !x.pending && (x.runners.includes('jest') || x.runners.includes('seam')))) {
   const name = s.name;
   // a pending body is not its final version yet: keep the reviewed fixture until the owning task un-pends it
   if (pendingScenarios.has(name)) {

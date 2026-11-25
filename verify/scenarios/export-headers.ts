@@ -9,5 +9,5 @@ export default scenario(
   async ({tracer, at}) => {
     tracer.startSpan('headers', {startTime: at(0)}).end(at(10));
   },
-  {targets: ['android', 'ios', 'web']}, // every example app's init sends x-api-key: test
+  {runners: ['seam', 'e2e'], targets: ['android', 'ios', 'web']}, // every example app's init sends x-api-key: test
 );
