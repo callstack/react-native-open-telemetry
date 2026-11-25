@@ -1,0 +1,161 @@
+name: Release
+
+# Two gates, both checked through the GitHub API by scripts/release-gate.js, which fails closed (red, pending, missing
+# or an API error all stop the job):
+# - publish-next: after CI completes on a `main` push, and only if that commit's CI is green. Changesets opens the
+#   "version packages" PR while changesets are pending; once it is merged (and CI is green on the merge), it runs
+#   `changeset publish --tag next` (npm publish --tag next). Nothing ever publishes to `latest` directly.
+# - promote (manual, from `main`): moves a published version from `next` to `latest`, only if its release commit
+#   (tag v<version>) has a green `nightly` status from a successful scheduled.yml run (mark-nightly), and the version
+#   is not lower than the current `latest`. Run the nightly on that commit first if needed:
+#   Actions -> Nightly -> Run workflow -> "Use workflow from" tag v<version>.
+# Both publishing jobs run in the `npm` environment, which holds NPM_TOKEN (a granular, publish-only token). Setup and
+# caveats (the version PR gets no CI): CONTRIBUTING.md "Publishing to npm".
+# Real publishing is first verified after merge to `main` (R28); until then only the dry run below has run (from the
+# PR, Release run 45353782465).
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      promote:
+        description: 'Version to move from `next` to `latest` (e.g. 0.3.0). Empty: nothing to promote.'
+        type: string
+        default: ''
+      dry_run:
+        description: 'Dry run: evaluate the gates, version and pack; publish and promote nothing'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# per event: a dry run or a promote never queues behind or replaces a pending publish-next
+concurrency:
+  group: release-${{ github.event_name }}
+  cancel-in-progress: false
+
+env:
+  PACKAGE: react-native-open-telemetry
+  # A commit whose CI is red (a v0-impl PR run): the dry run proves the CI gate refuses it, live against the API.
+  KNOWN_RED_SHA: 78482b19a4537be8f05306744729b5a6db8b0d10
+  # A commit whose CI is green: the positive control, so the refusal above is not a gate that always fails.
+  KNOWN_GREEN_SHA: d6d1af161ea6a6a1ee587aa858304f3aa6f2e5b3
+
+jobs:
+  dry-run:
+    if: github.event_name == 'workflow_dispatch' && inputs.dry_run
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+      statuses: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # all branches: changeset status compares against origin/main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.19
+      - run: node scripts/release-gate.js --self-test
+      - name: The CI gate refuses a red commit and passes a green one
+        run: |
+          if node scripts/release-gate.js ci "$KNOWN_RED_SHA"; then echo "::error::CI gate passed a red commit"; exit 1; fi
+          node scripts/release-gate.js ci "$KNOWN_GREEN_SHA"
+      - name: The promote gate refuses a commit without a green nightly
+        run: |
+          if node scripts/release-gate.js nightly "$KNOWN_RED_SHA"; then echo "::error::nightly gate passed"; exit 1; fi
+      - run: bun install --frozen-lockfile
+      - run: bun run prepare
+      - run: bunx changeset status --verbose --since=origin/main
+      - name: Version (what the version PR would contain)
+        run: bun run version && git status --short && git diff -- package.json src/sdk/config.ts ios/RNOtel/RNOtel.swift
+      # `changeset publish` has no dry-run flag, so the dry run packs exactly what it would publish, with its dist-tag
+      - run: npm publish --dry-run --tag next --ignore-scripts
+
+  publish-next:
+    if: >-
+      github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: npm
+    permissions:
+      contents: write # the version PR branch and the v<version> tag
+      pull-requests: write # the version PR
+      actions: read # the CI gate
+      id-token: write # npm provenance
+    env:
+      SHA: ${{ github.event.workflow_run.head_sha }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      # the event says success; re-check through the API so a re-run or a stale event cannot publish a red commit
+      - run: node scripts/release-gate.js ci "$SHA"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.19
+      - run: bun install --frozen-lockfile
+      - uses: changesets/action@v1
+        with:
+          version: bun run version
+          publish: bun run release
+          title: 'chore: version packages'
+          commit: 'chore: version packages'
+          createGithubReleases: false # `latest` is promote's call, not the publish's
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: 'true'
+
+  promote:
+    if: >-
+      github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' &&
+      inputs.promote != '' && !inputs.dry_run
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: npm
+    permissions:
+      contents: read
+      statuses: read # the nightly gate: the status
+      actions: read # the nightly gate: the scheduled.yml run it links
+    env:
+      VERSION: ${{ inputs.promote }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: https://registry.npmjs.org
+      - name: Resolve the release commit
+        run: |
+          # x.y.z only: a prerelease never becomes `latest`, and sort -V orders plain versions correctly
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::not a release version: $VERSION"; exit 1; }
+          sha=$(git rev-list -n 1 "v$VERSION") # fails the step when the tag is missing
+          echo "SHA=$sha" >> "$GITHUB_ENV"
+          test "$(npm view "$PACKAGE@$VERSION" version)" = "$VERSION"
+          latest=$(npm view "$PACKAGE" dist-tags.latest)
+          if [ "$(printf '%s\n' "$latest" "$VERSION" | sort -V | tail -n 1)" != "$VERSION" ]; then
+            echo "::error::$VERSION is lower than latest $latest"; exit 1
+          fi
+      - run: node scripts/release-gate.js nightly "$SHA"
+      - run: npm dist-tag add "$PACKAGE@$VERSION" latest
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

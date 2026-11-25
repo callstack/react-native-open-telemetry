@@ -438,8 +438,49 @@ jobs:
           if-no-files-found: ignore
           include-hidden-files: true # verify/e2e/.e2e is a dot dir
 
+  # Task 30: replays every raw request the e2e jobs captured (protobuf and JSON) and every verify/expected file into
+  # the official OpenTelemetry Collector (pinned; bump deliberately). Fails on a non-2xx or an error log line.
+  # Needs docker, so it is not part of `bun verify`.
+  compliance:
+    needs: [e2e-android-bare, e2e-ios-bare, e2e-android-expo, e2e-ios-expo, e2e-web]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.19
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: verify-artifacts-e2e-*
+          path: e2e-artifacts # one subdirectory per job
+      - name: Start the Collector
+        run: |
+          docker run -d --name otelcol -p 4318:4318 \
+            -v "$PWD/verify/compliance/collector.yaml:/etc/otelcol/config.yaml:ro" \
+            otel/opentelemetry-collector:0.165.0 --config /etc/otelcol/config.yaml
+          for i in $(seq 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -X POST localhost:4318/v1/traces || true)
+            [ "$code" != 000 ] && break
+            sleep 1
+          done
+          [ "$code" != 000 ] || { docker logs otelcol; exit 1; }
+      - name: Replay
+        run: bun verify/compliance/replay.ts --url http://localhost:4318 --dirs e2e-artifacts
+      - name: Collector log has no errors
+        if: always()
+        run: |
+          docker logs otelcol > collector.log 2>&1
+          if grep -P '\terror\t' collector.log; then echo '::error::the Collector logged errors'; exit 1; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: compliance-collector-log
+          path: collector.log
+          if-no-files-found: ignore
+
   budget:
-    needs: [static-fast, e2e-android-bare, e2e-ios-bare, e2e-android-expo, e2e-ios-expo, e2e-web] # every other job; extend when jobs are added
+    needs: [static-fast, e2e-android-bare, e2e-ios-bare, e2e-android-expo, e2e-ios-expo, e2e-web, compliance] # every other job; extend when jobs are added
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

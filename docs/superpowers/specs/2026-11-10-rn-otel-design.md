@@ -70,13 +70,13 @@ nesting**, to a collector — on iOS, Android and web.
   experimental 0.301.x (`@opentelemetry/sdk-trace` replaced `sdk-trace-base`/`-web` in 3.0),
   `@opentelemetry/browser-sdk` (lives in `open-telemetry/opentelemetry-browser`, pre-1.0),
   otel-java (stable), opentelemetry-swift 2.6.
-- Nitro Modules 0.37.x (pre-1.0). Requires Xcode ≥ 16.4, NDK ≥ 27. Pin the supported range
+- Nitro Modules 0.37.x (pre-1.0). Requires Xcode ≥ 27.0 (the opentelemetry-swift 2.6 dependencies need Swift 6.4), NDK ≥ 27. Pin the supported range
   and document it; `react-native-nitro-modules` is a peer dependency the app installs.
 - Bare RN and Expo must both work. Expo config plugins only run in `expo prebuild`, so
   nothing essential may depend on a plugin.
 - opentelemetry-swift appears to be distributed via SwiftPM only (no podspec at repo
   root — reported by a reviewer, builder to confirm). The pod must pull it via
-  `spm_dependency` (RN ≥ 0.75) or vendor it; verify with Xcode 16.4, static frameworks and
+  `spm_dependency` (RN ≥ 0.75) or vendor it; verify with Xcode 27.0, static frameworks and
   Nitro's Swift/C++ interop.
 
 ## 4. Architecture (decided)
@@ -101,8 +101,8 @@ flowchart TB
 
   subgraph web["Web"]
     direction TB
-    jsw["JS: startBrowserSdk (upstream browser-sdk)<br/>+ same ContextManager"]
-    wexp["OTLP/HTTP fetch exporter (upstream)"]
+    jsw["JS: sdk-trace TracerProvider (7)<br/>+ same ContextManager"]
+    wexp["OTLP/HTTP proto fetch exporter (upstream)"]
     jsw --> wexp
   end
 
@@ -114,7 +114,7 @@ flowchart TB
 
 | Ours vs upstream | |
 |---|---|
-| upstream, reused as-is | `@opentelemetry/api`, `sdk-trace`, browser-sdk, otel-java, opentelemetry-swift, exporters |
+| upstream, reused as-is | `@opentelemetry/api`, `sdk-trace`, otel-java, opentelemetry-swift, exporters |
 | ours | ContextManager patch, hand-off processor, Nitro adapters, pure native core, bundler helpers |
 
 ### 4.1 Where spans live (decided: "option C")
@@ -196,6 +196,10 @@ class NativeHandOffProcessor implements SpanProcessor {
     and the OTLP exporter only.
   - iOS: core sources in e.g. `ios/Core/*.swift`, listed in the podspec `source_files`; a
     root `Package.swift` uses the same path for `swift test` on macOS.
+    *(R24, Task 25: the app's non-interop Swift `AppDelegate` cannot import a Nitro C++-interop module, so iOS ships
+    two pods: pure-Swift `ReactNativeOpenTelemetryCore` (`ios/Core` + `RNOtel`) and the Nitro adapter pod that
+    depends on it. Autolinking links one podspec per package, so apps add `pod 'ReactNativeOpenTelemetryCore',
+    :path => '../node_modules/react-native-open-telemetry'` to their Podfile.)*
 - **v0 uses otel-java directly, not opentelemetry-android** (Claude's call): otel-java is
   stable; opentelemetry-android is alpha, adds desugaring/AGP constraints, and v0 needs none
   of its instrumentation. Add it with v1 lifecycle work. Watch OkHttp version alignment
@@ -305,12 +309,11 @@ OTel data model.
   itself with the semantic-convention distro attributes `telemetry.distro.name` /
   `telemetry.distro.version` (`telemetry.sdk.*` stays otel-java / opentelemetry-swift's).
   Carry `schemaUrl` for resource and scope.
-- **Clock (Claude's call, simplified in council review):** both sides use wall-clock epoch
-  time. JS computes one offset, `Date.now() - performance.now()`, at start and again on
-  `AppState` → active (Hermes' monotonic clock doesn't advance during device suspend), and
-  uses it as the JS SDK's time source. Error between JS and native siblings is under 1 ms;
-  scenarios use explicit timestamps, so test output is unaffected. Guard missing
-  `performance` (fall back to `Date.now()`).
+- **Clock (Claude's call, simplified in council review and again in v0 implementation):** both
+  sides use wall-clock epoch time. JS keeps upstream `sdk-trace` timing: each span starts at
+  `Date.now()` and measures its duration with `performance.now()`; there is no extra JS offset
+  (sdk-trace 3.1 has no time-source hook). Error between JS and native siblings is under 1 ms;
+  scenarios use explicit timestamps, so test output is unaffected.
 - **Before native is ready / failures (Claude's call):** no pre-init buffer. `initialize`
   runs synchronously inside `startReactNativeSdk` before the JS provider is registered, so
   no span can end before native is ready; spans started earlier come from the API's no-op
@@ -318,7 +321,7 @@ OTel data model.
   loudly (`console.error`), and `startReactNativeSdk` returns a working no-op handle. The
   SDK never throws into the app.
 - **Multiple runtimes (Claude's call):** one native singleton; `initialize` is safe under
-  concurrent calls; each JS runtime has its own hand-off and clock anchor. Per-runtime
+  concurrent calls; each JS runtime has its own hand-off. Per-runtime
   attributes are out of scope for v0.
 
 ### 4.4 Configuration (decided: "option A", with JS fallback)
@@ -516,9 +519,15 @@ ships TC39 AsyncContext (Stage 2).
 ## 7. Web (decided)
 
 Same `@opentelemetry/api` surface and the same ContextManager; spans live in the JS SDK and
-export directly via upstream `@opentelemetry/browser-sdk` (`startBrowserSdk`) and its OTLP
-fetch exporter. Builder to check whether `browser-sdk` installs its own context manager and
-make ours win.
+export directly from JS. **Changed in v0 implementation (R7, pending author review):** web
+builds its own `sdk-trace` `TracerProvider` + `BatchSpanProcessor` + upstream
+`@opentelemetry/exporter-trace-otlp-proto` (fetch), not `startBrowserSdk`. Why:
+browser-sdk 0.9.1 takes no `idGenerator` (no `0a` test-mode IDs, so no exact web goldens),
+adds `telemetry.sdk.*` to the resource (against 4.3), also starts a Logs SDK, exports JSON
+(loses NaN), and returns no `tracerProvider`/`forceFlush` for our handle. The resource is
+`service.*` + `resourceAttributes` + `telemetry.distro.*` (outside test mode). `start`
+re-registers our context manager if another one took the global slot. The package's
+`exports` `browser` condition points web bundlers (Vite, Metro web) at `index.web.js`.
 
 Browsers run `await` natively, which bypasses the patched `then`. **Decided:** web apps
 compile `async` down in their bundler — the same mechanism RN uses by default, and what
@@ -593,8 +602,9 @@ tests: they don't care about internals, so internals can be rewritten freely.
   time; native: Gradle property `otelTestMode` / `OTEL_TEST_MODE=1` at `pod install`. Same
   flag for the bare and Expo apps; no test fields in the public API or the seam config:
   - **explicit timestamps**: v0 scenarios create all spans themselves, so they pass
-    `startTime` / `end(t)` explicitly (JS and native), in whole microseconds (exactly
-    representable on iOS). Clock stubs (Java `setClock`/`TestClock` in test source sets
+    `startTime` / `end(t)` explicitly (JS and native), in whole microseconds. iOS cannot
+    represent them exactly: opentelemetry-swift exports `Date`, a ~238–256 ns grid, so the `ios`
+    files record the quantized values (R22, measured floor in verify/VERIFY.md). Clock stubs (Java `setClock`/`TestClock` in test source sets
     only; Swift `with(clock:)`) are only a fallback for implicit reads.
   - sequential test ID generators, namespaced per side (JS `0a…01`, native `0b…01`) via
     upstream hooks: JS `sdk-trace` `idGenerator`, Java `setIdGenerator`, Swift
@@ -610,7 +620,9 @@ tests: they don't care about internals, so internals can be rewritten freely.
   output is reduced to a shape and must equal it, so all platforms agree with each other by
   construction. Shapes are written first; exact per-platform files are then drafted with
   `--update` and reviewed (council review: hand-writing 30+ exact OTLP trees puts the bugs
-  in the expected files).
+  in the expected files). Known v0 gap, accepted: opentelemetry-swift 2.6's OTLP encoder never
+  writes span/link `flags`, span/link `traceState` or the scope `schemaUrl`, so the `ios` files
+  lack them (shapes don't cover them; no encoder reimplementation, see verify/VERIFY.md).
 - One non-deterministic smoke scenario per device (production pipeline, no test mode) checks
   the real path still exports.
 
@@ -872,7 +884,7 @@ Left out until needed:
 8. Default sampling `ParentBased(AlwaysOn)` on both sides, honoring `traceFlags` (4.3).
 9. One native-owned resource; JS adds no `telemetry.sdk.*`; SDK identity via
    `telemetry.distro.*` (4.3).
-10. Clock: one `Date.now() - performance.now()` offset, recomputed on foreground (4.3).
+10. Clock: upstream sdk-trace timing (start at `Date.now()`, `performance.now()` durations) (4.3).
 11. No pre-init buffer; init failure → one error and a no-op handle, never a throw;
     multi-runtime handling (4.3, 4.4).
 12. Context manager extends upstream `StackContextManager`; Metro `withOtel` helper for
@@ -907,7 +919,7 @@ direct precedent was found; treat those as the highest-risk parts.
 | P11 | Links instead of parents for batched/multi-cause work; interval ticks as new roots (5, 6.2) | OTel spec: links represent batched operations; React notes it can't attribute batched updates without AsyncContext | [Spec: Links between spans](https://github.com/open-telemetry/opentelemetry-specification/blob/a03fa4e26b3982da42aa0010aaebcd9f694cb037/specification/overview.md#L207-L214) · [React `ReactFiberAsyncAction.js`](https://github.com/facebook/react/blob/fe719f77ba3e4b5fb3ebe13787bfbd0ed911da19/packages/react-reconciler/src/ReactFiberAsyncAction.js#L42) |
 | P12 | *(removed: the staleness rule was cut in council review, see 6.2)* | | |
 | P13 | *(removed: the pre-init buffer was cut in council review, see 4.3)* | | |
-| P14 | Clock offset `Date.now() - performance.now()`, recomputed on foreground (4.3) | OTel JS derives span times from `performance.timeOrigin` + `performance.now()`; Sentry RN guards an unreliable `performance.timeOrigin` | [Sentry `timeOrigin` guard](https://github.com/getsentry/sentry-react-native/blob/794a52a9e80ca0a7c4ee005264cd9cd3ee1533de/packages/core/src/js/sdk.tsx#L76-L80) |
+| P14 | *(Superseded by R8: upstream timing kept, no offset.)* Clock offset `Date.now() - performance.now()`, recomputed on foreground (4.3) | OTel JS derives span times from `performance.timeOrigin` + `performance.now()`; Sentry RN guards an unreliable `performance.timeOrigin` | [Sentry `timeOrigin` guard](https://github.com/getsentry/sentry-react-native/blob/794a52a9e80ca0a7c4ee005264cd9cd3ee1533de/packages/core/src/js/sdk.tsx#L76-L80) |
 | P15 | Custom names under a reverse-domain prefix, never `otel.*` (4.5) | OTel naming guidance | [naming.md: app developers](https://github.com/open-telemetry/semantic-conventions/blob/2d91ead21027a8a58fbb7488b12d80238e7c0ac5/docs/general/naming.md#L183-L187) · [`otel.*` reserved](https://github.com/open-telemetry/semantic-conventions/blob/2d91ead21027a8a58fbb7488b12d80238e7c0ac5/docs/general/naming.md#L217-L227) |
 | P16 | Option names mirror `startBrowserSdk`; invalid config returns a no-op SDK instead of throwing (4.4) | OTel Browser SIG browser SDK | [browser-sdk README](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/sdk) |
 | P17 | Exact expected-output files (goldens) for traces (9.1) | OTel Collector tests compare traces against golden files | [collector-contrib `pkg/golden`](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/c64840337cf400792cb684037ed998428b268197/pkg/golden) · [`ptracetest` compare options](https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/c64840337cf400792cb684037ed998428b268197/pkg/pdatatest/ptracetest/options.go#L102-L149) |
