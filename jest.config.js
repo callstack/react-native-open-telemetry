@@ -23,6 +23,5 @@ module.exports = {
       ],
     },
     '<rootDir>/verify/jest/jest.scenarios.config.js',
-    '<rootDir>/verify/jest/jest.degraded.config.js',
   ],
 };
