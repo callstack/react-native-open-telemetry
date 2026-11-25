@@ -30,7 +30,6 @@
       "default": "./lib/module/index.js"
     },
     "./metro": "./metro/index.js",
-    "./vite": "./vite/index.ts",
     "./setup": "./lib/module/setup.js",
     "./package.json": "./package.json"
   },
@@ -44,7 +43,6 @@
     "ReactNativeOpenTelemetry.podspec",
     "nitro.json",
     "metro",
-    "vite",
     "!ios/build",
     "!android/build",
     "!android/gradle",
