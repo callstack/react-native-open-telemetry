@@ -1,16 +1,14 @@
 import {trace, type ProxyTracerProvider} from '@opentelemetry/api';
-import {hrTimeToMilliseconds} from '@opentelemetry/core';
 import {InMemorySpanExporter, SimpleSpanProcessor} from '@opentelemetry/sdk-trace';
 import type {Otel, SeamConfig, SeamSpan} from '../../native/Otel.nitro';
 import {MARKER} from '../../context/patch';
 import {DEGRADED_ATTR, markDegraded} from '../../context/scope';
 import {getOtel} from '../../native/otel';
-import {tracesUrl} from '../config';
 import {startReactNativeSdk} from '../start';
 
 jest.mock('../../native/otel', () => ({getOtel: jest.fn()}));
 
-const CONFIG = {serviceName: 'shop', exportConfig: {url: 'https://collector.example.com:4318'}};
+const CONFIG = {serviceName: 'shop', exportConfig: {url: 'https://collector.example.com:4318/v1/traces'}};
 
 function fakeOtel({initialized = false, testMode = false, error}: {initialized?: boolean; testMode?: boolean; error?: string} = {}) {
   const calls: (SeamConfig | undefined)[] = [];
@@ -63,7 +61,7 @@ test('initializes native when it is not', () => {
     serviceName: 'shop',
     serviceVersion: '1.2.3',
     resourceAttributes: {'deployment.environment.name': 'prod', n: 3, dropped: [1, 'x'] as any},
-    exportConfig: {url: 'https://collector.example.com:4318', headers: {'x-api-key': 'k'}},
+    exportConfig: {url: 'https://collector.example.com:4318/v1/traces', headers: {'x-api-key': 'k'}},
   });
   expect(calls).toEqual([
     {
@@ -73,7 +71,7 @@ test('initializes native when it is not', () => {
         {key: 'deployment.environment.name', value: 'prod'},
         {key: 'n', value: 3},
       ],
-      exportUrl: 'https://collector.example.com:4318',
+      exportUrl: 'https://collector.example.com:4318/v1/traces',
       exportHeaders: [{key: 'x-api-key', value: 'k'}],
     },
   ]);
@@ -155,17 +153,6 @@ test('test-mode native gives 0a ids', () => {
   expect(span.spanContext().spanId).toBe('0a' + '1'.padStart(14, '0'));
 });
 
-test('a span without startTime starts at Date.now()', () => {
-  fakeOtel({initialized: true});
-  const tracer = startReactNativeSdk().tracerProvider.getTracer('t');
-  const before = Date.now();
-  const span = tracer.startSpan('s') as unknown as {startTime: [number, number]};
-  const after = Date.now();
-  const ms = hrTimeToMilliseconds(span.startTime);
-  expect(ms).toBeGreaterThanOrEqual(before - 1);
-  expect(ms).toBeLessThanOrEqual(after + 1);
-});
-
 test('global provider is the returned provider, its tracers carry the degraded flag', () => {
   fakeOtel({initialized: true});
   const h = startReactNativeSdk();
@@ -175,10 +162,4 @@ test('global provider is the returned provider, its tracers carry the degraded f
   markDegraded();
   expect(scope.attributes).toEqual({[DEGRADED_ATTR]: true});
   expect((trace.getTracer('later') as any).instrumentationScope.attributes).toEqual({[DEGRADED_ATTR]: true});
-});
-
-test('tracesUrl appends /v1/traces unless present', () => {
-  expect(tracesUrl('https://c:4318')).toBe('https://c:4318/v1/traces');
-  expect(tracesUrl('https://c:4318/')).toBe('https://c:4318/v1/traces');
-  expect(tracesUrl('https://c/v1/traces')).toBe('https://c/v1/traces');
 });

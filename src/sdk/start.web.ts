@@ -3,7 +3,8 @@ import {OTLPTraceExporter} from '@opentelemetry/exporter-trace-otlp-proto';
 import {resourceFromAttributes} from '@opentelemetry/resources';
 import {BatchSpanProcessor, TracerProvider} from '@opentelemetry/sdk-trace';
 import {isTestModeBuild, sequentialIds} from '../internal/testMode';
-import {DISTRO_VERSION, tracesUrl, type SdkConfig, type SdkHandle} from './config';
+import pkg from 'react-native-open-telemetry/package.json';
+import type {SdkConfig, SdkHandle} from './config';
 import {noopHandle} from './noop';
 import {register, startOnce, TAG} from './shared';
 
@@ -33,9 +34,9 @@ function start(config: SdkConfig | undefined): SdkHandle {
     ...resourceAttributes,
     'service.name': serviceName,
     ...(serviceVersion ? {'service.version': serviceVersion} : {}),
-    ...(testMode ? {} : {'telemetry.distro.name': 'react-native-open-telemetry', 'telemetry.distro.version': DISTRO_VERSION}),
+    ...(testMode ? {} : {'telemetry.distro.name': 'react-native-open-telemetry', 'telemetry.distro.version': pkg.version}),
   });
-  const exporter = new OTLPTraceExporter({url: tracesUrl(exportConfig.url), headers: exportConfig.headers});
+  const exporter = new OTLPTraceExporter({url: exportConfig.url, headers: exportConfig.headers});
   return register(
     new TracerProvider({
       resource,

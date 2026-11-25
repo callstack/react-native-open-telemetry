@@ -5,10 +5,10 @@ import {context, ROOT_CONTEXT, trace, type ProxyTracerProvider} from '@opentelem
 import {InMemorySpanExporter, SimpleSpanProcessor} from '@opentelemetry/sdk-trace';
 import {MARKER} from '../../context/patch';
 import {contextManager} from '../../setup';
-import {DISTRO_VERSION} from '../config';
+import pkg from '../../../package.json';
 import {startReactNativeSdk} from '../start.web';
 
-const CONFIG = {serviceName: 'shop', exportConfig: {url: 'https://c.example.com:4318', headers: {'x-api-key': 'k'}}};
+const CONFIG = {serviceName: 'shop', exportConfig: {url: 'https://c.example.com:4318/v1/traces', headers: {'x-api-key': 'k'}}};
 
 // jsdom lacks TextEncoder (every browser has it); the proto serializer needs it.
 (globalThis as any).TextEncoder ??= require('util').TextEncoder;
@@ -44,19 +44,16 @@ test('our context manager is the global one after start', () => {
   expect(err).not.toHaveBeenCalled();
 });
 
-test.each(['https://c.example.com:4318', 'https://c.example.com:4318/', 'https://c.example.com:4318/v1/traces'])(
-  'url %s exports to one /v1/traces with the headers',
-  async url => {
-    const h = startReactNativeSdk({...CONFIG, exportConfig: {...CONFIG.exportConfig, url}});
-    h.tracerProvider.getTracer('t').startSpan('s').end();
-    await h.forceFlush();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [sent, init] = fetchMock.mock.calls[0];
-    expect(sent).toBe('https://c.example.com:4318/v1/traces');
-    expect(init.headers).toMatchObject({'x-api-key': 'k', 'Content-Type': 'application/x-protobuf'});
-    await h.shutdown();
-  },
-);
+test('exports to the url as given, with the headers', async () => {
+  const h = startReactNativeSdk(CONFIG);
+  h.tracerProvider.getTracer('t').startSpan('s').end();
+  await h.forceFlush();
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  const [sent, init] = fetchMock.mock.calls[0];
+  expect(sent).toBe(CONFIG.exportConfig.url);
+  expect(init.headers).toMatchObject({'x-api-key': 'k', 'Content-Type': 'application/x-protobuf'});
+  await h.shutdown();
+});
 
 test('missing exportConfig returns a no-op handle', () => {
   const h = startReactNativeSdk({serviceName: 'shop'});
@@ -97,7 +94,7 @@ test('resource, user processors and the global provider', () => {
     'service.name': 'shop',
     'service.version': '1.2.3',
     'telemetry.distro.name': 'react-native-open-telemetry',
-    'telemetry.distro.version': DISTRO_VERSION,
+    'telemetry.distro.version': pkg.version,
   });
 });
 
@@ -110,8 +107,4 @@ test('test mode: 0a ids and no distro attributes', () => {
   expect(span.spanContext().traceId).toBe('0a' + '1'.padStart(30, '0'));
   expect(span.spanContext().spanId).toBe('0a' + '1'.padStart(14, '0'));
   expect(span.resource.attributes).toEqual({'service.name': 'shop'});
-});
-
-test('DISTRO_VERSION matches package.json', () => {
-  expect(DISTRO_VERSION).toBe(require('../../../package.json').version);
 });
