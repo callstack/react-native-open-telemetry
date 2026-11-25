@@ -7,10 +7,10 @@ test('attributes each section the bytes up to the next one', () => {
   expect(Object.fromEntries(m)).toEqual({'a.js': 7, 'b.js': 3});
 });
 
-test('counts src/ and @opentelemetry/* only', () => {
+test('counts src/, lib/ and @opentelemetry/* only', () => {
   const sdk = isSdk('/r');
-  expect(['/r/src/index.ts', '/r/node_modules/@opentelemetry/api/x.js', '/r/example/App.tsx', '/r/node_modules/react/x.js'].map(sdk))
-    .toEqual([true, true, false, false]);
+  expect(['/r/src/index.ts', '/r/lib/module/setup.js', '/r/node_modules/@opentelemetry/api/x.js', '/r/example/App.tsx', '/r/node_modules/react/x.js'].map(sdk))
+    .toEqual([true, true, true, false, false]);
 });
 
 test('fails only above +10%', () => {

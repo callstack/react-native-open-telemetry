@@ -22,7 +22,7 @@ export function bytesPerSource(map: {sections: Section[]}, code: string): Map<st
 /** The SDK's share: the package's own src/ and @opentelemetry/*. */
 export const isSdk = (repoRoot: string) => (source: string) => {
   const rel = path.relative(repoRoot, path.resolve(repoRoot, source));
-  return rel.startsWith('src' + path.sep) || /(^|[/\\])node_modules[/\\]@opentelemetry[/\\]/.test(rel);
+  return rel.startsWith('src' + path.sep) || rel.startsWith('lib' + path.sep) || /(^|[/\\])node_modules[/\\]@opentelemetry[/\\]/.test(rel);
 };
 
 /** Release-bundles the example app and returns the SDK's bytes in it. */
