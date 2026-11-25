@@ -18,5 +18,4 @@ export default scenario(
     // back at ROOT after the join: guards the ROOT fast path (§6.1)
     tracer.startSpan('after.all', {startTime: at(40)}).end(at(41));
   },
-  {pending: true}, // Task 10
 );

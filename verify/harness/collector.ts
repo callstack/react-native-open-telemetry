@@ -1,6 +1,7 @@
 import fs from 'fs';
 import http from 'http';
 import path from 'path';
+import zlib from 'zlib';
 import {normalize} from './normalize';
 import {decodeRequest, toOtlpJson, type OtlpJson} from './otlpJson';
 
@@ -9,6 +10,8 @@ export type Collector = {
   begin(scenario: string, platform: string): void;
   end(): Promise<OtlpJson>;
   refuse(status: number, count: number): void;
+  /** Export requests accepted since `begin`. */
+  received(): number;
   close(): Promise<void>;
 };
 
@@ -29,7 +32,7 @@ export async function startCollector(
     const chunks: Buffer[] = [];
     req.on('data', c => chunks.push(c));
     req.on('end', () => {
-      const body = Buffer.concat(chunks);
+      let body = Buffer.concat(chunks);
       const send = (status: number, payload?: unknown) => {
         res.writeHead(status, {
           ...CORS,
@@ -38,6 +41,8 @@ export async function startCollector(
         res.end(payload === undefined ? undefined : JSON.stringify(payload));
       };
       try {
+        // opentelemetry-swift gzips by default; the raw/ files keep the decoded body
+        if (req.headers['content-encoding'] === 'gzip') body = zlib.gunzipSync(body);
         const route = `${req.method} ${req.url?.split('?')[0]}`;
         if (req.method === 'OPTIONS') return send(204);
         if (route === 'POST /v1/traces') {
@@ -113,6 +118,7 @@ export async function startCollector(
     refuse(status, count) {
       refusal = {status, count};
     },
+    received: () => cur?.n ?? 0,
     close: () =>
       new Promise<void>(r => {
         server.closeAllConnections();

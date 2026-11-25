@@ -1,10 +1,10 @@
 import {createTraceState, SpanKind, SpanStatusCode, TraceFlags} from '@opentelemetry/api';
 import {scenario} from '../harness/scenario';
+import {stampScope} from '../../src/context/scope';
 
 export default scenario('rich-span', async ({getTracer, at}) => {
   const tracer = getTracer('verify.rich', '1.2.3', {schemaUrl: 'https://opentelemetry.io/schemas/1.40.0'});
-  // sdk-trace 3.1 has no API for scope attributes; its OTLP exporter reads them off the scope at runtime.
-  Object.assign((tracer as any).instrumentationScope, {attributes: {'scope.key': 'scope-value'}});
+  stampScope(tracer, {'scope.key': 'scope-value'});
   const span = tracer.startSpan('rich', {
     startTime: at(0),
     kind: SpanKind.CLIENT,

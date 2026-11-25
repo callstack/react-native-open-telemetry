@@ -20,5 +20,7 @@ export default scenario(
       parent.end(at(20));
     });
   },
-  {runners: ['e2e'], pending: true}, // Task 13
+  // RN 0.88 (the example) removed InteractionManager from core (dev: invariant; release: undefined). Kept pending until
+  // an example on an RN that still ships it exists; the RN replacement, requestIdleCallback, is not in the §6.1 patch list.
+  {runners: ['e2e'], pending: true},
 );
