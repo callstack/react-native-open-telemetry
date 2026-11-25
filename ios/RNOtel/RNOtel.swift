@@ -2,7 +2,6 @@ import Foundation
 import OpenTelemetryApi
 import UIKit
 
-/// Public native API (spec §4.3/§4.4). Test mode comes from the build (`OTEL_TEST_MODE=1 pod install`), never from here.
 public enum RNOtel {
   #if OTEL_TEST_MODE
     static let testMode = true
@@ -10,35 +9,26 @@ public enum RNOtel {
     static let testMode = false
   #endif
 
-  /// Native-first init from `AppDelegate`, before React Native. Never throws; an error is logged once.
   public static func start(_ configure: (RNOtelConfig) -> Void) {
     let c = RNOtelConfig()
     configure(c)
     let r = initialize(c.toCore())
-    // alreadyInitialized: a repeat call; a sticky failure was logged by the first one
     if let err = r.error, !r.alreadyInitialized { NSLog("RNOtel init failed; telemetry is off: %@", err) }
   }
 
   private static var observer: NSObjectProtocol?
   private static let lock = NSLock()
 
-  /// One path for native-first and JS-fallback init. The exporter is built on first export, off the main thread.
   package static func initialize(_ config: CoreConfig?) -> InitResult {
     let r = OtelCore.initialize(config, testMode: testMode, distroVersion: packageVersion)
     if let core = OtelCore.instance { lock.withLock { if observer == nil { observer = flushOnBackground(core) } } }
     return r
   }
 
-  /// Exports what is queued when the app is about to go to the background, inside a background task so iOS lets it
-  /// finish. The flush blocks a global queue, never the main thread.
-  /// Starts on `willResignActive`, not `didEnterBackground`: once backgrounded, a loaded system can starve the app for
-  /// 15 s and more despite the background task (seen on CI simulators: the export stalls until the app is reopened).
-  /// It also fires for transient interruptions (Control Center, a call); an extra flush there is harmless.
   private static func flushOnBackground(_ core: OtelCore) -> NSObjectProtocol {
     NotificationCenter.default.addObserver(forName: UIApplication.willResignActiveNotification, object: nil, queue: .main) { _ in
       let app = UIApplication.shared
       var task = UIBackgroundTaskIdentifier.invalid
-      // begin/end/expiration all run on the main thread, so `task` needs no lock
       let end = { if task != .invalid { app.endBackgroundTask(task); task = .invalid } }
       task = app.beginBackgroundTask(withName: "RNOtel flush", expirationHandler: end)
       DispatchQueue.global(qos: .utility).async {
@@ -48,13 +38,11 @@ public enum RNOtel {
     }
   }
 
-  /// A tracer on the native provider; a no-op tracer before (or without) a successful init.
   public static func tracer(_ name: String, version: String? = nil) -> any Tracer {
     guard let p = OtelCore.instance?.tracerProvider else { return DefaultTracer.instance }
     return p.get(instrumentationName: name, instrumentationVersion: version)
   }
 
-  /// W3C traceparent -> explicit, non-remote parent `SpanContext` for `setParent(_:)`; invalid input -> nil (a root).
   public static func contextFrom(traceparent: String) -> SpanContext? { ReactNativeOpenTelemetryCore.contextFrom(traceparent: traceparent) }
 
   public static func traceparentOf(_ span: any Span) -> String { traceparent(of: span.context) }

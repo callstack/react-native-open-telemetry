@@ -90,5 +90,4 @@ android/generated
 verify/artifacts/
 verify/e2e/.e2e/
 
-# generated at pod install from package.json (ReactNativeOpenTelemetryCore.podspec)
 ios/RNOtel/PackageVersion.swift

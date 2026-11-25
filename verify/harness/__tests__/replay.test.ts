@@ -12,7 +12,7 @@ test('replay posts raw + expected files, fails on a non-2xx', async () => {
     const raw = path.join(dir, 'dl', 'artifacts', 'raw', 's.web');
     fs.mkdirSync(raw, {recursive: true});
     fs.writeFileSync(path.join(raw, '0.json'), good);
-    fs.writeFileSync(path.join(raw, '0.headers.json'), '{}'); // not a request
+    fs.writeFileSync(path.join(raw, '0.headers.json'), '{}');
     const exp = path.join(dir, 'expected');
     fs.mkdirSync(exp);
     fs.writeFileSync(path.join(exp, 'a.js.otlp.json'), good);

@@ -1,6 +1,3 @@
-// Replays captured raw requests (protobuf as application/x-protobuf, JSON as application/json) and the expected
-// *.otlp.json files into a real OpenTelemetry Collector. Fails on any non-2xx (the collector log is checked in CI).
-// Usage: bun verify/compliance/replay.ts --url http://localhost:4318 --dirs <artifact dir>... [--expected verify/expected]
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -10,7 +7,6 @@ const walk = (d: string): string[] =>
     return e.isDirectory() ? walk(p) : [p];
   });
 
-/** `raw/<scenario>.<platform>/<n>.pb|json`, wherever the artifact download put `raw`. */
 const isRaw = (f: string) =>
   /\.(pb|json)$/.test(f) && !f.endsWith('.headers.json') && path.basename(path.dirname(path.dirname(f))) === 'raw';
 

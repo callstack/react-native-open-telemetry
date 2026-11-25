@@ -1,4 +1,3 @@
-# Official OpenTelemetry Collector for the compliance job (Task 30): receives OTLP/HTTP, decodes every span, logs it.
 receivers:
   otlp:
     protocols:

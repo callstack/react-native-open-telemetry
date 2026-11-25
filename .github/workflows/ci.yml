@@ -40,20 +40,15 @@ jobs:
           java-version: '17'
       - run: bun install --frozen-lockfile
       - run: bun run prepare
-      - run: bun verify # every non-e2e stage (R17)
+      - run: bun verify
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: verify-artifacts-static-fast
           path: verify/artifacts/
           if-no-files-found: ignore
-          include-hidden-files: true # verify/e2e/.e2e is a dot dir
+          include-hidden-files: true
 
-  # Release builds with the JS bundle embedded (no Metro), test mode on; the bare jobs also build test mode off for
-  # smoke-device (per PR on bare only, X11 interim; Expo smoke goes to the main matrix). perf-budget runs on android-bare.
-  # Every Task 27 failure scenario runs here except fast-refresh-idempotent: it needs dev builds + Metro, so it is
-  # local only (verify/VERIFY.md), no per-PR jobs; the main matrix runs it.
-  # Native outputs are cached on native inputs only, so a JS-only change re-bundles but reuses the native build.
   e2e-android-bare:
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -69,7 +64,7 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun install --frozen-lockfile
         working-directory: example
-      - run: bun run prepare # the example bundles the package through exports -> lib/ (R4)
+      - run: bun run prepare
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -89,8 +84,6 @@ jobs:
             example/node_modules/react-native-nitro-modules/android/build
             example/node_modules/react-native-nitro-modules/android/.cxx
           key: android-native-${{ hashFiles('android/**', 'nitrogen/**', 'patches/**', 'example/android/**', 'example/modules/**', 'bun.lock', 'example/bun.lock') }}
-      # smoke-device (R20, X11): the production pipeline needs a test-mode-off build. Built first, so the test-mode
-      # build is what the native outputs cache keeps; the switch recompiles only Kotlin and the bundle.
       - name: Build release APK (smoke, test mode off)
         working-directory: example/android
         run: |
@@ -101,7 +94,6 @@ jobs:
         working-directory: example/android
         env:
           OTEL_TEST_MODE: '1'
-        # one retry: plugin and NDK downloads fail transiently on hosted runners
         run: |
           ./gradlew :app:assembleRelease -PotelTestMode=true -PreactNativeArchitectures=x86_64 ||
             ./gradlew :app:assembleRelease -PotelTestMode=true -PreactNativeArchitectures=x86_64
@@ -125,7 +117,7 @@ jobs:
           disable-animations: false
           script: echo "AVD snapshot created"
       - name: e2e (android-bare)
-        timeout-minutes: 25 # a hung device run fails here, not at the job limit
+        timeout-minutes: 25
         uses: reactivecircus/android-emulator-runner@v2
         env:
           E2E_TARGET: android-bare
@@ -138,18 +130,16 @@ jobs:
           disable-animations: true
           script: |
             adb shell settings put global hide_error_dialogs 1
-            # one line (the runner runs each line in its own shell and stops at the first failure): smoke runs even
-            # when the main e2e failed, and the step exits with the first non-zero code
             bun verify --e2e e2e; a=$?; E2E_SMOKE=1 E2E_ANDROID_APP='${{ runner.temp }}/smoke.apk' bun verify --e2e e2e; b=$?; exit $(( a ? a : b ))
       - uses: actions/upload-artifact@v4
-        if: always() # e2e retries once; keep traces of retried and failed attempts
+        if: always()
         with:
           name: verify-artifacts-e2e-android-bare
           path: |
             verify/artifacts/
             verify/e2e/.e2e/
           if-no-files-found: ignore
-          include-hidden-files: true # verify/e2e/.e2e is a dot dir
+          include-hidden-files: true
 
   e2e-ios-bare:
     runs-on: xcode-27
@@ -165,7 +155,7 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun install --frozen-lockfile
         working-directory: example
-      - run: bun run prepare # the example bundles the package through exports -> lib/ (R4)
+      - run: bun run prepare
       - name: Cache Swift packages
         uses: actions/cache@v4
         with:
@@ -178,8 +168,6 @@ jobs:
             example/ios/Pods
             example/ios/build/Build
           key: ios-native-${{ hashFiles('ios/**', 'nitrogen/**', 'ReactNativeOpenTelemetry.podspec', 'ReactNativeOpenTelemetryCore.podspec', 'example/ios/Podfile', 'example/ios/Podfile.lock', 'example/ios/OpenTelemetryExample/**', 'example/ios/OpenTelemetryExample.xcodeproj/**', 'example/modules/**', 'bun.lock', 'example/bun.lock') }}
-      # smoke-device (R20, X11): a test-mode-off build, first, so the cache keeps the test-mode one; the switch
-      # recompiles only the core pod, the adapter and the app.
       - name: pod install (smoke, test mode off)
         working-directory: example/ios
         run: pod install
@@ -210,14 +198,13 @@ jobs:
           xcrun simctl boot "$udid"
           xcrun simctl bootstatus "$udid" -b
       - name: e2e (ios-bare)
-        timeout-minutes: 30 # a hung device run fails here, not at the job limit
+        timeout-minutes: 30
         env:
           E2E_TARGET: ios-bare
-          AGENT_DEVICE_DAEMON_STARTUP_TIMEOUT_MS: '600000' # the first daemon start on a cold runner outlasts the 120 s default
+          AGENT_DEVICE_DAEMON_STARTUP_TIMEOUT_MS: '600000'
         run: bun verify --e2e e2e
       - name: e2e smoke (ios-bare, test mode off)
-        timeout-minutes: 10 # a hung device run fails here, not at the job limit
-        # also after a failed main e2e (that step already fails the job)
+        timeout-minutes: 10
         if: ${{ !cancelled() && steps.ios-smoke-build.outcome == 'success' }}
         env:
           E2E_TARGET: ios-bare
@@ -226,7 +213,7 @@ jobs:
         run: E2E_IOS_APP='${{ runner.temp }}/OpenTelemetryExample.app' bun verify --e2e e2e
       - name: Diagnose the simulator log
         if: failure()
-        timeout-minutes: 4 # `log show` scans the whole store: ~1 min per call on a runner
+        timeout-minutes: 4
         run: |
           echo "--- RNOtel lines"; xcrun simctl spawn booted log show --last 10m --info --style compact --predicate 'eventMessage CONTAINS "RNOtel"' | tail -20
           echo "--- app process lines"; xcrun simctl spawn booted log show --last 10m --info --style compact --predicate 'process == "OpenTelemetryExample"' | tail -20
@@ -239,18 +226,15 @@ jobs:
           if-no-files-found: ignore
           include-hidden-files: true
       - uses: actions/upload-artifact@v4
-        if: always() # e2e retries once; keep traces of retried and failed attempts
+        if: always()
         with:
           name: verify-artifacts-e2e-ios-bare
           path: |
             verify/artifacts/
             verify/e2e/.e2e/
           if-no-files-found: ignore
-          include-hidden-files: true # verify/e2e/.e2e is a dot dir
+          include-hidden-files: true
 
-  # The Expo app (Task 28): JS-fallback init, CNG (`expo prebuild` every run; android/ and ios/ are not committed),
-  # same scenarios and the same android/ios expected files as the bare app. Test mode: OTEL_TEST_MODE=1 at prebuild
-  # (the local config plugin writes otelTestMode=true to gradle.properties) and at pod install.
   e2e-android-expo:
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -266,7 +250,7 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun install --frozen-lockfile
         working-directory: example-expo
-      - run: bun run prepare # the app bundles the package through exports -> lib/ (R4)
+      - run: bun run prepare
       - name: expo prebuild (test mode)
         working-directory: example-expo
         env:
@@ -280,7 +264,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Enable the Gradle build cache (setup-gradle persists it)
         run: printf '\norg.gradle.caching=true\n' >> example-expo/android/gradle.properties
-      - name: Cache native build outputs # after prebuild, which regenerates android/
+      - name: Cache native build outputs
         uses: actions/cache@v4
         with:
           path: |
@@ -295,7 +279,6 @@ jobs:
         working-directory: example-expo/android
         env:
           OTEL_TEST_MODE: '1'
-        # one retry: plugin and NDK downloads fail transiently on hosted runners
         run: |
           ./gradlew :app:assembleRelease -PreactNativeArchitectures=x86_64 ||
             ./gradlew :app:assembleRelease -PreactNativeArchitectures=x86_64
@@ -319,7 +302,7 @@ jobs:
           disable-animations: false
           script: echo "AVD snapshot created"
       - name: e2e (android-expo)
-        timeout-minutes: 25 # a hung device run fails here, not at the job limit
+        timeout-minutes: 25
         uses: reactivecircus/android-emulator-runner@v2
         env:
           E2E_TARGET: android-expo
@@ -334,14 +317,14 @@ jobs:
             adb shell settings put global hide_error_dialogs 1
             bun verify --e2e e2e
       - uses: actions/upload-artifact@v4
-        if: always() # e2e retries once; keep traces of retried and failed attempts
+        if: always()
         with:
           name: verify-artifacts-e2e-android-expo
           path: |
             verify/artifacts/
             verify/e2e/.e2e/
           if-no-files-found: ignore
-          include-hidden-files: true # verify/e2e/.e2e is a dot dir
+          include-hidden-files: true
 
   e2e-ios-expo:
     runs-on: xcode-27
@@ -357,11 +340,11 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun install --frozen-lockfile
         working-directory: example-expo
-      - run: bun run prepare # the app bundles the package through exports -> lib/ (R4)
+      - run: bun run prepare
       - name: expo prebuild
         working-directory: example-expo
         run: bunx expo prebuild --clean --no-install --platform ios
-      - name: Cache native build outputs # after prebuild, which regenerates ios/
+      - name: Cache native build outputs
         uses: actions/cache@v4
         with:
           path: |
@@ -388,10 +371,10 @@ jobs:
           xcrun simctl boot "$udid"
           xcrun simctl bootstatus "$udid" -b
       - name: e2e (ios-expo)
-        timeout-minutes: 30 # a hung device run fails here, not at the job limit
+        timeout-minutes: 30
         env:
           E2E_TARGET: ios-expo
-          AGENT_DEVICE_DAEMON_STARTUP_TIMEOUT_MS: '600000' # the first daemon start on a cold runner outlasts the 120 s default
+          AGENT_DEVICE_DAEMON_STARTUP_TIMEOUT_MS: '600000'
         run: bun verify --e2e e2e
       - uses: actions/upload-artifact@v4
         if: failure()
@@ -401,17 +384,15 @@ jobs:
           if-no-files-found: ignore
           include-hidden-files: true
       - uses: actions/upload-artifact@v4
-        if: always() # e2e retries once; keep traces of retried and failed attempts
+        if: always()
         with:
           name: verify-artifacts-e2e-ios-expo
           path: |
             verify/artifacts/
             verify/e2e/.e2e/
           if-no-files-found: ignore
-          include-hidden-files: true # verify/e2e/.e2e is a dot dir
+          include-hidden-files: true
 
-  # The Expo app's Metro web export (react-native-web) and the web SDK, headless Chromium.
-  # The runner exports the app in test mode and serves it (e2e.config.ts `command`).
   e2e-web:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -423,7 +404,7 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun install --frozen-lockfile
         working-directory: example-expo
-      - run: bun run prepare # the web app resolves the package through exports -> lib/ (browser condition)
+      - run: bun run prepare
       - run: bunx e2e-web install chromium --with-deps
       - run: bun verify --e2e e2e
         env:
@@ -436,11 +417,8 @@ jobs:
             verify/artifacts/
             verify/e2e/.e2e/
           if-no-files-found: ignore
-          include-hidden-files: true # verify/e2e/.e2e is a dot dir
+          include-hidden-files: true
 
-  # Task 30: replays every raw request the e2e jobs captured (protobuf and JSON) and every verify/expected file into
-  # the official OpenTelemetry Collector (pinned; bump deliberately). Fails on a non-2xx or an error log line.
-  # Needs docker, so it is not part of `bun verify`.
   compliance:
     needs: [e2e-android-bare, e2e-ios-bare, e2e-android-expo, e2e-ios-expo, e2e-web]
     runs-on: ubuntu-latest
@@ -453,7 +431,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           pattern: verify-artifacts-e2e-*
-          path: e2e-artifacts # one subdirectory per job
+          path: e2e-artifacts
       - name: Start the Collector
         run: |
           docker run -d --name otelcol -p 4318:4318 \
@@ -480,7 +458,7 @@ jobs:
           if-no-files-found: ignore
 
   budget:
-    needs: [static-fast, e2e-android-bare, e2e-ios-bare, e2e-android-expo, e2e-ios-expo, e2e-web, compliance] # every other job; extend when jobs are added
+    needs: [static-fast, e2e-android-bare, e2e-ios-bare, e2e-android-expo, e2e-ios-expo, e2e-web, compliance]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

@@ -8,9 +8,8 @@ const stage: Stage = {
   run({sh}) {
     sh(['bunx', 'tsc', '--noEmit']);
     sh(['bun', 'run', 'codegen']);
-    sh(['bun', 'run', '--cwd', 'example/modules/test-native', 'codegen']); // the example's TestNative module (Task 26)
+    sh(['bun', 'run', '--cwd', 'example/modules/test-native', 'codegen']);
     const generated = ['nitrogen/', 'example/modules/test-native/nitrogen/'];
-    // git diff ignores untracked files, so list them too.
     sh(['git', 'diff', '--exit-code', ...generated]);
     if (sh(['git', 'ls-files', '--others', '--exclude-standard', ...generated]).trim()) {
       throw new Error('nitrogen/generated is out of date: run `bun run codegen` and commit');
