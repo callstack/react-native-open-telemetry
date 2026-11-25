@@ -29,17 +29,18 @@ cd ../ios && OTEL_TEST_MODE=1 pod install && OTEL_TEST_MODE=1 xcodebuild -worksp
 ```
 
 The Kotlin and Swift cores have no host-side test runs: the `e2e` stage runs every scenario on Android and iOS
-through the real seam and native core and compares against `<name>.android.otlp.json` / `<name>.ios.otlp.json`.
+through the real seam and native core and compares against the scenario's one `<name>.otlp.json`.
 
-**iOS time floor (R22).** opentelemetry-swift 2.6 keeps times as `Date` and exports
-`UInt64(timeIntervalSince1970 * 1e9)`, so whole-µs seam times come back on a ~238–256 ns grid, truncated
-(measured once over `at(0…10_000)` and `at(1_000_000_000)`: max |error| 240 ns, 314 of 10 002 exact).
-`*.ios.otlp.json` record these quantized values as emitted (deterministic); shapes ignore times.
-
-**iOS vs Android/JS goldens.** Apart from times, the `ios` files differ only by what the opentelemetry-swift 2.6 OTLP
-encoder (`SpanAdapter`) never writes: span `flags` (257), span `traceState`, link `flags`, link `traceState`, and the
-scope `schemaUrl` on `ScopeSpans`. The core passes them all into `SpanData`; the exporter drops them. Accepted for v0
-(no encoder reimplementation); `rich-span` exercises span flags, link flags/traceState and the scope `schemaUrl`.
+**One expected file per scenario.** JS, web, Android and iOS report the same OTLP, so each scenario has one
+`verify/expected/<name>.otlp.json`. iOS differs only by two opentelemetry-swift 2.6 gaps, which the compare step
+(`iosView` in `harness/compare.ts`) accepts on `ios` and nowhere else:
+- **Times (R22):** opentelemetry-swift keeps times as `Date` and exports `UInt64(timeIntervalSince1970 * 1e9)`, so
+  whole-µs seam times come back rounded to a ~238–256 ns grid, either way (measured once over `at(0…10_000)` and
+  `at(1_000_000_000)`: max |error| 240 ns, 314 of 10 002 exact). iOS times may be off by up to 256 ns.
+- **Fields its OTLP encoder (`SpanAdapter`) never writes:** span `flags` (257), span `traceState`, link `flags`, link
+  `traceState`, and the scope `schemaUrl` on `ScopeSpans`. The core passes them all into `SpanData`; the exporter drops
+  them. Accepted for v0 (no encoder reimplementation); `rich-span` exercises all of them.
+iOS never writes the shared file (`VERIFY_UPDATE`, draft): its rounded times are not the reference.
 
 **iOS `TRACEPARENT` (upstream caveat).** opentelemetry-swift reads a `TRACEPARENT` environment variable at provider
 construction and makes it the parent of every root span, even with `setNoParent()`. Apps only see it when launched with
@@ -49,11 +50,11 @@ it (Xcode scheme, `SIMCTL_CHILD_TRACEPARENT`).
 except the scenarios with their own e2e file. Each test cold-starts the app (R5). e2e is compare-only;
 On web, `forceFlush` latency follows the OTLP exporter's own retries (about 10 s worst case), not a native flush timeout; `collector-down` allows 10 s there.
 
-`VERIFY_E2E_DRAFT=1` writes a **missing** `<name>.<platform>.otlp.json` from the device run and still fails the test
+`VERIFY_E2E_DRAFT=1` writes a **missing** `<name>.otlp.json` from the run (never from iOS) and still fails the test
 ("drafted …, review it"); existing files are never overwritten. Draft runs have no retries, so a drafting run always ends red.
-Each target compares to its platform's files (`android-*` → `android`, `ios-*` → `ios`, `web` → `web`): the bare app inits native
+Every target compares to the same file: the bare app inits native
 first (`RNOtel.start` in `MainApplication` / `AppDelegate`), the Expo app inits from JS (below), and ScenariosScreen
-exports through `startReactNativeSdk` and the Kotlin or Swift core. One set of files for both apps is the proof that
+exports through `startReactNativeSdk` and the Kotlin or Swift core. One file for both apps is the proof that
 the two init paths are equivalent. A scenario that only one app can run names targets (`android-bare`) instead of
 platforms in `targets`.
 
@@ -135,9 +136,8 @@ HybridObjects: no native `testMode` line, scenarios get no `native`).
 - **Probe:** `babel-preset-expo` keeps native `async` on web; `example-expo/babel.config.js` adds the two async
   plugins for the web platform, so the bundle has no native `async`/`for await`; no `com.callstack.context.degraded`
   scope attribute in any web file.
-- **Files:** every `*.web.otlp.json` is byte-identical to the scenario's `.js` file (`collector-down`, `handoff-basic`,
-  `odd-attributes` and `export-headers`, which have no `.js`, equal their `.android` file). The proto exporter and the web resource (`service.name` only in test mode)
-  change nothing visible.
+- **Files:** web compares against the same `<name>.otlp.json` as every other platform, with no exceptions. The proto
+  exporter and the web resource (`service.name` only in test mode) change nothing visible.
 - **collector-down:** the OTel JS exporter retries a 503 inside the export (backoff 1 s ×1.5, ±20 %), so the first
   `flush` resolves after the three refusals (~4.7 s; up to 5.7 s): the web flush timeout is 10 s.
 - **nest-timers-microtasks:** browsers have no `setImmediate`; there the `immediate` step is one more `setTimeout(0)`,
@@ -225,12 +225,12 @@ check before Task 27; fix the T3 host's Java (or run the check through an e2e te
 
 ## Scenarios
 
-One file per guarantee in `verify/scenarios/`, named after it, with a hand-written `verify/expected/<name>.shape.json`
-(the cross-platform parity contract). Exact `<name>.<platform>.otlp.json` files are drafted by the owning task with
-`VERIFY_UPDATE=1` and reviewed by the author. `pending` scenarios report as `todo`; the owning task flips `pending` off.
+One file per guarantee in `verify/scenarios/`, named after it, with one exact `verify/expected/<name>.otlp.json` that
+every platform compares against. It is drafted with `VERIFY_UPDATE=1` (or `VERIFY_E2E_DRAFT=1` for e2e-only scenarios,
+from Android or web) and reviewed by the author. `pending` scenarios report as `todo`; the owning task flips `pending` off.
 
-Shapes use the JS runner's resource, `["service.name"]`. Native test mode builds the resource from config only and
-the example inits with no `serviceVersion` (R2), so native-first device runs match the same shapes.
+Every file uses the JS runner's resource, `service.name` only. Native test mode builds the resource from config only and
+the example inits with no `serviceVersion` (R2), so native-first device runs match the same files.
 
 e2e targets are android, ios and web unless the Runners column names them.
 
@@ -268,7 +268,5 @@ e2e targets are android, ios and web unless the Runners column names them.
    Explicit `at(µs)` start/end times on every span; parents through `context.active()` (`startActiveSpan`), not
    explicit parent contexts. `opts.runners` defaults to `['jest', 'e2e']`, `opts.targets` to
    `['android', 'ios', 'web']` (platforms or target names like `android-bare`; the e2e harness skips other targets); `pending: true` until it passes.
-2. Hand-write `verify/expected/<guarantee-id>.shape.json` in exactly `shapeOf()`'s format (traces ordered by first
-   span start, spans sorted by name, `kind` 1 = INTERNAL) and get it reviewed.
-3. `bun verify` regenerates `verify/scenarios/index.ts`. Un-pend, draft the exact files with `VERIFY_UPDATE=1 bun verify`
-   (the shape must already match), have the author review them, then `bun verify` must be green.
+2. `bun verify` regenerates `verify/scenarios/index.ts`. Un-pend, draft `<guarantee-id>.otlp.json` with
+   `VERIFY_UPDATE=1 bun verify`, have the author review it, then `bun verify` must be green.

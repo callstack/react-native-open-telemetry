@@ -1,8 +1,0 @@
-{
-  "resource": ["service.name"],
-  "scope": [],
-  "traces": [[
-    {"name":"emit","kind":1,"parent":null,"status":0,"links":[],"attributes":{}},
-    {"name":"listener","kind":1,"parent":"emit","status":0,"links":[],"attributes":{}}
-  ]]
-}
