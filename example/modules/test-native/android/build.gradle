@@ -1,0 +1,49 @@
+// Example-only Nitro module (Task 26, R25). Versions follow the app (rootProject.ext), as autolinked libraries do.
+apply plugin: "com.android.library"
+apply plugin: "org.jetbrains.kotlin.android"
+apply from: "../nitrogen/generated/android/TestNative+autolinking.gradle"
+
+def abis = (rootProject.findProperty("reactNativeArchitectures") ?: "armeabi-v7a,x86,x86_64,arm64-v8a").split(",")
+
+android {
+  namespace "com.margelo.nitro.callstack.testnative"
+  ndkVersion rootProject.ext.ndkVersion
+  compileSdkVersion rootProject.ext.compileSdkVersion
+
+  defaultConfig {
+    minSdkVersion rootProject.ext.minSdkVersion
+    targetSdkVersion rootProject.ext.targetSdkVersion
+    externalNativeBuild {
+      cmake {
+        cppFlags "-frtti -fexceptions -Wall -Wextra -fstack-protector-all"
+        arguments "-DANDROID_STL=c++_shared", "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
+        abiFilters(*abis)
+      }
+    }
+  }
+
+  externalNativeBuild {
+    cmake { path "CMakeLists.txt" }
+  }
+
+  // the app and react-native-nitro-modules ship these
+  packagingOptions {
+    excludes = ["META-INF", "META-INF/**", "**/libc++_shared.so", "**/libNitroModules.so", "**/libfbjni.so",
+                "**/libjsi.so", "**/libreactnative.so"]
+  }
+
+  buildFeatures { prefab true }
+
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
+  kotlinOptions { jvmTarget = "17" }
+}
+
+dependencies {
+  implementation "com.facebook.react:react-android"
+  implementation project(":react-native-nitro-modules")
+  // RNOtel (and, through it, the otel API)
+  implementation project(":react-native-open-telemetry")
+}

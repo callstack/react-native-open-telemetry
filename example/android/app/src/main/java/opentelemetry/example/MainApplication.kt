@@ -22,6 +22,7 @@ class MainApplication : Application(), ReactApplication {
 
   override fun onCreate() {
     super.onCreate()
+    startOtel() // native-first init, before React Native (OtelInit.kt)
     loadReactNative(this)
   }
 }

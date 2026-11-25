@@ -1789,9 +1789,38 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
+    - ReactNativeOpenTelemetryCore (= 0.2.0)
     - Yoga
+  - ReactNativeOpenTelemetryCore (0.2.0)
   - SocketRocket (0.7.1):
     - ReactNativeDependencies
+  - TestNative (0.0.0):
+    - hermes-engine
+    - NitroModules
+    - RCTRequired
+    - RCTTypeSafety
+    - React-bridging
+    - React-callinvoker
+    - React-Core
+    - React-Core-prebuilt
+    - React-cxxstableapi
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - ReactNativeOpenTelemetry
+    - ReactNativeOpenTelemetryCore
+    - Yoga
   - Yoga (0.0.0):
     - React-Core-prebuilt
 
@@ -1883,7 +1912,9 @@ DEPENDENCIES:
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
   - ReactNativeDependencies (from `../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec`)
   - ReactNativeOpenTelemetry (from `../..`)
+  - ReactNativeOpenTelemetryCore (from `../..`)
   - SocketRocket (from `build/rndeps-facades/SocketRocket`)
+  - TestNative (from `../modules/test-native`)
   - Yoga (from `build/rncore-facades/Yoga`)
 
 EXTERNAL SOURCES:
@@ -2060,8 +2091,12 @@ EXTERNAL SOURCES:
     :podspec: "../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec"
   ReactNativeOpenTelemetry:
     :path: "../.."
+  ReactNativeOpenTelemetryCore:
+    :path: "../.."
   SocketRocket:
     :path: build/rndeps-facades/SocketRocket
+  TestNative:
+    :path: "../modules/test-native"
   Yoga:
     :path: build/rncore-facades/Yoga
 
@@ -2151,10 +2186,12 @@ SPEC CHECKSUMS:
   ReactCodegen: 3840312f5071bb6b953b35a029c5c6dcf06b435e
   ReactCommon: b63ce798b898ed77c6cfdeb80b18080161f52ed5
   ReactNativeDependencies: a5164c3ebbe90d992022b5d9cbabbf770a6d7d05
-  ReactNativeOpenTelemetry: 41460d3f8f1e8fd6922cb815c46fb80c4843bd03
+  ReactNativeOpenTelemetry: 43d7fab91827b9a012ba5b1b34e64b79a1aeae9d
+  ReactNativeOpenTelemetryCore: b9b1d5e27b1df7d86e4937554d2c9152e85df541
   SocketRocket: 37aec555668fb852ec12e3c0de59a86ca58f0871
+  TestNative: 256fa8cff013c95afd55f46437705c7387ad6b16
   Yoga: d1c536142c5ff8ec8cd856ab2a7c227a1d875c8e
 
-PODFILE CHECKSUM: 2f80b8c0e897d23dcb020369108758aff0cbef0e
+PODFILE CHECKSUM: bc90526914a3954cc63e80dcd3edb75bde6b4a2a
 
 COCOAPODS: 1.17.0

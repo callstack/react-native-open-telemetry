@@ -15,6 +15,8 @@ if linkage != nil
 end
 
 target 'OpenTelemetryExample' do
+  # Autolinking links only the Nitro pod; the pure Swift core pod (RNOtel, imported by AppDelegate) is declared here (R24).
+  pod 'ReactNativeOpenTelemetryCore', :path => '../..'
   config = use_native_modules!
 
   use_react_native!(
@@ -30,5 +32,14 @@ target 'OpenTelemetryExample' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+    # Test mode reaches the app target too: AppDelegate reads test-only launch arguments under `#if OTEL_TEST_MODE`.
+    if ENV['OTEL_TEST_MODE'] == '1'
+      installer.aggregate_targets.each do |t|
+        t.xcconfigs.each do |name, xc|
+          xc.attributes['SWIFT_ACTIVE_COMPILATION_CONDITIONS'] = '$(inherited) OTEL_TEST_MODE'
+          xc.save_as(t.xcconfig_path(name))
+        end
+      end
+    end
   end
 end
