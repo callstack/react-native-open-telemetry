@@ -37,8 +37,6 @@ jobs:
           distribution: temurin
           java-version: '17'
       - run: bun install --frozen-lockfile
-      - run: bun install --frozen-lockfile
-        working-directory: example # static's bundle-size check bundles the example app
       - run: bun run prepare
       - run: bun verify static fast-js
       - uses: actions/upload-artifact@v4

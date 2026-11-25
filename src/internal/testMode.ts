@@ -1,7 +1,14 @@
 import type {IdGenerator} from '@opentelemetry/sdk-trace';
 
-export const isTestModeBuild = (): boolean =>
-  typeof process !== 'undefined' && process.env?.OTEL_TEST_MODE === '1';
+// The plain `process.env.OTEL_TEST_MODE` form is what a Babel plugin inlines at bundle time; a browser bundle without
+// it has no `process`, hence the catch.
+export const isTestModeBuild = (): boolean => {
+  try {
+    return process.env.OTEL_TEST_MODE === '1';
+  } catch {
+    return false;
+  }
+};
 
 const hex = (prefix: string, n: number, len: number) => prefix + String(n).padStart(len - prefix.length, '0');
 

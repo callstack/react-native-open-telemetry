@@ -9,7 +9,7 @@ const seamValue = (v: unknown): v is AttrValue =>
   (Array.isArray(v) && v.every(x => PRIMS.includes(typeof x) && typeof x === typeof v[0]));
 
 // Insertion order; anything the seam cannot carry (null, undefined, objects, bytes, mixed arrays) is dropped.
-const attrs = (a: Attributes | undefined): SeamAttribute[] => {
+export const attrs = (a: Attributes | undefined): SeamAttribute[] => {
   const out: SeamAttribute[] = [];
   for (const key in a) {
     const value: unknown = a[key];
