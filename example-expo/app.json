@@ -1,0 +1,10 @@
+{
+  "expo": {
+    "name": "OpenTelemetryExpo",
+    "slug": "opentelemetry-example-expo",
+    "version": "1.0.0",
+    "ios": {"bundleIdentifier": "opentelemetry.example.expo"},
+    "android": {"package": "opentelemetry.example.expo"},
+    "plugins": ["react-native-open-telemetry", "./plugins/withOtelExample"]
+  }
+}

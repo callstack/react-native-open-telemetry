@@ -1,0 +1,16 @@
+{
+  "name": "react-native-open-telemetry-example-expo",
+  "version": "0.0.1",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "postinstall": "test -e node_modules/react-native-open-telemetry || ln -sfn ../.. node_modules/react-native-open-telemetry",
+    "prebuild": "expo prebuild --clean --no-install"
+  },
+  "dependencies": {
+    "expo": "58.0.26",
+    "react": "19.3.0",
+    "react-native": "0.88.1",
+    "react-native-nitro-modules": "0.37.2"
+  }
+}
