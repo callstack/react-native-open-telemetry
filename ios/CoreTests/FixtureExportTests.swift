@@ -30,7 +30,7 @@ final class FixtureExportTests: XCTestCase {
     XCTAssertFalse(files.isEmpty)
     for f in files {
       let name = String(f.dropLast(".handoff.json".count))
-      let (config, spans) = try FixtureJson.parse(Data(contentsOf: fixtures.appendingPathComponent(f)), exportUrl: collector)
+      let (config, spans) = try FixtureJson.parse(Data(contentsOf: fixtures.appendingPathComponent(f)), exportUrl: collector + "/v1/traces")
       try control("begin", ["scenario": name, "platform": "ios"])
       let core = OtelCore(config: config, testMode: true)
       core.handOff(spans)

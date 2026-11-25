@@ -6,7 +6,7 @@ public final class RNOtelConfig {
   public var export = Export(url: "")
 
   public struct Export {
-    /// OTLP base URL; `/v1/traces` is appended unless present.
+    /// The OTLP/HTTP traces endpoint (e.g. `https://collector:4318/v1/traces`), used as given.
     public var url: String
     public var headers: [String: String]
     public init(url: String, headers: [String: String] = [:]) { self.url = url; self.headers = headers }

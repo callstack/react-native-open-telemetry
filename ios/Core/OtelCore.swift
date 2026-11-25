@@ -57,7 +57,7 @@ package final class OtelCore {
     // Upstream sends `envVarHeaders ?? config headers`: passing ours there (even empty) means exactly these headers,
     // never OTEL_EXPORTER_OTLP_HEADERS. Upstream's default gzip stays on.
     exporter = LazyExporter {
-      URL(string: tracesUrl(config.exportUrl)).map {
+      URL(string: config.exportUrl).map {
         OtlpHttpTraceExporter(endpoint: $0, envVarHeaders: config.exportHeaders.map { ($0.key, $0.value) })
       }
     }

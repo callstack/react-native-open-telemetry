@@ -2,7 +2,7 @@ package struct CoreConfig {
   var serviceName: String
   var serviceVersion: String? = nil
   var resourceAttributes: [CoreAttribute] = []
-  /// Base URL; see `tracesUrl`.
+  /// The OTLP/HTTP traces endpoint, used as given.
   var exportUrl: String
   var exportHeaders: [String: String] = [:]
   package init(serviceName: String, serviceVersion: String? = nil, resourceAttributes: [CoreAttribute] = [],
