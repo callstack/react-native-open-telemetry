@@ -5,12 +5,16 @@
   "main": "index.js",
   "scripts": {
     "postinstall": "test -e node_modules/react-native-open-telemetry || ln -sfn ../.. node_modules/react-native-open-telemetry",
-    "prebuild": "expo prebuild --clean --no-install"
+    "prebuild": "expo prebuild --clean --no-install",
+    "web:e2e": "expo export -p web --clear && expo serve --port 4173"
   },
   "dependencies": {
+    "@expo/metro-runtime": "~58.0.17",
     "expo": "58.0.26",
     "react": "19.3.0",
+    "react-dom": "19.3.0",
     "react-native": "0.88.1",
-    "react-native-nitro-modules": "0.37.2"
+    "react-native-nitro-modules": "0.37.2",
+    "react-native-web": "^0.21.4"
   }
 }

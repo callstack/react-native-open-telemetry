@@ -410,8 +410,8 @@ jobs:
           if-no-files-found: ignore
           include-hidden-files: true # verify/e2e/.e2e is a dot dir
 
-  # The bare example's ScenariosScreen through react-native-web and the web SDK (example/web), headless Chromium.
-  # The runner builds the Vite app in test mode and serves it (e2e.config.ts `command`).
+  # The Expo app's Metro web export (react-native-web) and the web SDK, headless Chromium.
+  # The runner exports the app in test mode and serves it (e2e.config.ts `command`).
   e2e-web:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -422,7 +422,7 @@ jobs:
           bun-version: 1.2.19
       - run: bun install --frozen-lockfile
       - run: bun install --frozen-lockfile
-        working-directory: example
+        working-directory: example-expo
       - run: bun run prepare # the web app resolves the package through exports -> lib/ (browser condition)
       - run: bunx e2e-web install chromium --with-deps
       - run: bun verify --e2e e2e

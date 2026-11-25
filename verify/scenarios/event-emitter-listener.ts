@@ -18,5 +18,5 @@ export default scenario(
       sub.remove();
     }
   },
-  {runners: ['e2e'], targets: ['android', 'ios']}
+  {runners: ['e2e'], targets: ['android', 'ios', 'web']}
 );

@@ -19,6 +19,11 @@ const config = {
     nodeModulesPaths: [path.join(__dirname, 'node_modules'), path.join(root, 'node_modules')],
     blockList: [...block(root), ...block(path.join(root, 'example'))],
     extraNodeModules: {...Object.fromEntries(single.map(m => [m, own(m)])), 'react-native-open-telemetry': root},
+    // web has no Nitro: ScenariosScreen's HybridObject lookups find none
+    resolveRequest: (ctx, name, platform) =>
+      platform === 'web' && name === 'react-native-nitro-modules'
+        ? {type: 'sourceFile', filePath: path.join(__dirname, 'nitro-stub.web.ts')}
+        : ctx.resolveRequest(ctx, name, platform),
   },
 };
 

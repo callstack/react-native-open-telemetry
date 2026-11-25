@@ -49,8 +49,8 @@ export default {
         appPath: process.env.E2E_IOS_EXPO_APP ?? `${expo}/ios/build/Build/Products/Release-iphonesimulator/OpenTelemetryExpo.app`,
       },
     },
-    // The bare example's ScenariosScreen through react-native-web, exporting with the web SDK (example/web, Task 23).
-    // The runner builds it in test mode (lib/ first: `bun run prepare`) and serves it with `vite preview`.
+    // The Expo app's Metro web export (react-native-web), exporting with the web SDK (Task 23).
+    // The runner exports it in test mode (lib/ first: `bun run prepare`) and serves it with `expo serve`.
     {
       name: 'web',
       engine: web({browser: 'chromium'}),
@@ -59,7 +59,7 @@ export default {
         command: {
           executable: 'bun',
           args: ['run', 'web:e2e'],
-          cwd: example,
+          cwd: expo,
           env: {OTEL_TEST_MODE: '1'},
           log: '.e2e/logs/web.log',
           startupTimeout: 120_000,
