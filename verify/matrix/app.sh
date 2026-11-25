@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Nightly helper (Task 31, .github/workflows/scheduled.yml). Run from the repo root, on a throwaway checkout: it
+# Main-matrix helper (Task 31, .github/workflows/main-matrix.yml). Run from the repo root, on a throwaway checkout: it
 # rewrites example/ and example-expo/ in place, so the e2e config and every path in VERIFY.md stay the same.
 #
-#   verify/nightly/app.sh bare <rn>   regenerate example/android and example/ios from the React Native template at
-#                                     <rn> (an npm version or range: 0.79, latest), then re-apply the example's native
+#   verify/matrix/app.sh bare <rn>   regenerate example/android and example/ios from the React Native template at
+#                                     <rn> (an exact npm version, e.g. 0.79.7), then re-apply the example's native
 #                                     edits (X13). The JS side (App.tsx, src/, metro, babel) is kept as committed.
-#   verify/nightly/app.sh pack <app>  `npm pack` the package and install the tarball into <app> (example or
+#   verify/matrix/app.sh pack <app>  `npm pack` the package and install the tarball into <app> (example or
 #                                     example-expo) instead of linking the source tree. One app per run: the Expo app
 #                                     bundles example/src too, and a second copy of the SDK in example/node_modules
-#                                     would be picked up there. Run `bare latest` first for a fresh bare app; the Expo
+#                                     would be picked up there. The bare app is the committed example; the Expo
 #                                     app is fresh anyway (`expo prebuild --clean`).
 #
 # The example's native edits, re-applied by `bare` (keep this list in sync when the example gains one):
@@ -29,7 +29,7 @@ bare() {
   echo "example: React Native $rn"
   tmp=$(mktemp -d)
   old=$tmp/old
-  npx --yes @react-native-community/cli@latest init OpenTelemetryExample --version "$rn" --directory "$tmp/app" \
+  npx --yes @react-native-community/cli@20.2.0 init OpenTelemetryExample --version "$rn" --directory "$tmp/app" \
     --package-name opentelemetry.example --skip-install --install-pods false --skip-git-init
   cd example
   mkdir "$old"
@@ -59,7 +59,7 @@ bare() {
   edit android/build.gradle 's/minSdkVersion = \d+/minSdkVersion = 26/' 'minSdkVersion = 26'
   {
     echo
-    echo "// verify/nightly/app.sh: as in the committed example"
+    echo "// verify/matrix/app.sh: as in the committed example"
     echo "android { defaultConfig { $(grep "buildConfigField.*OTEL_TEST_MODE" "$old/android/app/build.gradle" | sed 's/^ *//') } }"
     sed -n '/^tasks.matching { it.name.startsWith("createBundle") }/,/^}/p' "$old/android/app/build.gradle"
   } >> android/app/build.gradle

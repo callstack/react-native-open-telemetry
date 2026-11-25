@@ -752,7 +752,7 @@ Everything below is automated; nothing needs a person except reviewing expected 
 ```mermaid
 flowchart LR
   s1["1 · Static<br/>every push"] --> s2["2 · Fast loop<br/>every iteration"] --> s3["3 · E2E matrix<br/>every PR"] --> s4["4 · OTLP compliance<br/>every PR"]
-  s5["5 · Scheduled<br/>nightly + before release"]
+  s5["5 · Main matrix<br/>every push to main"]
 ```
 
 | Stage | Runs | Checks |
@@ -761,7 +761,7 @@ flowchart LR
 | **2. Fast loop** (seconds) | every iteration, local and CI | Jest (Node) through the fake collector against expected files; the handful of unit tests (int vs double, `HrTime`, endpoint) |
 | **3. E2E matrix** (minutes) | every PR | `e2e` on five targets: **bare app** (native-first init) on iOS and Android, **Expo prebuild app** (JS-fallback init) on iOS and Android, **web** (the Expo app's Metro web export). All golden scenarios, the failure scenarios below, and one smoke scenario per target without test mode. Parity check across all five outputs. `perf-budget` on Android. |
 | **4. OTLP compliance** | every PR, Linux runner with Docker | The fake collector keeps every raw request it received. They are replayed, together with every expected file, to the **official OTel Collector** image (pinned) with an OTLP receiver; the job fails on any rejected request or decode error in its logs. Proves both our output and our spec files are real OTLP. |
-| **5. Scheduled** | nightly, and before every release | E2E on the **minimum and latest supported RN**; the fast loop and E2E against the **latest upstream** `@opentelemetry/*`, otel-java and opentelemetry-swift (catches upstream changes before a version bump); the **packed tarball** (`npm pack`) installed into a fresh bare app and a fresh Expo app, running the smoke scenario (catches missing files and broken autolinking). |
+| **5. Main matrix** | every push to `main` | Pinned versions only: E2E on the **minimum supported RN** (0.79.7); the **packed tarball** (`npm pack`) in the bare and Expo apps, running the smoke scenario with test mode off (catches missing files and broken autolinking); API 26; Debug + Metro for fast refresh. No job tests the latest upstream release. |
 
 Two apps cover both init paths: the bare example inits natively in
 `MainApplication`/`AppDelegate`; the Expo app has no native init and relies on the JS
@@ -775,7 +775,7 @@ one final `needs:` job that checks total wall-clock time. When a PR run exceeds 
 matrix on every PR is decided.
 
 **Releases:** manual with changesets (`bun run version`, then `bun run publish`), from `main`
-once its PR pipeline and the latest nightly are green. No release workflow.
+once its PR pipeline and the main matrix are green. No release workflow.
 
 **Failure scenarios** (E2E; the fake collector can refuse requests on demand):
 - collector down: the app doesn't block or crash; spans arrive once it is back.

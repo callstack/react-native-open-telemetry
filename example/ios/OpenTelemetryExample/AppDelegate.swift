@@ -12,7 +12,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   }
 }
 
-// otel-init: verify/nightly/app.sh appends this line and everything below it to a freshly generated AppDelegate.swift.
+// otel-init: verify/matrix/app.sh appends this line and everything below it to a freshly generated AppDelegate.swift.
 /// Native-first init, before React Native. No serviceVersion: the test-mode resource is service.name only (R2).
 func startOtel() {
   RNOtel.start { c in

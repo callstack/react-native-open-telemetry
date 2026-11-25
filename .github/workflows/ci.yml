@@ -50,9 +50,9 @@ jobs:
           include-hidden-files: true # verify/e2e/.e2e is a dot dir
 
   # Release builds with the JS bundle embedded (no Metro), test mode on; the bare jobs also build test mode off for
-  # smoke-device (per PR on bare only, X11 interim; Expo smoke goes to the nightly). perf-budget runs on android-bare.
+  # smoke-device (per PR on bare only, X11 interim; Expo smoke goes to the main matrix). perf-budget runs on android-bare.
   # Every Task 27 failure scenario runs here except fast-refresh-idempotent: it needs dev builds + Metro, so it is
-  # local only (verify/VERIFY.md), no per-PR jobs; a nightly can add it.
+  # local only (verify/VERIFY.md), no per-PR jobs; the main matrix runs it.
   # Native outputs are cached on native inputs only, so a JS-only change re-bundles but reuses the native build.
   e2e-android-bare:
     runs-on: ubuntu-latest

@@ -5,8 +5,8 @@ import com.callstack.otel.RNOtel
 import java.io.File
 
 /**
- * Native-first init, called from MainApplication.onCreate before React Native. Its own file so the nightly
- * (verify/nightly/app.sh) can add it unchanged to a freshly generated app at another RN version.
+ * Native-first init, called from MainApplication.onCreate before React Native. Its own file so the main matrix
+ * (verify/matrix/app.sh) can add it unchanged to a freshly generated app at another RN version.
  * No serviceVersion: the test-mode resource is service.name only (R2).
  */
 internal fun Application.startOtel() {

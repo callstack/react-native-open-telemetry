@@ -1,11 +1,11 @@
-name: Nightly
+name: Main matrix
 
-# Spec §9.4/§9.5 (Task 31). Setup steps follow ci.yml; no native caches here: every nightly build is from scratch.
-# `schedule` and `workflow_dispatch` only run workflow files from the default branch (main), so the real schedule is
-# first verified after merge to main (R28).
+# Spec §9.4/§9.5 (Task 31): every push to main, on pinned versions only (React Native, OTel, tools). What per-PR CI
+# cannot run: the minimum React Native, the packed tarball, API 26 and Debug + Metro. Setup steps follow ci.yml; no
+# native caches here: every build is from scratch.
 on:
-  schedule:
-    - cron: '0 2 * * *'
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       dry_run:
@@ -17,8 +17,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: nightly-${{ github.ref }}
-  cancel-in-progress: false # never cancel a real nightly
+  group: main-matrix-${{ github.ref }}
+  cancel-in-progress: true # a newer push to main supersedes the run
 
 env:
   E2E_TELEMETRY_DISABLED: '1'
@@ -36,24 +36,19 @@ jobs:
         # platform: android | ios. app: bare (example/, default) | expo (example-expo/).
         # mode: e2e (Release, test mode, every scenario) | smoke (Release, test mode off, smoke-device) |
         #       dev (Debug + Metro, test mode, fast-refresh-idempotent).
-        # rn: regenerate example/ from the RN template at that version (verify/nightly/app.sh bare, X13).
-        # deps: @opentelemetry/*, otel-java (BOM) and opentelemetry-swift at their latest, plus the fast loop.
+        # rn: regenerate example/ from the RN template at that exact version (verify/matrix/app.sh bare, X13).
         # pack: npm pack, install the tarball into that app instead of linking the source tree (app.sh pack).
         include:
-          # oldest supported (peer range >=0.79) and newest React Native
-          - {name: rn-0.79-android, platform: android, rn: '0.79', mode: e2e}
-          # experimental (AUTHOR GATE, VERIFY.md "Nightly"): RN 0.79.7 iOS does not build on Xcode 27 (locally: the
+          # the oldest supported React Native (peer range >=0.79); per-PR CI runs the example's 0.88.1
+          - {name: rn-0.79-android, platform: android, rn: '0.79.7', mode: e2e}
+          # experimental (AUTHOR GATE, VERIFY.md "Main matrix"): RN 0.79.7 iOS does not build on Xcode 27 (locally: the
           # adapter podspec's module-map script phase collides with CocoaPods' own, then RN 0.79's fmt pod fails on
           # consteval). Fix both or raise the minimum RN, then drop the flag.
-          - {name: rn-0.79-ios, platform: ios, rn: '0.79', mode: e2e, experimental: true}
-          - {name: rn-latest-android, platform: android, rn: latest, mode: e2e}
-          - {name: rn-latest-ios, platform: ios, rn: latest, mode: e2e}
-          - {name: deps-latest-android, platform: android, deps: true, mode: e2e}
-          - {name: deps-latest-ios, platform: ios, deps: true, mode: e2e}
-          # the published package: a fresh bare app (template at latest) and the Expo app (prebuild --clean), test mode
-          # off. The Expo entries are also the Expo smoke-device run (X11 interim: bare per PR, Expo here).
-          - {name: pack-bare-android, platform: android, rn: latest, pack: example, mode: smoke}
-          - {name: pack-bare-ios, platform: ios, rn: latest, pack: example, mode: smoke}
+          - {name: rn-0.79-ios, platform: ios, rn: '0.79.7', mode: e2e, experimental: true}
+          # the published package (npm pack) in the bare and the Expo app (prebuild --clean), test mode off. The Expo
+          # entries are also the Expo smoke-device run (X11 interim: bare per PR, Expo here).
+          - {name: pack-bare-android, platform: android, pack: example, mode: smoke}
+          - {name: pack-bare-ios, platform: ios, pack: example, mode: smoke}
           - {name: pack-expo-android, platform: android, app: expo, pack: example-expo, mode: smoke}
           - {name: pack-expo-ios, platform: ios, app: expo, pack: example-expo, mode: smoke}
           # Android process-name fallback below API 28 (/proc/self/cmdline, Task 24): native init must still run
@@ -79,7 +74,7 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.2.19
-      - uses: actions/setup-node@v4 # npm view / npm pack / the RN CLI in verify/nightly/app.sh
+      - uses: actions/setup-node@v4 # npm view / npm pack / the RN CLI in verify/matrix/app.sh
         with:
           node-version: '24'
       - if: matrix.platform == 'android'
@@ -88,37 +83,17 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Bump @opentelemetry/*, otel-java and opentelemetry-swift to latest
-        if: matrix.deps
-        run: |
-          jq -r '.dependencies | keys[] | select(startswith("@opentelemetry/")) + "@latest"' package.json | xargs bun add
-          java=$(curl -fsSL https://repo1.maven.org/maven2/io/opentelemetry/opentelemetry-bom/maven-metadata.xml |
-            sed -n 's:.*<release>\(.*\)</release>.*:\1:p')
-          perl -pi -e "s/opentelemetry-bom:[\d.]+/opentelemetry-bom:$java/" android/build.gradle
-          for repo in opentelemetry-swift opentelemetry-swift-core; do
-            v=$(git ls-remote --tags --refs "https://github.com/open-telemetry/$repo" | sed 's:.*/::; s/^v//' |
-              grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
-            perl -0pi -e "s|($repo',\s*requirement: \{ kind: 'upToNextMinorVersion', minimumVersion: ')[\d.]+|\${1}$v|" \
-              ReactNativeOpenTelemetryCore.podspec
-            grep -qF "minimumVersion: '$v'" ReactNativeOpenTelemetryCore.podspec || { echo "::error::podspec: $repo not bumped"; exit 1; }
-          done
-          # resolve the bumped Swift packages afresh
-          rm -f example/ios/OpenTelemetryExample.xcworkspace/xcshareddata/swiftpm/Package.resolved
-          git diff -- package.json android/build.gradle '*.podspec'
       - run: bun install --frozen-lockfile
       - name: Regenerate example/ at React Native ${{ matrix.rn }}
         if: matrix.rn
-        run: verify/nightly/app.sh bare '${{ matrix.rn }}'
+        run: verify/matrix/app.sh bare '${{ matrix.rn }}'
       - name: Install ${{ env.APP_DIR }}
         working-directory: ${{ env.APP_DIR }}
         run: bun install ${{ !matrix.rn && '--frozen-lockfile' || '' }}
       - run: bun run prepare # the apps bundle the package through exports -> lib/ (R4)
       - name: npm pack into ${{ matrix.pack }}
         if: matrix.pack
-        run: verify/nightly/app.sh pack '${{ matrix.pack }}'
-      - name: Fast loop
-        if: matrix.deps && env.DRY_RUN != 'true'
-        run: bun verify # every non-e2e stage
+        run: verify/matrix/app.sh pack '${{ matrix.pack }}'
       - name: expo prebuild
         if: matrix.app == 'expo'
         working-directory: example-expo
@@ -179,7 +154,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: nightly-${{ matrix.name }}
+          name: main-matrix-${{ matrix.name }}
           path: |
             verify/artifacts/
             verify/e2e/.e2e/
