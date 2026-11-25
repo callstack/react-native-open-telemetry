@@ -139,8 +139,8 @@ HybridObjects: no native `testMode` line, scenarios get no `native`).
 - **Probe:** `babel-preset-expo` keeps native `async` on web; `example-expo/babel.config.js` adds the two async
   plugins for the web platform, so the bundle has no native `async`/`for await`; no `com.callstack.context.degraded`
   scope attribute in any web file.
-- **Files:** every `*.web.otlp.json` is byte-identical to the scenario's `.js` file (`collector-down`, which has no
-  `.js`, equals its `.android` file). The proto exporter and the web resource (`service.name` only in test mode)
+- **Files:** every `*.web.otlp.json` is byte-identical to the scenario's `.js` file (`collector-down` and the `seam`
+  scenarios, which have no `.js`, equal their `.android` file). The proto exporter and the web resource (`service.name` only in test mode)
   change nothing visible.
 - **collector-down:** the OTel JS exporter retries a 503 inside the export (backoff 1 s ×1.5, ±20 %), so the first
   `flush` resolves after the three refusals (~4.7 s; up to 5.7 s): the web flush timeout is 10 s.
@@ -330,7 +330,6 @@ e2e targets are android, ios and web unless the Runners column names them.
 
 | Scenario | Guarantee | Task | Runners | Status |
 | --- | --- | --- | --- | --- |
-| `smoke-js` | the JS pipeline exports a span | 7 | jest | passing |
 | `nest-after-await` | a span after `await` is a child of the span active before it | 10 | jest, e2e | passing |
 | `nest-timers-microtasks` | `setTimeout`/`setImmediate`/`queueMicrotask` callbacks keep their scheduling context, also after the parent ended | 10 | jest, e2e | passing |
 | `nest-promise-all-race` | `Promise.all`/`race` branches and the code after them keep the parent | 10 | jest, e2e | passing |
@@ -346,10 +345,10 @@ e2e targets are android, ios and web unless the Runners column names them.
 | `interaction-manager` | `runAfterInteractions` callback is a child of the caller's span | 13 | e2e | pending: RN 0.88 removed `InteractionManager` |
 | `nest-raf` | a `requestAnimationFrame` callback keeps its scheduling context | 13 | e2e | passing |
 | `event-emitter-listener` | a synchronous `DeviceEventEmitter` listener is a child of the emitter's span | 13 | e2e (android, ios) | passing |
-| `handoff-basic` | a span crosses the seam intact | 8, 15, 18 | jest, e2e | passing |
+| `handoff-basic` | a span crosses the seam intact | 8, 15, 18 | seam, e2e | passing |
 | `rich-span` | every attribute type, events, links, status, scope survive the seam | 8, 15, 18 | jest, e2e | passing |
-| `odd-attributes` | NaN, ±Infinity, -0, big ints, empty arrays survive the seam | 8, 15, 18 | jest, e2e | passing |
-| `export-headers` | configured export headers are sent on every request | 16, 19, 23, 24, 25 | jest, e2e | passing |
+| `odd-attributes` | NaN, ±Infinity, -0, big ints, empty arrays survive the seam | 8, 15, 18 | seam, e2e | passing |
+| `export-headers` | configured export headers are sent on every request | 16, 19, 23, 24, 25 | seam, e2e | passing |
 | `cross-js-to-native` | a native span started from JS is a child of the JS span | 26 | e2e (android, ios) | passing |
 | `cross-native-to-js` | a JS span started under a native span's context is its child | 26 | e2e (android, ios) | passing |
 | `collector-down` | app never blocks; spans arrive exactly once when the collector is back | 23, 27 | e2e | passing |
@@ -364,7 +363,7 @@ e2e targets are android, ios and web unless the Runners column names them.
 
 1. `verify/scenarios/<guarantee-id>.ts`: `export default scenario('<guarantee-id>', async ({tracer, at}) => {…}, opts)`.
    Explicit `at(µs)` start/end times on every span; parents through `context.active()` (`startActiveSpan`), not
-   explicit parent contexts. `opts.runners` defaults to `['jest', 'e2e']` (`'jest-degraded'` is the native-`async` project), `opts.targets` to
+   explicit parent contexts. `opts.runners` defaults to `['jest', 'e2e']` (`'seam'` records only the hand-off fixture, for scenarios whose JS output would be upstream's alone; `'jest-degraded'` is the native-`async` project), `opts.targets` to
    `['android', 'ios', 'web']` (platforms or target names like `android-bare`; the e2e harness skips other targets); `pending: true` until it passes.
 2. Hand-write `verify/expected/<guarantee-id>.shape.json` in exactly `shapeOf()`'s format (traces ordered by first
    span start, spans sorted by name, `kind` 1 = INTERNAL) and get it reviewed.
