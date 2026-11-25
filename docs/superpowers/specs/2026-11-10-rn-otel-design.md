@@ -732,8 +732,8 @@ flowchart LR
   work, ROOT leak check, captured `then`, async generators, batching (documented
   exception), `setInterval` (new root), thrown errors in callbacks, never-settling promise
   (no context leak into later work), cross-boundary both ways, one rich span (every
-  attribute type, events, links, status) to catch seam drift, degraded probe (Jest with
-  native `async`), `perf-budget` (below).
+  attribute type, events, links, status) to catch seam drift, `perf-budget` (below).
+  The degraded probe is a unit test: a native-`async` step built with `new Function` defeats the patch.
 - **Fixture encoding:** fixtures are JSON, which can't hold `NaN`, `Infinity` or `-0`; these
   are written as `{"$num": "NaN" | "Infinity" | "-Infinity" | "-0"}` and decoded by the
   Kotlin and Swift test readers.

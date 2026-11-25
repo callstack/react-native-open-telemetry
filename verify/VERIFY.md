@@ -341,7 +341,6 @@ e2e targets are android, ios and web unless the Runners column names them.
 | `never-settling-promise` | a never-settling promise does not leak its span into later work | 10 | jest, e2e | passing |
 | `interval-new-root` | exception: each `setInterval` tick is a new root | 10 | jest, e2e | passing |
 | `batching-shared-queue` | exception: a shared queue runs work as its first enqueuer (pinned wrong parent) | 10 | jest, e2e | passing |
-| `degraded-probe` | native `await` → degraded scope attribute, spans after `await` are roots | 11 | jest-degraded | passing |
 | `interaction-manager` | `runAfterInteractions` callback is a child of the caller's span | 13 | e2e | pending: RN 0.88 removed `InteractionManager` |
 | `nest-raf` | a `requestAnimationFrame` callback keeps its scheduling context | 13 | e2e | passing |
 | `event-emitter-listener` | a synchronous `DeviceEventEmitter` listener is a child of the emitter's span | 13 | e2e (android, ios) | passing |
@@ -363,7 +362,7 @@ e2e targets are android, ios and web unless the Runners column names them.
 
 1. `verify/scenarios/<guarantee-id>.ts`: `export default scenario('<guarantee-id>', async ({tracer, at}) => {…}, opts)`.
    Explicit `at(µs)` start/end times on every span; parents through `context.active()` (`startActiveSpan`), not
-   explicit parent contexts. `opts.runners` defaults to `['jest', 'e2e']` (`'seam'` records only the hand-off fixture, for scenarios whose JS output would be upstream's alone; `'jest-degraded'` is the native-`async` project), `opts.targets` to
+   explicit parent contexts. `opts.runners` defaults to `['jest', 'e2e']` (`'seam'` records only the hand-off fixture, for scenarios whose JS output would be upstream's alone), `opts.targets` to
    `['android', 'ios', 'web']` (platforms or target names like `android-bare`; the e2e harness skips other targets); `pending: true` until it passes.
 2. Hand-write `verify/expected/<guarantee-id>.shape.json` in exactly `shapeOf()`'s format (traces ordered by first
    span start, spans sorted by name, `kind` 1 = INTERNAL) and get it reviewed.
