@@ -23,8 +23,8 @@ had. The version stays in 0.x (0.2.0 → 0.3.0), but expect breaking changes.
 - Metro: wrap the merged config with `withOtel` from `react-native-open-telemetry/metro`. It runs the context patch
   before any app module. Without it, the patch installs at the package import, and only code that runs before that
   import loses parents.
-- Vite (7 and older): `withOtel` from `react-native-open-telemetry/vite`. It also compiles `async` down. Without it,
-  context is lost after a native `await`.
+- Expo web: also lower `async` for the web platform in `babel.config.js` (see the
+  [README](README.md#metro-helper)). Without it, context is lost after a native `await`.
 
 ## Init
 

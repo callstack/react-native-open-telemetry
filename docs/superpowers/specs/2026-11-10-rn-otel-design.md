@@ -115,7 +115,7 @@ flowchart TB
 | Ours vs upstream | |
 |---|---|
 | upstream, reused as-is | `@opentelemetry/api`, `sdk-trace`, otel-java, opentelemetry-swift, exporters |
-| ours | ContextManager patch, hand-off processor, Nitro adapters, pure native core, bundler helpers |
+| ours | ContextManager patch, hand-off processor, Nitro adapters, pure native core, Metro helper |
 
 ### 4.1 Where spans live (decided: "option C")
 - **JS spans live in the stock JS SDK** (`@opentelemetry/sdk-trace` `TracerProvider`) on both
@@ -397,7 +397,7 @@ module.exports = withOtel(getDefaultConfig(__dirname));
    (OTel naming guidance: reverse-domain prefix; `otel.*` is reserved). **Prefix is
    Claude's call.**
 
-Package name: `react-native-open-telemetry` (subpaths `/metro`, `/vite`). Entry function:
+Package name: `react-native-open-telemetry` (subpath `/metro`). Entry function:
 `startReactNativeSdk`, on web too. **(decided)**
 
 ## 5. Trace model (decided; most of it lands with v1 instrumentations)
@@ -527,23 +527,25 @@ adds `telemetry.sdk.*` to the resource (against 4.3), also starts a Logs SDK, ex
 (loses NaN), and returns no `tracerProvider`/`forceFlush` for our handle. The resource is
 `service.*` + `resourceAttributes` + `telemetry.distro.*` (outside test mode). `start`
 re-registers our context manager if another one took the global slot. The package's
-`exports` `browser` condition points web bundlers (Vite, Metro web) at `index.web.js`.
+`exports` `browser` condition points Metro web (Expo web) at `index.web.js`.
 
+Web is bundled with Metro (Expo web), with the same `withOtel` from `/metro` as mobile.
 Browsers run `await` natively, which bypasses the patched `then`. **Decided:** web apps
 compile `async` down in their bundler — the same mechanism RN uses by default, and what
-Angular requires for zone.js. We ship one-line bundler helpers mirroring the Metro helper:
-- Vite: `withOtel(viteConfig)` sets esbuild `supported: { 'async-await': false }` for the
-  app and for pre-bundled dependencies.
-- webpack / Babel: deferred until a webpack user asks (Expo web uses Metro, covered by
-  `withOtel` from `/metro`); the manual fix is `@babel/plugin-transform-async-to-generator`.
-Without the helper, the probe reports degraded (lost parents after `await`, never wrong).
-Prior art: Angular CLI does exactly this for zone.js (§14 P4).
+Angular requires for zone.js (§14 P4). `babel-preset-expo` keeps native `async` on web, so the
+app adds `@babel/plugin-transform-async-to-generator` and
+`@babel/plugin-transform-async-generator-functions` for the web platform in `babel.config.js`
+(README). Without them, the probe reports degraded (lost parents after `await`, never wrong).
 
-```ts
-// vite.config.ts (illustrative)
-import { withOtel } from 'react-native-open-telemetry/vite';
-export default withOtel(defineConfig({ plugins: [react()] }));
-// sets esbuild.supported['async-await'] = false for build and optimizeDeps
+```js
+// babel.config.js (Expo app, illustrative)
+module.exports = api => {
+  const web = api.caller(c => c?.platform === 'web');
+  return {
+    presets: ['babel-preset-expo'],
+    plugins: web ? ['@babel/plugin-transform-async-generator-functions', '@babel/plugin-transform-async-to-generator'] : [],
+  };
+};
 ```
 
 ## 8. v0 scope and sequencing (decided scope; sequencing is Claude's call)
@@ -556,7 +558,7 @@ Scope:
    policy (6.2).
 4. Cross-boundary parenting, both directions, with the native helper.
 5. The seam (4.3).
-6. Web: upstream browser SDK, same ContextManager, bundler helpers.
+6. Web: upstream browser SDK, same ContextManager, Metro (Expo web).
 7. Proof (section 9): on iOS and Android, the example app produces one trace with a JS
    root, a child after `await`, a native child parented from JS, a JS span parented by
    native; plus a second concurrent trace that shares nothing with the first. On web (no
@@ -674,7 +676,7 @@ The same scenarios run in every layer, fastest first.
 | JS (Node) | **Jest** + `babel-jest` + `@react-native/babel-preset` | context patch, hand-off (fake Nitro module) | every iteration |
 | Kotlin core | JUnit via `gradle test` (plain JVM) | native hand-off → OTLP | every iteration |
 | Swift core | XCTest via `swift test` (macOS) | native hand-off → OTLP | every iteration |
-| E2E: iOS, Android, web | **[`e2e`](https://www.npmjs.com/package/e2e)** (agent-device for mobile, Playwright for web) | everything for real: Nitro glue, both init paths, threading, reload, failure paths, browser SDK, bundler helpers (matrix in 9.4) | **every PR** once the seam exists (decided) |
+| E2E: iOS, Android, web | **[`e2e`](https://www.npmjs.com/package/e2e)** (agent-device for mobile, Playwright for web) | everything for real: Nitro glue, both init paths, threading, reload, failure paths, browser SDK, Metro helper (matrix in 9.4) | **every PR** once the seam exists (decided) |
 
 - **Why Jest:** it compiles scenarios the way RN does (`await` → `.then`). Bun's test runner
   and Vitest keep native `await`, which bypasses the context patch and makes results wrong
@@ -769,9 +771,9 @@ flowchart LR
 
 | Stage | Runs | Checks |
 |---|---|---|
-| **1. Static** (seconds) | pre-commit hook, and every push | `tsc`; `oxlint`; Nitro codegen is current (`nitrogen && git diff --exit-code nitrogen/`); `npm pack` contents include `lib/`, `nitrogen/`, `android/`, `ios/`, `Package.swift`, the podspec and helper subpaths; bundle size: the SDK's share of a Metro bundle of the example stays within 10% of a committed baseline; unit tests of the fake collector's normalizer (it sorts and merges, so a bug there would hide or invent diffs everywhere) |
+| **1. Static** (seconds) | pre-commit hook, and every push | `tsc`; `oxlint`; Nitro codegen is current (`nitrogen && git diff --exit-code nitrogen/`); `npm pack` contents include `lib/`, `nitrogen/`, `android/`, `ios/`, `Package.swift`, the podspec and the `metro/` helper; bundle size: the SDK's share of a Metro bundle of the example stays within 10% of a committed baseline; unit tests of the fake collector's normalizer (it sorts and merges, so a bug there would hide or invent diffs everywhere) |
 | **2. Fast loop** (seconds) | every iteration, local and CI | Jest (Node), `gradle test`, `swift test`, all through the fake collector against expected files; the handful of unit tests (int vs double, `HrTime`, endpoint) |
-| **3. E2E matrix** (minutes) | every PR | `e2e` on five targets: **bare app** (native-first init) on iOS and Android, **Expo prebuild app** (JS-fallback init) on iOS and Android, **web**. All golden scenarios, the failure scenarios below, and one smoke scenario per target without test mode. Parity check across all five outputs. `perf-budget` on Android. |
+| **3. E2E matrix** (minutes) | every PR | `e2e` on five targets: **bare app** (native-first init) on iOS and Android, **Expo prebuild app** (JS-fallback init) on iOS and Android, **web** (the Expo app's Metro web export). All golden scenarios, the failure scenarios below, and one smoke scenario per target without test mode. Parity check across all five outputs. `perf-budget` on Android. |
 | **4. OTLP compliance** | every PR, Linux runner with Docker | The fake collector keeps every raw request it received. They are replayed, together with every expected file, to the **official OTel Collector** image (pinned) with an OTLP receiver; the job fails on any rejected request or decode error in its logs. Proves both our output and our spec files are real OTLP. |
 | **5. Scheduled** | nightly, and before every release | E2E on the **minimum and latest supported RN**; the fast loop and E2E against the **latest upstream** `@opentelemetry/*`, otel-java and opentelemetry-swift (catches upstream changes before a version bump); the **packed tarball** (`npm pack`) installed into a fresh bare app and a fresh Expo app, running the smoke scenario (catches missing files and broken autolinking). |
 
@@ -909,7 +911,7 @@ direct precedent was found; treat those as the highest-risk parts.
 | P1 | Context runtime patch: wrap `Promise.prototype.then` + timers, capture at schedule, restore at run (6.1) | zone.js (Angular) patches `then` and replaces `Promise`; async-listener (Node, pre-`async_hooks`, basis of `continuation-local-storage`) wraps `then` and timers | [zone.js `patchThen`](https://github.com/angular/angular/blob/efbab16e56734d7121d9dd29c2761dec6e787807/packages/zone.js/lib/common/promise.ts#L585-L611) · [async-listener `wrap(Promise.prototype, 'then')`](https://github.com/othiym23/async-listener/blob/01a02ee123db3d4a98e0cc5dda6f8ef82c55f81e/index.js#L468) · [async-listener timers](https://github.com/othiym23/async-listener/blob/01a02ee123db3d4a98e0cc5dda6f8ef82c55f81e/index.js#L215-L224) |
 | P2 | ContextManager extends upstream sync manager (6.1) | OTel JS `StackContextManager` | [StackContextManager.ts](https://github.com/open-telemetry/opentelemetry-js/blob/ee0bd33cac8bb245a3d83fc2b8ba0b07534b8efd/packages/sdk-trace/src/StackContextManager.ts#L20) |
 | P3 | Startup probe that detects whether the patch can work (6.1) | async-listener checks at load whether `Promise` is native and whether its patch takes effect | [async-listener native-Promise check](https://github.com/othiym23/async-listener/blob/01a02ee123db3d4a98e0cc5dda6f8ef82c55f81e/index.js#L347-L361) |
-| P4 | Web: require bundlers to downlevel `async`, via a `withOtel(viteConfig)` helper (7) | Angular CLI disables native async/await in esbuild so zone.js can track it | [Angular CLI `getFeatureSupport`](https://github.com/angular/angular-cli/blob/c5d6f9f04d3a971b453b9189d8a344f8ca5e0fe2/packages/angular/build/src/tools/esbuild/utils.ts#L190-L199) |
+| P4 | Web: require the bundler to downlevel `async` (Babel plugins on Expo web) (7) | Angular CLI disables native async/await in esbuild so zone.js can track it | [Angular CLI `getFeatureSupport`](https://github.com/angular/angular-cli/blob/c5d6f9f04d3a971b453b9189d8a344f8ca5e0fe2/packages/angular/build/src/tools/esbuild/utils.ts#L190-L199) |
 | P5 | Metro helper installs the patch before app modules (6.1) | RN's own Metro config runs `InitializeCore` before the main module the same way; Sentry ships a `withSentryConfig` Metro wrapper | [RN `getModulesRunBeforeMainModule`](https://github.com/facebook/react-native/blob/6b9afd8a836604df111fad1d2fbcbce773bd0eaf/packages/metro-config/src/index.flow.js#L44) · [Sentry `withSentryConfig`](https://github.com/getsentry/sentry-react-native/blob/794a52a9e80ca0a7c4ee005264cd9cd3ee1533de/packages/core/src/js/tools/metroconfig.ts#L133) |
 | P6 | Spans created in JS, handed to native which owns transport (4.1) | Sentry RN: JS SDK builds envelopes, native SDK sends them (offline cache, retry) | [Sentry native transport](https://github.com/getsentry/sentry-react-native/blob/794a52a9e80ca0a7c4ee005264cd9cd3ee1533de/packages/core/src/js/transports/native.ts#L38) · [`sendEnvelope`](https://github.com/getsentry/sentry-react-native/blob/794a52a9e80ca0a7c4ee005264cd9cd3ee1533de/packages/core/src/js/wrapper.ts#L225) · this repo's earlier Kotlin `SpanData` conversion (commit `fe4d4b8`, removed `exportTraces`) |
 | P7 | Native-first init with JS fallback (4.4) | Sentry RN: native-first `RNSentrySDK.start`, JS `initNativeSdk` otherwise; Embrace checks `isStarted()` and starts from JS if needed | [Sentry `RNSentrySDK.m`](https://github.com/getsentry/sentry-react-native/blob/794a52a9e80ca0a7c4ee005264cd9cd3ee1533de/packages/core/ios/RNSentrySDK.m) · [Sentry `initNativeSdk`](https://github.com/getsentry/sentry-react-native/blob/794a52a9e80ca0a7c4ee005264cd9cd3ee1533de/packages/core/src/js/wrapper.ts#L289) · [Embrace `isStarted`](https://github.com/embrace-io/embrace-react-native-sdk/blob/db0e9a6e3677f61f822f9bd98a95c9ce95ee4f64/packages/core/src/index.ts#L29) |

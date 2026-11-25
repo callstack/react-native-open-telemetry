@@ -111,7 +111,7 @@ and returns a no-op handle. The SDK never throws into your app.
 already ends with it, so `https://host:4318` and `https://vendor.example/v1/traces` both work. It works the same on
 Android, iOS and web. URLs with a query string are not supported.
 
-## Bundler helpers
+## Metro helper
 
 The context patch must run before any app module. Web bundles also must not use native `async`, which the patch cannot
 see through.
@@ -131,19 +131,21 @@ Metro's `withOtel` only orders the setup: it runs the patch before any app modul
 compiles `async` down. Without the helper, the patch still installs when your code imports the package. Only code
 that ran before that import, such as React's scheduler capturing timers, loses its parent.
 
-**Vite** (`vite.config.*`), for **Vite 7 and older only**. Vite 8 (Rolldown/Oxc) is not supported.
+**Web (Expo web, Metro).** Use the same Metro `withOtel`. `babel-preset-expo` keeps native `async` on web, so lower
+it there in `babel.config.js`:
 
-```ts
-import {withOtel} from 'react-native-open-telemetry/vite';
-export default withOtel(defineConfig({plugins: [react()]}));
+```js
+module.exports = api => {
+  const web = api.caller(c => c?.platform === 'web');
+  return {
+    presets: ['babel-preset-expo'],
+    plugins: web ? ['@babel/plugin-transform-async-generator-functions', '@babel/plugin-transform-async-to-generator'] : [],
+  };
+};
 ```
 
-The Vite `withOtel` compiles `async`/`await` down for the app and its pre-bundled dependencies, and runs the SDK
-setup first. Without it, the startup probe logs an error (`console.error`) and marks the JS tracers with
+Without it, the startup probe logs an error (`console.error`) and marks the JS tracers with
 `com.callstack.context.degraded=true`. Parents are then lost after `await`, but never wrong.
-
-**webpack** has no helper yet. Add `@babel/plugin-transform-async-to-generator` to your Babel config, and import
-`react-native-open-telemetry` first in your entry.
 
 ## Native helpers and crossing the boundary
 
@@ -193,9 +195,9 @@ Documented exceptions:
   Bind the context yourself with `context.bind(ctx, fn)` or `context.with(...)` from `@opentelemetry/api`.
 - **`setInterval`.** Ticks run in `ROOT_CONTEXT`, so each tick's spans start a new trace. They do not join the trace
   that registered the interval, and v0 adds no link back to it.
-- **Code that captured `Promise.prototype.then` before the patch ran** (without the Metro/Vite helper, code that runs before the package import) runs
+- **Code that captured `Promise.prototype.then` before the patch ran** (without the Metro helper, code that runs before the package import) runs
   at ROOT and loses its parent. It never gets a wrong one.
-- **Native `async`** (a web bundle without the Vite helper, a future Hermes that keeps `async`) loses parents after
+- **Native `async`** (a web bundle without the Babel plugins above, a future Hermes that keeps `async`) loses parents after
   `await`. The startup probe detects this and sets `com.callstack.context.degraded=true` on the JS tracers' scope.
 
 ## Known limits (v0)

@@ -4,5 +4,5 @@
 
 v0: a rewrite around one trace across JS and native. Native-first init (`RNOtel.start` on Android and iOS) with a JS
 fallback (`startReactNativeSdk`), a context patch that carries the active span through `await`, promises and timers,
-and `withOtel` helpers for Metro and Vite. Removed (breaking): metrics, fetch instrumentation, session tagging and
+and a `withOtel` helper for Metro. Removed (breaking): metrics, fetch instrumentation, session tagging and
 the `openTelemetrySDK` init. See MIGRATION.md.
