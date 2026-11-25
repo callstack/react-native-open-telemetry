@@ -2,14 +2,14 @@ name: Nightly
 
 # Spec §9.4/§9.5 (Task 31). Setup steps follow ci.yml; no native caches here: every nightly build is from scratch.
 # `schedule` and `workflow_dispatch` only run workflow files from the default branch (main), so the real schedule is
-# first verified after merge to main (R28). On success, `mark-nightly` marks the commit with a `nightly` status.
+# first verified after merge to main (R28).
 on:
   schedule:
     - cron: '0 2 * * *'
   workflow_dispatch:
     inputs:
       dry_run:
-        description: 'Dry run: setup, app regeneration and packing only (no builds, no devices, no status)'
+        description: 'Dry run: setup, app regeneration and packing only (no builds, no devices)'
         type: boolean
         default: false
 
@@ -185,20 +185,3 @@ jobs:
             verify/e2e/.e2e/
           if-no-files-found: ignore
           include-hidden-files: true # verify/e2e/.e2e is a dot dir
-
-  # Marks the commit for the release gate (Task 32). A matrix entry with `experimental: true` does not block it.
-  mark-nightly:
-    needs: [e2e]
-    if: ${{ !inputs.dry_run }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      statuses: write
-    steps:
-      - name: Mark the commit with the `nightly` status
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: >
-          gh api 'repos/${{ github.repository }}/statuses/${{ github.sha }}'
-          -f state=success -f context=nightly -f description='Nightly matrix passed'
-          -f target_url='${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'

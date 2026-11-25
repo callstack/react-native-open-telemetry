@@ -73,7 +73,7 @@
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "prepare": "bunx bob build && (git config core.hooksPath .githooks || true)",
     "version": "bunx changeset version",
-    "release": "bunx changeset publish --tag next"
+    "publish": "bunx changeset publish"
   },
   "dependencies": {
     "@opentelemetry/api": "~1.10.0",

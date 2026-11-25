@@ -231,7 +231,7 @@ than the local arm64 one, so the 100 µs gate has less headroom there.
 ## Nightly (Task 31)
 
 `.github/workflows/scheduled.yml`, 02:00 UTC and `workflow_dispatch` (input `dry_run`). One matrix job `e2e`, one
-entry per row; `mark-nightly` then sets the commit status `nightly` (context `nightly`, the release gate of Task 32).
+entry per row. Check it is green before a release (CONTRIBUTING.md).
 
 | entry | what |
 |---|---|

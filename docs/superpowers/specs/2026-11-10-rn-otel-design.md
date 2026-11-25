@@ -774,9 +774,8 @@ one final `needs:` job that checks total wall-clock time. When a PR run exceeds 
 (cache native builds, shard targets, trim slow scenarios), never dropping a target: the full
 matrix on every PR is decided.
 
-**Releases:** only from commits on `main` whose full PR pipeline and stage 5 passed. Publish
-to the `next` dist-tag first; promote to `latest` after the next nightly is green on that
-commit.
+**Releases:** manual with changesets (`bun run version`, then `bun run publish`), from `main`
+once its PR pipeline and the latest nightly are green. No release workflow.
 
 **Failure scenarios** (E2E; the fake collector can refuse requests on demand):
 - collector down: the app doesn't block or crash; spans arrive once it is back.
