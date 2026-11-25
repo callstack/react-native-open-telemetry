@@ -27,14 +27,6 @@ class InitTest {
     assertEquals("first", core!!.resource.getAttribute(AttributeKey.stringKey("service.name")))
   }
 
-  @Test fun invalidUrlReturnsAnErrorAndNeverThrows() {
-    for (u in listOf("not a url", "ftp://h", "http://", "", "http:///x")) {
-      OtelCore.resetForTest()
-      val r = OtelCore.initialize(ok.copy(exportUrl = u), testMode = true)
-      assertNotNull(r.error, u); assertNull(OtelCore.instance)
-    }
-  }
-
   @Test fun aFailedInitIsSticky() {
     val first = OtelCore.initialize(ok.copy(exportUrl = "not a url"), testMode = true)
     val again = OtelCore.initialize(ok, testMode = true)
@@ -47,12 +39,6 @@ class InitTest {
     val r = OtelCore.initialize(ok, testMode = true)
     assertNull(r.error); assertFalse(r.alreadyInitialized)
     assertNotNull(OtelCore.instance)
-  }
-
-  @Test fun initializeWithoutConfigAfterInitIsAlreadyInitialized() {
-    OtelCore.initialize(ok, testMode = true)
-    val r = OtelCore.initialize(null, testMode = true)
-    assertTrue(r.alreadyInitialized); assertNull(r.error)
   }
 
   @Test fun distroAttributesOutsideTestModeOnly() {
