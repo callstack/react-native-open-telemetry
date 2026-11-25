@@ -96,7 +96,16 @@ const write = (f: string, o: unknown) => {
   fs.writeFileSync(f, JSON.stringify(o, null, 2) + '\n');
 };
 
-export function compareToExpected(scenario: string, platform: Platform, actual: OtlpJson): {ok: boolean; report: string} {
+/**
+ * `draft` (e2e only, `VERIFY_E2E_DRAFT=1`): a missing expected file is written from `actual` and the compare still
+ * fails, so a draft never passes unreviewed. An existing file is never overwritten.
+ */
+export function compareToExpected(
+  scenario: string,
+  platform: Platform,
+  actual: OtlpJson,
+  {draft = false}: {draft?: boolean} = {},
+): {ok: boolean; report: string} {
   const fail = (diffs: Diff[], expectedFile?: string) => {
     write(abs('artifacts', scenario, `${platform}.otlp.json`), actual);
     return {ok: false, report: formatReport(scenario, platform, diffs, expectedFile)};
@@ -108,7 +117,11 @@ export function compareToExpected(scenario: string, platform: Platform, actual: 
     write(f, actual);
     return {ok: true, report: `updated ${f}`};
   }
-  if (!fs.existsSync(f)) return fail([{path: 'file', expected: f, actual: undefined}]);
+  if (!fs.existsSync(f)) {
+    if (!draft) return fail([{path: 'file', expected: f, actual: undefined}]);
+    write(f, actual);
+    return {ok: false, report: `drafted ${rel('expected', scenario, `${platform}.otlp.json`)}, review it`};
+  }
   const diffs = diffOtlp(JSON.parse(fs.readFileSync(f, 'utf8')), actual);
   return diffs.length ? fail(diffs) : {ok: true, report: ''};
 }

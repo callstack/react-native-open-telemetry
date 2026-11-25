@@ -9,5 +9,5 @@ export default scenario(
   async ({tracer}) => {
     tracer.startSpan('smoke').end();
   },
-  {runners: ['e2e'], targets: ['android', 'ios'], pending: true},
+  {runners: ['e2e'], targets: ['android', 'ios']},
 );

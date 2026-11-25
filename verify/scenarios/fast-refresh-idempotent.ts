@@ -9,4 +9,4 @@ import nestAfterAwait from './nest-after-await';
  * (b) the refresh edit re-evaluates the patch module (otherwise (a) holds trivially).
  * The `nest-after-await` body then still gives its usual output (one `child` under `parent`).
  */
-export default scenario('fast-refresh-idempotent', nestAfterAwait.run, {runners: ['e2e'], pending: true});
+export default scenario('fast-refresh-idempotent', nestAfterAwait.run, {runners: ['e2e'], targets: ['android', 'ios']});

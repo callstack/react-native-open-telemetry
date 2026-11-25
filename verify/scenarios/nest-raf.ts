@@ -14,5 +14,5 @@ export default scenario(
       root.end(at(20));
     });
   },
-  {runners: ['e2e'], pending: true}, // Task 13
+  {runners: ['e2e']}
 );

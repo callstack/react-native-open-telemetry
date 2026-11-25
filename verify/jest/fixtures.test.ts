@@ -11,14 +11,15 @@ import type {Otel, SeamSpan} from '../../src/native/Otel.nitro';
 import {allScenarios} from '../scenarios';
 import {pendingScenarios} from '../harness/compare';
 
-const NAMES = ['handoff-basic', 'rich-span', 'odd-attributes', 'nest-after-await'];
 const CONFIG = {
   serviceName: 'verify',
-  serviceVersion: '0.0.0',
   resourceAttributes: [],
   exportUrl: '<collector>',
   exportHeaders: [],
 };
+// R11: per-scenario config; export-headers proves the headers reach the collector (fast-jvm asserts headers.json)
+const configFor = (name: string) =>
+  name === 'export-headers' ? {...CONFIG, exportHeaders: [{key: 'x-api-key', value: 'test'}]} : CONFIG;
 const dir = path.join(process.env.VERIFY_DIR ?? path.join(__dirname, '..'), 'fixtures');
 
 function setup() {
@@ -81,11 +82,11 @@ describe('NativeHandOffProcessor', () => {
   });
 });
 
-for (const name of NAMES) {
-  const s = allScenarios().find(x => x.name === name);
-  if (!s) throw new Error('unknown fixture scenario ' + name);
+// R6: every active Jest scenario has a seam fixture
+for (const s of allScenarios().filter(x => !x.pending && (x.runners.includes('jest') || x.runners.includes('seam')))) {
+  const name = s.name;
   // a pending body is not its final version yet: keep the reviewed fixture until the owning task un-pends it
-  if (s.pending || pendingScenarios.has(name)) {
+  if (pendingScenarios.has(name)) {
     test.todo(`${name} fixture matches hand-off payloads`);
     continue;
   }
@@ -96,8 +97,8 @@ for (const name of NAMES) {
     const file = path.join(dir, `${name}.handoff.json`);
     if (process.env.VERIFY_UPDATE === '1') {
       fs.mkdirSync(dir, {recursive: true});
-      fs.writeFileSync(file, encodeFixture({config: CONFIG, spans: actual}) + '\n');
+      fs.writeFileSync(file, encodeFixture({config: configFor(name), spans: actual}) + '\n');
     }
-    expect(decodeFixture(fs.readFileSync(file, 'utf8'))).toStrictEqual({config: CONFIG, spans: actual});
+    expect(decodeFixture(fs.readFileSync(file, 'utf8'))).toStrictEqual({config: configFor(name), spans: actual});
   });
 }

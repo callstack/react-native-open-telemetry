@@ -23,5 +23,4 @@ export default scenario(
       tap.end(at(400));
     });
   },
-  {pending: true}, // Task 10
 );

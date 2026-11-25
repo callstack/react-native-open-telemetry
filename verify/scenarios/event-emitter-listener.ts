@@ -18,6 +18,5 @@ export default scenario(
       sub.remove();
     }
   },
-  // web: DeviceEventEmitter on react-native-web not confirmed
-  {runners: ['e2e'], targets: ['android', 'ios'], pending: true}, // Task 13
+  {runners: ['e2e'], targets: ['android', 'ios']}
 );

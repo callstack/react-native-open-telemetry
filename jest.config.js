@@ -23,6 +23,5 @@ module.exports = {
       ],
     },
     '<rootDir>/verify/jest/jest.scenarios.config.js',
-    // the degraded project lives under verify/jest/ (later task)
   ],
 };

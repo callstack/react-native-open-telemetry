@@ -28,5 +28,4 @@ export default scenario(
     });
     await done;
   },
-  {pending: true}, // Task 10
 );

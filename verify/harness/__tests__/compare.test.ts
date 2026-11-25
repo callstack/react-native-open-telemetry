@@ -86,6 +86,19 @@ describe('compareToExpected', () => {
     expect(r.report).toContain('got (none)');
   });
 
+  test('draft writes a missing file but still fails, and never overwrites', () => {
+    const o = otlp();
+    writeShape(o);
+    const f = path.join(dir, 'expected/sc.js.otlp.json');
+    const r = compareToExpected('sc', 'js', o, {draft: true});
+    expect(r).toEqual({ok: false, report: 'drafted verify/expected/sc.js.otlp.json, review it'});
+    expect(JSON.parse(fs.readFileSync(f, 'utf8'))).toEqual(o);
+    expect(compareToExpected('sc', 'js', o, {draft: true}).ok).toBe(true);
+    const r2 = compareToExpected('sc', 'js', otlp({status: {code: 1}}), {draft: true});
+    expect(r2.ok).toBe(false);
+    expect(JSON.parse(fs.readFileSync(f, 'utf8'))).toEqual(o);
+  });
+
   test('shape mismatch report points at the shape file', () => {
     writeShape(otlp());
     const r = compareToExpected('sc', 'js', otlp({name: 'other'}));

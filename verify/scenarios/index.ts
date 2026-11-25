@@ -8,7 +8,6 @@ import collectorDown from './collector-down';
 import concurrentInterleaved from './concurrent-interleaved';
 import crossJsToNative from './cross-js-to-native';
 import crossNativeToJs from './cross-native-to-js';
-import degradedProbe from './degraded-probe';
 import errorInCallback from './error-in-callback';
 import eventEmitterListener from './event-emitter-listener';
 import exportHeaders from './export-headers';
@@ -28,6 +27,5 @@ import perfBudget from './perf-budget';
 import richSpan from './rich-span';
 import rootNoLeak from './root-no-leak';
 import smokeDevice from './smoke-device';
-import smokeJs from './smoke-js';
 
-export const allScenarios = (): Scenario[] => [asyncGenerator, backgroundFlush, batchingSharedQueue, capturedThen, collectorDown, concurrentInterleaved, crossJsToNative, crossNativeToJs, degradedProbe, errorInCallback, eventEmitterListener, exportHeaders, fastRefreshIdempotent, flushAfterReload, handoffBasic, interactionManager, intervalNewRoot, nativeInitFailure, nestAfterAwait, nestPromiseAllRace, nestRaf, nestTimersMicrotasks, neverSettlingPromise, oddAttributes, perfBudget, richSpan, rootNoLeak, smokeDevice, smokeJs];
+export const allScenarios = (): Scenario[] => [asyncGenerator, backgroundFlush, batchingSharedQueue, capturedThen, collectorDown, concurrentInterleaved, crossJsToNative, crossNativeToJs, errorInCallback, eventEmitterListener, exportHeaders, fastRefreshIdempotent, flushAfterReload, handoffBasic, interactionManager, intervalNewRoot, nativeInitFailure, nestAfterAwait, nestPromiseAllRace, nestRaf, nestTimersMicrotasks, neverSettlingPromise, oddAttributes, perfBudget, richSpan, rootNoLeak, smokeDevice];

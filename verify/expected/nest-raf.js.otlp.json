@@ -20,10 +20,21 @@
             {
               "traceId": "0a000000000000000000000000000001",
               "spanId": "0a00000000000001",
-              "name": "smoke",
+              "name": "root",
               "kind": 1,
               "startTimeUnixNano": "1767225600000000000",
-              "endTimeUnixNano": "1767225600000001000",
+              "endTimeUnixNano": "1767225600000020000",
+              "status": {},
+              "flags": 257
+            },
+            {
+              "traceId": "0a000000000000000000000000000001",
+              "spanId": "0a00000000000002",
+              "parentSpanId": "0a00000000000001",
+              "name": "frame",
+              "kind": 1,
+              "startTimeUnixNano": "1767225600000010000",
+              "endTimeUnixNano": "1767225600000011000",
               "status": {},
               "flags": 257
             }

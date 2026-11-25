@@ -16,5 +16,4 @@ export default scenario(
       root.end(at(60));
     });
   },
-  {pending: true}, // Task 10
 );

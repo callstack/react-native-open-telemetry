@@ -93,3 +93,15 @@ test('begin rejects unsafe scenario/platform names', async () => {
   });
   expect(r.status).toBe(400);
 });
+
+test('collector gunzips content-encoding: gzip bodies', async () => {
+  c.begin('g', 'ios');
+  const r = await fetch(`${c.url}/v1/traces`, {
+    method: 'POST',
+    headers: {'content-type': 'application/json', 'content-encoding': 'gzip'},
+    body: require('zlib').gzipSync(body('zipped')),
+  });
+  expect(r.status).toBe(200);
+  const out = await c.end();
+  expect(out.resourceSpans![0].scopeSpans[0].spans.map((s: any) => s.name)).toEqual(['zipped']);
+});
