@@ -191,11 +191,9 @@ class NativeHandOffProcessor implements SpanProcessor {
 - Layout that works with autolinking (Claude's call, from review): shared sources, two
   build entry points.
   - Android: core sources in e.g. `android/src/core/kotlin`, compiled into the library by the
-    normal `android/` project; a standalone JVM-only Gradle project points its `srcDir` at
-    the same folder so `gradle test` runs without AGP. Core depends on `opentelemetry-sdk`
-    and the OTLP exporter only.
-  - iOS: core sources in e.g. `ios/Core/*.swift`, listed in the podspec `source_files`; a
-    root `Package.swift` uses the same path for `swift test` on macOS.
+    normal `android/` project. Core depends on `opentelemetry-sdk` and the OTLP exporter
+    only.
+  - iOS: core sources in e.g. `ios/Core/*.swift`, listed in the podspec `source_files`.
     *(R24, Task 25: the app's non-interop Swift `AppDelegate` cannot import a Nitro C++-interop module, so iOS ships
     two pods: pure-Swift `ReactNativeOpenTelemetryCore` (`ios/Core` + `RNOtel`) and the Nitro adapter pod that
     depends on it. Autolinking links one podspec per package, so apps add `pod 'ReactNativeOpenTelemetryCore',
@@ -673,8 +671,6 @@ The same scenarios run in every layer, fastest first.
 | Layer | Runner | Covers | When |
 |---|---|---|---|
 | JS (Node) | **Jest** + `babel-jest` + `@react-native/babel-preset` | context patch, hand-off (fake Nitro module) | every iteration |
-| Kotlin core | JUnit via `gradle test` (plain JVM) | native hand-off → OTLP | every iteration |
-| Swift core | XCTest via `swift test` (macOS) | native hand-off → OTLP | every iteration |
 | E2E: iOS, Android, web | **[`e2e`](https://www.npmjs.com/package/e2e)** (agent-device for mobile, Playwright for web) | everything for real: Nitro glue, both init paths, threading, reload, failure paths, browser SDK, Metro helper (matrix in 9.4) | **every PR** once the seam exists (decided) |
 
 - **Why Jest:** it compiles scenarios the way RN does (`await` → `.then`). Bun's test runner
@@ -702,27 +698,22 @@ The same scenarios run in every layer, fastest first.
 ```mermaid
 flowchart LR
   sc["Scenarios<br/>(verify/scenarios)"] --> js["JS: Jest (Node)"]
-  js -- "writes handOff payloads" --> fx[("Shared payload<br/>fixtures")]
-  fx --> kt["Kotlin core<br/>gradle test"]
-  fx --> sw["Swift core<br/>swift test"]
   sc --> e2e["e2e: iOS / Android / web<br/>(every PR)"]
   js --> fc
-  kt --> fc
-  sw --> fc
   e2e --> fc
   fc[("Fake collector<br/>OTLP → OTLP/JSON")] --> cmp{"exact compare<br/>+ parity shape"}
   exp[("verify/expected<br/>(CODEOWNERS)")] --> cmp
   cmp --> out["structured diff<br/>+ verify/artifacts"]
 ```
 
-- **Shared payload fixture** (Claude's call): JS generates the exact `handOff` payloads for
-  the scenarios; the Kotlin and Swift tests consume the same fixture files. This is the
-  contract test for the seam (int vs double, optional vs null, attribute arrays, HrTime).
+- **Native cores are proven on devices:** the Kotlin and Swift cores have no host-side test
+  runs. The device e2e runs every scenario through the real seam and native core and compares
+  against the same `*.android` / `*.ios` expected files.
 - **Fake collector**: a small Node OTLP/HTTP receiver decoding protobuf with the official
   `opentelemetry-proto` definitions and producing OTLP/JSON (GitHub macOS runners can't run
   Docker, so no Collector image).
 - **No separate Hermes layer:** E2E runs on real Hermes; Jest on Node is the fast loop. The
-  future native-`await` case is covered by a Jest project that keeps native `async`; an
+  future native-`await` case is covered by the probe's unit test; an
   `unstable_preserveAsync` device build is added once a Hermes release ships it.
 - E2E needs `10.0.2.2` on Android, cleartext config and iOS ATS local-networking
   allowance, scoped to the example app only.
@@ -734,9 +725,6 @@ flowchart LR
   (no context leak into later work), cross-boundary both ways, one rich span (every
   attribute type, events, links, status) to catch seam drift, `perf-budget` (below).
   The degraded probe is a unit test: a native-`async` step built with `new Function` defeats the patch.
-- **Fixture encoding:** fixtures are JSON, which can't hold `NaN`, `Infinity` or `-0`; these
-  are written as `{"$num": "NaN" | "Infinity" | "-Infinity" | "-0"}` and decoded by the
-  Kotlin and Swift test readers.
 - **Performance guardrail (council review):** one e2e scenario, `perf-budget`, on the
   Android target only: 1,000 spans with 10 attributes each through the real hand-off, and
   10,000 awaits with the patch on vs off (test build flag). It fails only on loose budgets
@@ -771,7 +759,7 @@ flowchart LR
 | Stage | Runs | Checks |
 |---|---|---|
 | **1. Static** (seconds) | pre-commit hook, and every push | `tsc`; `oxlint`; Nitro codegen is current (`nitrogen && git diff --exit-code nitrogen/`); `npm pack` contents include `lib/`, `nitrogen/`, `android/`, `ios/`, `Package.swift`, the podspec and the `metro/` helper; unit tests of the fake collector's normalizer (it sorts and merges, so a bug there would hide or invent diffs everywhere) |
-| **2. Fast loop** (seconds) | every iteration, local and CI | Jest (Node), `gradle test`, `swift test`, all through the fake collector against expected files; the handful of unit tests (int vs double, `HrTime`, endpoint) |
+| **2. Fast loop** (seconds) | every iteration, local and CI | Jest (Node) through the fake collector against expected files; the handful of unit tests (int vs double, `HrTime`, endpoint) |
 | **3. E2E matrix** (minutes) | every PR | `e2e` on five targets: **bare app** (native-first init) on iOS and Android, **Expo prebuild app** (JS-fallback init) on iOS and Android, **web** (the Expo app's Metro web export). All golden scenarios, the failure scenarios below, and one smoke scenario per target without test mode. Parity check across all five outputs. `perf-budget` on Android. |
 | **4. OTLP compliance** | every PR, Linux runner with Docker | The fake collector keeps every raw request it received. They are replayed, together with every expected file, to the **official OTel Collector** image (pinned) with an OTLP receiver; the job fails on any rejected request or decode error in its logs. Proves both our output and our spec files are real OTLP. |
 | **5. Scheduled** | nightly, and before every release | E2E on the **minimum and latest supported RN**; the fast loop and E2E against the **latest upstream** `@opentelemetry/*`, otel-java and opentelemetry-swift (catches upstream changes before a version bump); the **packed tarball** (`npm pack`) installed into a fresh bare app and a fresh Expo app, running the smoke scenario (catches missing files and broken autolinking). |
@@ -894,7 +882,7 @@ Left out until needed:
 14. Sequencing, with the real-RN-app context milestone first (8).
 15. Test mode as a build flag; explicit whole-µs timestamps in scenarios; attribute/event
     sorting; parity shape; one non-deterministic smoke scenario per device (9.1).
-16. Shared payload fixture as the seam contract test (9.2).
+16. Native cores proven by device e2e against the same expected files (9.2).
 17. One endpoint meaning on every platform (the traces endpoint, used as given); returned handle `{ tracerProvider, forceFlush, shutdown }` (4.4).
 18. `perf-budget` guardrail (9.2, 9.4).
 
@@ -929,4 +917,3 @@ direct precedent was found; treat those as the highest-risk parts.
 | P21 | *(removed: the mutant meta-check was cut from v0, see 9.3)* | | |
 | P22 | Hermetic fake collector decoding the official protos (9.2) | Official OTLP protobuf definitions | [opentelemetry-proto](https://github.com/open-telemetry/opentelemetry-proto) |
 | P23 | Pure Kotlin/Swift core + thin Nitro adapters; shared-sources layout (4.2) | **Ours**: no direct precedent found in the RN OTel SDKs reviewed | — |
-| P24 | Shared JS-generated payload fixtures as the seam contract test (9.2) | Consumer-driven contract testing (general practice) | [Pact: consumer-driven contracts](https://docs.pact.io/) |

@@ -94,19 +94,17 @@ jobs:
           jq -r '.dependencies | keys[] | select(startswith("@opentelemetry/")) + "@latest"' package.json | xargs bun add
           java=$(curl -fsSL https://repo1.maven.org/maven2/io/opentelemetry/opentelemetry-bom/maven-metadata.xml |
             sed -n 's:.*<release>\(.*\)</release>.*:\1:p')
-          perl -pi -e "s/opentelemetry-bom:[\d.]+/opentelemetry-bom:$java/" android/build.gradle android/core-jvm/build.gradle.kts
+          perl -pi -e "s/opentelemetry-bom:[\d.]+/opentelemetry-bom:$java/" android/build.gradle
           for repo in opentelemetry-swift opentelemetry-swift-core; do
             v=$(git ls-remote --tags --refs "https://github.com/open-telemetry/$repo" | sed 's:.*/::; s/^v//' |
               grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
-            perl -0pi -e "s|($repo\", \.upToNextMinor\(from: \")[\d.]+|\${1}$v|" Package.swift
             perl -0pi -e "s|($repo',\s*requirement: \{ kind: 'upToNextMinorVersion', minimumVersion: ')[\d.]+|\${1}$v|" \
               ReactNativeOpenTelemetryCore.podspec
-            grep -qF "$repo\", .upToNextMinor(from: \"$v\")" Package.swift || { echo "::error::Package.swift: $repo not bumped"; exit 1; }
             grep -qF "minimumVersion: '$v'" ReactNativeOpenTelemetryCore.podspec || { echo "::error::podspec: $repo not bumped"; exit 1; }
           done
           # resolve the bumped Swift packages afresh
           rm -f example/ios/OpenTelemetryExample.xcworkspace/xcshareddata/swiftpm/Package.resolved
-          git diff -- package.json android/build.gradle android/core-jvm/build.gradle.kts Package.swift '*.podspec'
+          git diff -- package.json android/build.gradle '*.podspec'
       - run: bun install --frozen-lockfile
       - name: Regenerate example/ at React Native ${{ matrix.rn }}
         if: matrix.rn
@@ -120,8 +118,7 @@ jobs:
         run: verify/nightly/app.sh pack '${{ matrix.pack }}'
       - name: Fast loop
         if: matrix.deps && env.DRY_RUN != 'true'
-        # every non-e2e stage on Linux (fast-swift skips there); fast-swift on macOS
-        run: bun verify ${{ matrix.platform == 'ios' && 'fast-swift' || '' }}
+        run: bun verify # every non-e2e stage
       - name: expo prebuild
         if: matrix.app == 'expo'
         working-directory: example-expo

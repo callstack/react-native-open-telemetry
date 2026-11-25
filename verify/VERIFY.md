@@ -28,12 +28,8 @@ cd ../ios && OTEL_TEST_MODE=1 pod install && OTEL_TEST_MODE=1 xcodebuild -worksp
   -scheme OpenTelemetryExpo -configuration Release -sdk iphonesimulator -derivedDataPath build build
 ```
 
-`fast-jvm` replays every `verify/fixtures/<name>.handoff.json` through the Kotlin core (`android/core-jvm`, run with
-the example app's Gradle wrapper) into a collector on a free port and compares `<name>.android.otlp.json`. The JVM tests run otel-java's
-own OkHttp 5; devices run React Native's OkHttp 4.9.2.
-
-`fast-swift` (macOS only; skips elsewhere) does the same through the Swift core: `swift test` over `Package.swift`
-(`ios/Core`, tests in `ios/CoreTests`) into `<name>.ios.otlp.json`. Both stages share `harness/nativeReplay.ts`.
+The Kotlin and Swift cores have no host-side test runs: the `e2e` stage runs every scenario on Android and iOS
+through the real seam and native core and compares against `<name>.android.otlp.json` / `<name>.ios.otlp.json`.
 
 **iOS time floor (R22).** opentelemetry-swift 2.6 keeps times as `Date` and exports
 `UInt64(timeIntervalSince1970 * 1e9)`, so whole-µs seam times come back on a ~238–256 ns grid, truncated
@@ -43,11 +39,11 @@ own OkHttp 5; devices run React Native's OkHttp 4.9.2.
 **iOS vs Android/JS goldens.** Apart from times, the `ios` files differ only by what the opentelemetry-swift 2.6 OTLP
 encoder (`SpanAdapter`) never writes: span `flags` (257), span `traceState`, link `flags`, link `traceState`, and the
 scope `schemaUrl` on `ScopeSpans`. The core passes them all into `SpanData`; the exporter drops them. Accepted for v0
-(no encoder reimplementation); today's fixtures exercise span flags, link flags/traceState and the scope `schemaUrl`.
+(no encoder reimplementation); `rich-span` exercises span flags, link flags/traceState and the scope `schemaUrl`.
 
 **iOS `TRACEPARENT` (upstream caveat).** opentelemetry-swift reads a `TRACEPARENT` environment variable at provider
 construction and makes it the parent of every root span, even with `setNoParent()`. Apps only see it when launched with
-it (Xcode scheme, `SIMCTL_CHILD_TRACEPARENT`); the verify stages unset it for native runs.
+it (Xcode scheme, `SIMCTL_CHILD_TRACEPARENT`).
 
 `verify/e2e/scenarios.e2e.ts` runs one test per scenario with runner `e2e`, not `pending`, on each target it lists,
 except the scenarios with their own e2e file. Each test cold-starts the app (R5). e2e is compare-only;
@@ -139,8 +135,8 @@ HybridObjects: no native `testMode` line, scenarios get no `native`).
 - **Probe:** `babel-preset-expo` keeps native `async` on web; `example-expo/babel.config.js` adds the two async
   plugins for the web platform, so the bundle has no native `async`/`for await`; no `com.callstack.context.degraded`
   scope attribute in any web file.
-- **Files:** every `*.web.otlp.json` is byte-identical to the scenario's `.js` file (`collector-down` and the `seam`
-  scenarios, which have no `.js`, equal their `.android` file). The proto exporter and the web resource (`service.name` only in test mode)
+- **Files:** every `*.web.otlp.json` is byte-identical to the scenario's `.js` file (`collector-down`, `handoff-basic`,
+  `odd-attributes` and `export-headers`, which have no `.js`, equal their `.android` file). The proto exporter and the web resource (`service.name` only in test mode)
   change nothing visible.
 - **collector-down:** the OTel JS exporter retries a 503 inside the export (backoff 1 s ×1.5, ±20 %), so the first
   `flush` resolves after the three refusals (~4.7 s; up to 5.7 s): the web flush timeout is 10 s.
@@ -240,7 +236,7 @@ entry per row; `mark-nightly` then sets the commit status `nightly` (context `ni
 | entry | what |
 |---|---|
 | `rn-0.79-{android,ios}`, `rn-latest-{android,ios}` | `example/` regenerated from the RN template at that version, full e2e (test mode) |
-| `deps-latest-{android,ios}` | `@opentelemetry/*`, the otel-java BOM and opentelemetry-swift(-core) bumped to latest; fast loop (`bun verify` on Linux, `fast-swift` on macOS) + e2e |
+| `deps-latest-{android,ios}` | `@opentelemetry/*`, the otel-java BOM and opentelemetry-swift(-core) bumped to latest; fast loop (`bun verify`) + e2e |
 | `pack-bare-{android,ios}` | `npm pack` → tarball into a fresh bare app (template at latest) → smoke-device, test mode off |
 | `pack-expo-{android,ios}` | tarball into the Expo app (`prebuild --clean`) → smoke-device, test mode off (the Expo smoke, X11) |
 | `api26-android-smoke` | smoke-device on API 26: the process-name fallback (Task 24) |
@@ -344,10 +340,10 @@ e2e targets are android, ios and web unless the Runners column names them.
 | `interaction-manager` | `runAfterInteractions` callback is a child of the caller's span | 13 | e2e | pending: RN 0.88 removed `InteractionManager` |
 | `nest-raf` | a `requestAnimationFrame` callback keeps its scheduling context | 13 | e2e | passing |
 | `event-emitter-listener` | a synchronous `DeviceEventEmitter` listener is a child of the emitter's span | 13 | e2e (android, ios) | passing |
-| `handoff-basic` | a span crosses the seam intact | 8, 15, 18 | seam, e2e | passing |
+| `handoff-basic` | a span crosses the seam intact | 8, 15, 18 | e2e | passing |
 | `rich-span` | every attribute type, events, links, status, scope survive the seam | 8, 15, 18 | jest, e2e | passing |
-| `odd-attributes` | NaN, ±Infinity, -0, big ints, empty arrays survive the seam | 8, 15, 18 | seam, e2e | passing |
-| `export-headers` | configured export headers are sent on every request | 16, 19, 23, 24, 25 | seam, e2e | passing |
+| `odd-attributes` | NaN, ±Infinity, -0, big ints, empty arrays survive the seam | 8, 15, 18 | e2e | passing |
+| `export-headers` | configured export headers are sent on every request | 16, 19, 23, 24, 25 | e2e | passing |
 | `cross-js-to-native` | a native span started from JS is a child of the JS span | 26 | e2e (android, ios) | passing |
 | `cross-native-to-js` | a JS span started under a native span's context is its child | 26 | e2e (android, ios) | passing |
 | `collector-down` | app never blocks; spans arrive exactly once when the collector is back | 23, 27 | e2e | passing |
@@ -362,7 +358,7 @@ e2e targets are android, ios and web unless the Runners column names them.
 
 1. `verify/scenarios/<guarantee-id>.ts`: `export default scenario('<guarantee-id>', async ({tracer, at}) => {…}, opts)`.
    Explicit `at(µs)` start/end times on every span; parents through `context.active()` (`startActiveSpan`), not
-   explicit parent contexts. `opts.runners` defaults to `['jest', 'e2e']` (`'seam'` records only the hand-off fixture, for scenarios whose JS output would be upstream's alone), `opts.targets` to
+   explicit parent contexts. `opts.runners` defaults to `['jest', 'e2e']`, `opts.targets` to
    `['android', 'ios', 'web']` (platforms or target names like `android-bare`; the e2e harness skips other targets); `pending: true` until it passes.
 2. Hand-write `verify/expected/<guarantee-id>.shape.json` in exactly `shapeOf()`'s format (traces ordered by first
    span start, spans sorted by name, `kind` 1 = INTERNAL) and get it reviewed.
