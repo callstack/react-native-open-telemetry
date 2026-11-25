@@ -1,5 +1,7 @@
 package com.callstack.otel.core
 
+import com.margelo.nitro.callstack.otel.SeamSpan
+import com.margelo.nitro.callstack.otel.SeamSpanContext
 import io.opentelemetry.api.trace.SpanContext
 import io.opentelemetry.api.trace.SpanKind
 import io.opentelemetry.api.trace.StatusCode
@@ -27,7 +29,7 @@ private fun traceState(s: String?): TraceState {
 }
 
 private fun contextOf(c: SeamSpanContext): SpanContext =
-  SpanContext.create(c.traceId, c.spanId, TraceFlags.fromByte(c.traceFlags.toByte()), traceState(c.traceState))
+  SpanContext.create(c.traceId, c.spanId, TraceFlags.fromByte(c.traceFlags.toInt().toByte()), traceState(c.traceState))
 
 /**
  * A finished JS span handed over the seam: the frozen [ReadableSpan] the native BatchSpanProcessor queues, and the
@@ -40,12 +42,12 @@ class JsSpanData(private val span: SeamSpan, private val resource: Resource) : R
       ?: SpanContext.getInvalid()
   }
   // API SpanKind and Java SpanKind share their order (INTERNAL, SERVER, CLIENT, PRODUCER, CONSUMER); OTLP's +1 is the exporter's job.
-  private val spanKind by lazy { SpanKind.values().getOrElse(span.kind) { SpanKind.INTERNAL } }
+  private val spanKind by lazy { SpanKind.values().getOrElse(span.kind.toInt()) { SpanKind.INTERNAL } }
   private val attrs by lazy { attributesOf(span.attributes) }
-  private val eventList by lazy { span.events.map { EventData.create(it.time.epochNanos, it.name, attributesOf(it.attributes)) } }
+  private val eventList by lazy { span.events.map { EventData.create(epochNanos(it.time), it.name, attributesOf(it.attributes)) } }
   private val linkList by lazy { span.links.map { LinkData.create(contextOf(it.context), attributesOf(it.attributes)) } }
   private val statusData by lazy {
-    StatusData.create(StatusCode.values().getOrElse(span.status.code) { StatusCode.UNSET }, span.status.message.orEmpty())
+    StatusData.create(StatusCode.values().getOrElse(span.status.code.toInt()) { StatusCode.UNSET }, span.status.message.orEmpty())
   }
   private val scope by lazy {
     InstrumentationScopeInfo.builder(span.scope.name)
@@ -59,8 +61,8 @@ class JsSpanData(private val span: SeamSpan, private val resource: Resource) : R
   override fun getSpanContext() = context
   override fun getParentSpanContext() = parent
   override fun getStatus() = statusData
-  override fun getStartEpochNanos() = span.start.epochNanos
-  override fun getEndEpochNanos() = span.end.epochNanos
+  override fun getStartEpochNanos() = epochNanos(span.start)
+  override fun getEndEpochNanos() = epochNanos(span.end)
   override fun getAttributes() = attrs
   override fun getEvents() = eventList
   override fun getLinks() = linkList

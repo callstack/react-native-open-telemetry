@@ -1,5 +1,6 @@
 package com.callstack.otel.core
 
+import com.margelo.nitro.callstack.otel.SeamSpan
 import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter
 import io.opentelemetry.sdk.common.CompletableResultCode
 import io.opentelemetry.sdk.trace.data.SpanData
@@ -33,7 +34,7 @@ class OtelCore(config: CoreConfig, testMode: Boolean = false, distroVersion: Str
   /** The one resource of the app; in test mode built from config only (no `telemetry.*`). */
   val resource: Resource = (if (testMode) Resource.empty() else Resource.getDefault()).merge(
     Resource.create(
-      attributesOf(config.resourceAttributes).toBuilder()
+      config.resourceAttributes.toBuilder()
         .put("service.name", config.serviceName)
         .apply { config.serviceVersion?.let { put("service.version", it) } }
         .apply {
@@ -62,7 +63,7 @@ class OtelCore(config: CoreConfig, testMode: Boolean = false, distroVersion: Str
     .build()
 
   /** JS-thread work: wrap and enqueue only; SpanData is built on the export thread. */
-  fun handOff(spans: List<SeamSpan>) {
+  fun handOff(spans: Array<SeamSpan>) {
     for (s in spans) bsp.onEnd(JsSpanData(s, resource))
   }
 

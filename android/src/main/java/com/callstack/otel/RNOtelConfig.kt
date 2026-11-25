@@ -1,8 +1,7 @@
 package com.callstack.otel
 
-import com.callstack.otel.core.AttrValue
 import com.callstack.otel.core.CoreConfig
-import com.callstack.otel.core.SeamAttribute
+import io.opentelemetry.api.common.Attributes
 
 /** Native-first config (spec §4.4): `RNOtel.start(this) { serviceName = …; export { url = … } }`. */
 class RNOtelConfig {
@@ -24,7 +23,7 @@ class RNOtelConfig {
   internal fun toCore() = CoreConfig(
     serviceName = serviceName,
     serviceVersion = serviceVersion,
-    resourceAttributes = resourceAttributes.map { (k, v) -> SeamAttribute(k, AttrValue.Str(v)) },
+    resourceAttributes = Attributes.builder().apply { resourceAttributes.forEach { (k, v) -> put(k, v) } }.build(),
     exportUrl = export.url,
     exportHeaders = export.headers,
   )

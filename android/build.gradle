@@ -52,11 +52,6 @@ android {
     cmake { path "CMakeLists.txt" }
   }
 
-  // the pure Kotlin core (no Android or Nitro imports)
-  sourceSets {
-    main { java.srcDirs += "src/core/kotlin" }
-  }
-
   packagingOptions {
     excludes = [
       "META-INF",
