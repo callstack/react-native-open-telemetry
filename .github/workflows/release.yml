@@ -77,7 +77,7 @@ jobs:
       - run: bun run prepare
       - run: bunx changeset status --verbose --since=origin/main
       - name: Version (what the version PR would contain)
-        run: bun run version && git status --short && git diff -- package.json src/sdk/config.ts ios/RNOtel/RNOtel.swift
+        run: bun run version && git status --short && git diff -- package.json
       # `changeset publish` has no dry-run flag, so the dry run packs exactly what it would publish, with its dist-tag
       - run: npm publish --dry-run --tag next --ignore-scripts
 

@@ -2,9 +2,6 @@ import Foundation
 import OpenTelemetryApi
 import UIKit
 
-/// `package.json` version, reported as `telemetry.distro.version`; the static stage checks it matches.
-let packageVersion = "0.2.0"
-
 /// Public native API (spec §4.3/§4.4). Test mode comes from the build (`OTEL_TEST_MODE=1 pod install`), never from here.
 public enum RNOtel {
   #if OTEL_TEST_MODE

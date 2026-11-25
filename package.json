@@ -72,7 +72,7 @@
     "verify": "bun verify/run.ts",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "prepare": "bunx bob build && (git config core.hooksPath .githooks || true)",
-    "version": "bunx changeset version && node scripts/sync-distro-version.js",
+    "version": "bunx changeset version",
     "release": "bunx changeset publish --tag next"
   },
   "dependencies": {
