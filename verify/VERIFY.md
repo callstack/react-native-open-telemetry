@@ -124,7 +124,7 @@ unproven until their first CI run.
 
 The `web` target is the Expo app's Metro web export (`example-expo`, `expo export -p web`): its `ScenariosScreen`
 through react-native-web 0.21.4 (react-dom 19.3.0). `index.js` inits first with
-`startReactNativeSdk({serviceName: 'verify', exportConfig: {url: 'http://localhost:4318', headers: {'x-api-key':
+`startReactNativeSdk({serviceName: 'verify', exportConfig: {url: 'http://localhost:4318/v1/traces', headers: {'x-api-key':
 'test'}}})`, so every scenario runs through the **web SDK** (own `TracerProvider`, `BatchSpanProcessor`, OTLP/proto
 exporter, R7), not a harness provider. Metro resolves the package through its `exports` (`browser` →
 `lib/module/index.web.js`); on web, `metro.config.js` maps `react-native-nitro-modules` to `nitro-stub.web.ts` (no
@@ -231,10 +231,6 @@ CI: the `perf.json` of record is the `verify-artifacts-e2e-android-bare` artifac
 ([run 45358145497, artifact](https://github.com/callstack/react-native-open-telemetry/actions/runs/45358145497/artifacts/14904400776)):
 hosted x86_64 emulator (API 35): p50 76.9 µs (p95 686 µs, `end()` alone 41.8 µs), ratio 2.19. CI emulators are ~3× slower
 than the local arm64 one, so the 100 µs gate has less headroom there.
-
-**Bundle size** (`static`, `bundle-size`): `@opentelemetry/semantic-conventions` is about 56 % of the SDK share of the
-release bundle (146,789 of 264,120 B). Upstream barrel imports pull in the whole stable entry, though the SDK uses a few
-keys. Follow-up: a Metro/Babel rewrite of those imports to per-key modules, or an upstream fix.
 
 ## Nightly (Task 31)
 

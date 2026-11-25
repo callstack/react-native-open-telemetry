@@ -50,7 +50,7 @@ const tracer = trace.getTracer('app');
 | --- | --- |
 | `name` / `version` | `serviceName` / `serviceVersion` |
 | `environment` | `resourceAttributes: {'deployment.environment.name': …}`. 0.2 JS defaulted it to `process.env.NODE_ENV`; v0 sets no default, so pass it yourself. 0.2 Android wrote it as `environment` (default `development`) |
-| `url` | `exportConfig.url` (JS) or `export { url }` (native). It is the OTLP **HTTP** base URL (usually port 4318); `/v1/traces` is appended unless already there. 0.2 Android exported gRPC (4317); v0 sends OTLP/HTTP protobuf everywhere |
+| `url` | `exportConfig.url` (JS) or `export { url }` (native). It is the OTLP **HTTP** traces endpoint, used as given (usually `https://host:4318/v1/traces`). 0.2 Android exported gRPC (4317); v0 sends OTLP/HTTP protobuf everywhere |
 | `native` | Gone. Init natively with `RNOtel.start` instead. JS then attaches to it |
 | return value (the `@opentelemetry/api` module) | `{tracerProvider, forceFlush, shutdown}`. Import `@opentelemetry/api` yourself |
 
@@ -68,7 +68,7 @@ OpenTelemetry.init(this) { url = "https://collector:4317"; name = "shop"; versio
 RNOtel.start(this) {
   serviceName = "shop"; serviceVersion = "1.0.0"
   resourceAttributes = mapOf("deployment.environment.name" to "prod")
-  export { url = "https://collector:4318" }
+  export { url = "https://collector:4318/v1/traces" }
 }
 ```
 

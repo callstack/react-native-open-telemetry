@@ -63,7 +63,7 @@ RNOtel.start(this) {
   serviceVersion = BuildConfig.VERSION_NAME
   resourceAttributes = mapOf("deployment.environment.name" to "prod")
   export {
-    url = "https://collector.example.com:4318"
+    url = "https://collector.example.com:4318/v1/traces"
     headers = mapOf("x-api-key" to KEY)
   }
 }
@@ -76,7 +76,7 @@ import ReactNativeOpenTelemetryCore
 RNOtel.start { c in
   c.serviceName = "shop"
   c.serviceVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
-  c.export = .init(url: "https://collector.example.com:4318", headers: ["x-api-key": KEY])
+  c.export = .init(url: "https://collector.example.com:4318/v1/traces", headers: ["x-api-key": KEY])
 }
 ```
 
@@ -96,7 +96,7 @@ const {tracerProvider, forceFlush, shutdown} = startReactNativeSdk({
   serviceName: 'shop',
   serviceVersion: '1.4.0',
   resourceAttributes: {'deployment.environment.name': 'prod'},
-  exportConfig: {url: 'https://collector.example.com:4318', headers: {'x-api-key': KEY}},
+  exportConfig: {url: 'https://collector.example.com:4318/v1/traces', headers: {'x-api-key': KEY}},
   spanProcessors: [/* stock @opentelemetry/sdk-trace SpanProcessors, optional */],
 });
 ```
@@ -107,9 +107,8 @@ and returns a no-op handle. The SDK never throws into your app.
 
 ### Endpoint
 
-`url` (`exportConfig.url` in JS, `export.url` natively) is the OTLP base URL. `/v1/traces` is appended unless the URL
-already ends with it, so `https://host:4318` and `https://vendor.example/v1/traces` both work. It works the same on
-Android, iOS and web. URLs with a query string are not supported.
+`url` (`exportConfig.url` in JS, `export.url` natively) is the OTLP/HTTP traces endpoint, used as given, for example
+`https://host:4318/v1/traces`. No path is appended. It works the same on Android, iOS and web.
 
 ## Metro helper
 

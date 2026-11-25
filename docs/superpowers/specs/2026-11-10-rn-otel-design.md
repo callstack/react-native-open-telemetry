@@ -340,9 +340,8 @@ OTel data model.
 - Missing or invalid config logs one error and returns a no-op handle (as browser-sdk does
   with `invalidConfig`); it never throws.
 - **Endpoint (`exportConfig.url` / native `url`)** means the same on every platform: the
-  OTLP base URL; `/v1/traces` is appended unless the URL already ends with it (so vendor
-  URLs that already name the traces path still work). Web normalizes before calling
-  `startBrowserSdk`.
+  OTLP/HTTP traces endpoint (e.g. `https://collector:4318/v1/traces`), used as given. No path
+  is appended.
 - **Web**: the same call takes exporter options, mirroring `startBrowserSdk`'s option names
   (`serviceName`, `serviceVersion`, `resourceAttributes`, `exportConfig: { url, headers }`,
   `instrumentations`, …).
@@ -358,7 +357,7 @@ Usage, roughly (names are placeholders):
 // android: MainApplication.onCreate — preferred, native-first
 RNOtel.start(this) {
   serviceName = "shop"; serviceVersion = BuildConfig.VERSION_NAME
-  export { url = "https://collector.example.com:4318"; headers = mapOf("x-api-key" to KEY) }
+  export { url = "https://collector.example.com:4318/v1/traces"; headers = mapOf("x-api-key" to KEY) }
   resourceAttributes = mapOf("deployment.environment.name" to "prod")
 }
 ```
@@ -367,7 +366,7 @@ RNOtel.start(this) {
 // ios: AppDelegate — preferred, native-first
 RNOtel.start { c in
   c.serviceName = "shop"; c.serviceVersion = Bundle.main.version
-  c.export = .init(url: "https://collector.example.com:4318", headers: ["x-api-key": KEY])
+  c.export = .init(url: "https://collector.example.com:4318/v1/traces", headers: ["x-api-key": KEY])
 }
 ```
 
@@ -377,7 +376,7 @@ import { startReactNativeSdk } from 'react-native-open-telemetry';
 startReactNativeSdk({
   // only needed on web, or as the mobile fallback when no native init ran:
   serviceName: 'shop',
-  exportConfig: { url: 'https://collector.example.com:4318', headers: { 'x-api-key': KEY } },
+  exportConfig: { url: 'https://collector.example.com:4318/v1/traces', headers: { 'x-api-key': KEY } },
   spanProcessors: [/* stock sdk-trace SpanProcessors, unchanged */],
 });
 ```
@@ -771,7 +770,7 @@ flowchart LR
 
 | Stage | Runs | Checks |
 |---|---|---|
-| **1. Static** (seconds) | pre-commit hook, and every push | `tsc`; `oxlint`; Nitro codegen is current (`nitrogen && git diff --exit-code nitrogen/`); `npm pack` contents include `lib/`, `nitrogen/`, `android/`, `ios/`, `Package.swift`, the podspec and the `metro/` helper; bundle size: the SDK's share of a Metro bundle of the example stays within 10% of a committed baseline; unit tests of the fake collector's normalizer (it sorts and merges, so a bug there would hide or invent diffs everywhere) |
+| **1. Static** (seconds) | pre-commit hook, and every push | `tsc`; `oxlint`; Nitro codegen is current (`nitrogen && git diff --exit-code nitrogen/`); `npm pack` contents include `lib/`, `nitrogen/`, `android/`, `ios/`, `Package.swift`, the podspec and the `metro/` helper; unit tests of the fake collector's normalizer (it sorts and merges, so a bug there would hide or invent diffs everywhere) |
 | **2. Fast loop** (seconds) | every iteration, local and CI | Jest (Node), `gradle test`, `swift test`, all through the fake collector against expected files; the handful of unit tests (int vs double, `HrTime`, endpoint) |
 | **3. E2E matrix** (minutes) | every PR | `e2e` on five targets: **bare app** (native-first init) on iOS and Android, **Expo prebuild app** (JS-fallback init) on iOS and Android, **web** (the Expo app's Metro web export). All golden scenarios, the failure scenarios below, and one smoke scenario per target without test mode. Parity check across all five outputs. `perf-budget` on Android. |
 | **4. OTLP compliance** | every PR, Linux runner with Docker | The fake collector keeps every raw request it received. They are replayed, together with every expected file, to the **official OTel Collector** image (pinned) with an OTLP receiver; the job fails on any rejected request or decode error in its logs. Proves both our output and our spec files are real OTLP. |
@@ -896,9 +895,8 @@ Left out until needed:
 15. Test mode as a build flag; explicit whole-µs timestamps in scenarios; attribute/event
     sorting; parity shape; one non-deterministic smoke scenario per device (9.1).
 16. Shared payload fixture as the seam contract test (9.2).
-17. One endpoint meaning on every platform (base URL, `/v1/traces` appended unless
-    present); returned handle `{ tracerProvider, forceFlush, shutdown }` (4.4).
-18. `perf-budget` guardrail and bundle-size check (9.2, 9.4).
+17. One endpoint meaning on every platform (the traces endpoint, used as given); returned handle `{ tracerProvider, forceFlush, shutdown }` (4.4).
+18. `perf-budget` guardrail (9.2, 9.4).
 
 ## 14. Prior art and proof
 
