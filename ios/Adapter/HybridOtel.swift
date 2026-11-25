@@ -1,29 +1,28 @@
 import Foundation
 import NitroModules
-import OpenTelemetryProtocolExporterHttp
-import OpenTelemetrySdk
+import ReactNativeOpenTelemetryCore
 
-/// Tracer-bullet stub (Task 7): proves the seam and the opentelemetry-swift link; the real adapter is Task 25.
+/// The seam: JS spans are wrapped as otel `ReadableSpan`s here and queued in the core (pod `ReactNativeOpenTelemetryCore`,
+/// R24). The core stays free of Nitro's C++-backed types, so the app's AppDelegate can import it without C++ interop.
 class HybridOtel: HybridOtelSpec {
   func initialize(config: SeamConfig?) throws -> SeamInitResult {
-    // Touch opentelemetry-swift so a broken package link fails here, not in Task 25.
-    OtlpHttpTraceExporter().shutdown()
-    #if OTEL_TEST_MODE
-      let testMode = true
-    #else
-      let testMode = false
-    #endif
-    return SeamInitResult(alreadyInitialized: false, testMode: testMode, error: nil)
+    let r = RNOtel.initialize(config.map {
+      CoreConfig(serviceName: $0.serviceName, serviceVersion: $0.serviceVersion,
+                 resourceAttributes: attributes(of: $0.resourceAttributes), exportUrl: $0.exportUrl,
+                 exportHeaders: Dictionary($0.exportHeaders.compactMap { h in h.value.asType(String.self).map { (h.key, $0) } },
+                                           uniquingKeysWith: { _, last in last }))
+    })
+    return SeamInitResult(alreadyInitialized: r.alreadyInitialized, testMode: r.testMode, error: r.error)
   }
 
+  /// JS thread: wrap and enqueue; SpanData is built on the export queue.
   func handOff(spans: [SeamSpan]) throws {
-    let attrs = spans.reduce(0) { $0 + $1.attributes.count }
-    let events = spans.reduce(0) { $0 + $1.events.count }
-    let links = spans.reduce(0) { $0 + $1.links.count }
-    NSLog("%@", "RNOtel handOff spans=\(spans.count) attrs=\(attrs) events=\(events) links=\(links)")
+    guard let core = OtelCore.instance else { return }
+    core.handOff(spans.map { JsReadableSpan($0, resource: core.resource) })
   }
 
+  /// Off the JS thread (the flush blocks a global queue); resolves even when native never initialized.
   func flush(timeoutMs: Double) throws -> Promise<Void> {
-    return Promise.resolved()
+    Promise.parallel { _ = OtelCore.instance?.flush(timeoutMs: timeoutMs) }
   }
 }
