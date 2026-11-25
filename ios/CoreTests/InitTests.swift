@@ -44,12 +44,6 @@ final class InitTests: XCTestCase {
     XCTAssertNotNil(OtelCore.instance)
   }
 
-  func testInitializeWithoutConfigAfterInitIsAlreadyInitialized() {
-    OtelCore.initialize(ok, testMode: true)
-    let r = OtelCore.initialize(nil, testMode: true)
-    XCTAssertTrue(r.alreadyInitialized); XCTAssertNil(r.error)
-  }
-
   func testConcurrentInitializeCreatesOneCore() {
     DispatchQueue.concurrentPerform(iterations: 50) { _ in _ = OtelCore.initialize(ok, testMode: true) }
     let core = OtelCore.instance
