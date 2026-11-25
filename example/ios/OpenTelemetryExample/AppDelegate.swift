@@ -18,7 +18,7 @@ func startOtel() {
   RNOtel.start { c in
     c.serviceName = "verify"
     // the e2e collector on the host; asserted by verify/e2e/export-headers.e2e.ts
-    c.export = .init(url: testExportUrl() ?? "http://localhost:4318", headers: ["x-api-key": "test"])
+    c.export = .init(url: testExportUrl() ?? "http://localhost:4318/v1/traces", headers: ["x-api-key": "test"])
   }
   // compile check: the otel API is part of RNOtel's public surface (a no-op tracer is cheap to build)
   _ = RNOtel.tracer("opentelemetry.example")

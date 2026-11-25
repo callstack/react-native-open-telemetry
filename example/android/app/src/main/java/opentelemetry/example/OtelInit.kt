@@ -13,7 +13,7 @@ internal fun Application.startOtel() {
   RNOtel.start(this) {
     serviceName = "verify"
     export {
-      url = testExportUrl() ?: "http://10.0.2.2:4318" // the e2e collector on the host
+      url = testExportUrl() ?: "http://10.0.2.2:4318/v1/traces" // the e2e collector on the host
       headers = mapOf("x-api-key" to "test") // asserted by verify/e2e/export-headers.e2e.ts
     }
   }

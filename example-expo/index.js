@@ -8,7 +8,7 @@ import {ScenariosScreen} from '../example/src/ScenariosScreen';
 startReactNativeSdk({
   serviceName: 'verify',
   exportConfig: {
-    url: Platform.OS === 'android' ? 'http://10.0.2.2:4318' : 'http://localhost:4318',
+    url: Platform.OS === 'android' ? 'http://10.0.2.2:4318/v1/traces' : 'http://localhost:4318/v1/traces',
     headers: {'x-api-key': 'test'}, // asserted by verify/e2e/export-headers.e2e.ts
   },
 });
