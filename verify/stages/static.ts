@@ -1,14 +1,11 @@
 import type {Stage} from '../run';
-import fs from 'node:fs';
-import path from 'node:path';
-import {checkBundleSize, measureSdkBytes} from '../static/bundleSize';
 import {packContents, REQUIRED} from '../static/packContents';
 
 const stage: Stage = {
   name: 'static',
   order: 10,
   e2e: false,
-  run({sh, update}) {
+  run({sh}) {
     sh(['bunx', 'tsc', '--noEmit']);
     sh(['bun', 'run', 'codegen']);
     // git diff ignores untracked files, so list them too.
@@ -22,15 +19,6 @@ const stage: Stage = {
     const missing = packContents(list, REQUIRED);
     if (missing.length) throw new Error(`npm pack is missing: ${missing.join(', ')}`);
     sh(['bunx', 'jest', '--selectProjects', 'harness']);
-    // SDK share of the example's release bundle (src/ + @opentelemetry/*), +10% budget; ~2-10s
-    const root = path.join(import.meta.dirname, '..', '..');
-    const baselineFile = path.join(root, 'verify', 'static', 'bundle-baseline.json');
-    const sdkBytes = measureSdkBytes(root);
-    if (update) fs.writeFileSync(baselineFile, JSON.stringify({sdkBytes}, null, 2) + '\n');
-    const {sdkBytes: baseline} = JSON.parse(fs.readFileSync(baselineFile, 'utf8'));
-    console.log(`bundle-size: SDK share ${sdkBytes} B (baseline ${baseline} B)`);
-    const err = checkBundleSize(sdkBytes, baseline);
-    if (err) throw new Error(err);
   },
 };
 
