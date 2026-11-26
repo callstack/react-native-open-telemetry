@@ -20,7 +20,6 @@ import io.opentelemetry.sdk.trace.data.StatusData
 private fun traceState(s: String?): TraceState {
   if (s.isNullOrEmpty()) return TraceState.getDefault()
   val b = TraceState.builder()
-  // the builder puts each new entry first, so add the W3C list back to front
   for (kv in s.split(',').asReversed()) {
     val i = kv.indexOf('=')
     if (i > 0) b.put(kv.substring(0, i).trim(), kv.substring(i + 1).trim())
@@ -31,17 +30,12 @@ private fun traceState(s: String?): TraceState {
 private fun contextOf(c: SeamSpanContext): SpanContext =
   SpanContext.create(c.traceId, c.spanId, TraceFlags.fromByte(c.traceFlags.toInt().toByte()), traceState(c.traceState))
 
-/**
- * A finished JS span handed over the seam: the frozen [ReadableSpan] the native BatchSpanProcessor queues, and the
- * [SpanData] it exports. Everything but the span context is computed lazily, on first access from the export thread.
- */
 class JsSpanData(private val span: SeamSpan, private val resource: Resource) : ReadableSpan, SpanData {
   private val context by lazy { contextOf(span.context) }
   private val parent by lazy {
     span.parentSpanId?.let { SpanContext.create(span.context.traceId, it, context.traceFlags, context.traceState) }
       ?: SpanContext.getInvalid()
   }
-  // API SpanKind and Java SpanKind share their order (INTERNAL, SERVER, CLIENT, PRODUCER, CONSUMER); OTLP's +1 is the exporter's job.
   private val spanKind by lazy { SpanKind.values().getOrElse(span.kind.toInt()) { SpanKind.INTERNAL } }
   private val attrs by lazy { attributesOf(span.attributes) }
   private val eventList by lazy { span.events.map { EventData.create(epochNanos(it.time), it.name, attributesOf(it.attributes)) } }
@@ -76,7 +70,6 @@ class JsSpanData(private val span: SeamSpan, private val resource: Resource) : R
     @Suppress("DEPRECATION") InstrumentationLibraryInfo.create(scope.name, scope.version, scope.schemaUrl)
   override fun getResource() = resource
 
-  // ReadableSpan: frozen, nothing to mutate
   override fun toSpanData(): SpanData = this
   override fun getLatencyNanos() = endEpochNanos - startEpochNanos
   override fun <T : Any?> getAttribute(key: AttributeKey<T>): T? = attrs.get(key)

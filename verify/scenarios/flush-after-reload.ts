@@ -1,9 +1,5 @@
 import {scenario} from '../harness/scenario';
 
-/**
- * `flush()` across a JS reload (§9.4): run this, reload JS, call `forceFlush()`. It resolves within
- * 5 s without blocking the main thread, and the span arrives exactly once.
- */
 export default scenario(
   'flush-after-reload',
   async ({tracer, at}) => {

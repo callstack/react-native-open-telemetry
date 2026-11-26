@@ -1,7 +1,5 @@
 import type {IdGenerator} from '@opentelemetry/sdk-trace';
 
-// The plain `process.env.OTEL_TEST_MODE` form is what a Babel plugin inlines at bundle time; a browser bundle without
-// it has no `process`, hence the catch.
 export const isTestModeBuild = (): boolean => {
   try {
     return process.env.OTEL_TEST_MODE === '1';

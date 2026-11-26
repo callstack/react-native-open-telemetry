@@ -8,7 +8,6 @@ import {noopHandle} from './noop';
 
 export const TAG = '[react-native-open-telemetry]';
 
-/** Stamps every tracer, makes `provider` the global one, starts the probe; returns the handle. */
 export function register(provider: TracerProvider): SdkHandle {
   const getTracer = provider.getTracer.bind(provider);
   provider.getTracer = (name, version, options) => stampScope(getTracer(name, version, options));
@@ -23,10 +22,8 @@ export function register(provider: TracerProvider): SdkHandle {
   };
 }
 
-// On the marker (globalThis), so a fast-refresh re-evaluation of this module still finds the first handle.
 type Marker = PatchMarker & {handle?: SdkHandle; warned?: boolean};
 
-/** D10: the first call's handle wins; later calls get it back with one warning. Never throws. */
 export function startOnce(start: (config?: SdkConfig) => SdkHandle, config?: SdkConfig): SdkHandle {
   const m: Marker = (globalThis as any)[MARKER];
   if (m.handle) {

@@ -8,11 +8,6 @@ import io.opentelemetry.context.Context
 
 private val TRACEPARENT = Regex("^00-([0-9a-f]{32})-([0-9a-f]{16})-([0-9a-f]{2})$")
 
-/**
- * W3C traceparent -> Context holding a NON-remote parent (spec §4.3).
- * Not W3CTraceContextPropagator.extract: that yields isRemote=true.
- * Invalid input (incl. all-zero ids) -> Context.root(); never throws.
- */
 fun contextFrom(traceparent: String): Context {
   val m = TRACEPARENT.matchEntire(traceparent) ?: return Context.root()
   val (traceId, spanId, flags) = m.destructured

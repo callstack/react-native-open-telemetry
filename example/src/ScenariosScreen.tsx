@@ -1,25 +1,20 @@
 import {useEffect, useState} from 'react';
 import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {NitroModules} from 'react-native-nitro-modules';
-// the package's entry imports its setup (context patch); withOtel keeps this import out of inline requires
 import {startReactNativeSdk} from 'react-native-open-telemetry';
 import {getOtel} from '../../src/native/otel';
 import {at} from '../../verify/harness/scenario';
 import {allScenarios} from '../../verify/scenarios';
 import type {TestNative} from '../modules/test-native/src/TestNative.nitro';
 
-// Failure scenarios whose e2e test decides when, or whether, anything flushes.
 const NO_FLUSH = new Set(['collector-down', 'flush-after-reload', 'background-flush']);
 const TEST_MODE = process.env.OTEL_TEST_MODE === '1';
 
-// fast-refresh-idempotent: the patched functions as first seen; `??=` keeps them across re-evaluations of
-// this module, so a refresh that stacked the patch shows `changed`. The e2e edit counts in `__otelRefreshes`.
 const g = globalThis as any;
 g.__otelFirstPatch ??= {then: Promise.prototype.then, setTimeout: g.setTimeout};
 const patchIdentity = () =>
   `${g.__otelFirstPatch.then === Promise.prototype.then && g.__otelFirstPatch.setTimeout === g.setTimeout ? 'same' : 'changed'} refreshes=${g.__otelRefreshes ?? 0}`;
 
-// Native-first: MainApplication / AppDelegate ran RNOtel.start (collector URL there); attach and export through the native core.
 async function runScenario(name: string) {
   const s = allScenarios().find(x => x.name === name)!;
   const sdk = startReactNativeSdk();
@@ -41,7 +36,6 @@ export function ScenariosScreen() {
     setTestMode(otel ? `native testMode=${otel.initialize().testMode}` : 'native: no HybridObject');
   }, []);
 
-  // The run starts after the commit that removed the previous scenario-done, so a stale marker never satisfies a wait.
   const [running, setRunning] = useState<string | null>(null);
   useEffect(() => {
     if (!running) return;
@@ -51,7 +45,6 @@ export function ScenariosScreen() {
     ).finally(() => setRunning(null));
   }, [running]);
 
-  // test-mode only: each resolved forceFlush shows `flush-done-<n>`, so a wait never matches a stale one
   const [flushes, setFlushes] = useState(0);
   const flush = () => startReactNativeSdk().forceFlush().then(() => setFlushes(n => n + 1));
 

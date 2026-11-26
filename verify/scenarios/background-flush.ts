@@ -1,9 +1,5 @@
 import {scenario} from '../harness/scenario';
 
-/**
- * Background flush (§9.4): run this and background the app immediately. The span arrives without
- * `forceFlush()`, exactly once; no ANR on Android.
- */
 export default scenario(
   'background-flush',
   async ({tracer, at}) => {

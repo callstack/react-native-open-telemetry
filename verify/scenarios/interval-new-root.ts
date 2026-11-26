@@ -1,9 +1,5 @@
 import {scenario} from '../harness/scenario';
 
-/**
- * Documented exception (§6.2): `setInterval` ticks run in ROOT_CONTEXT, so a poller started inside a tap
- * starts a new root per tick instead of attaching to the tap. Work after `await` in the tap stays its child.
- */
 export default scenario(
   'interval-new-root',
   async ({tracer, at}) => {

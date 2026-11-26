@@ -1,4 +1,3 @@
-# Resolve react_native_pods.rb with node to allow for hoisting
 require Pod::Executable.execute_command('node', ['-p',
   'require.resolve(
     "react-native/scripts/react_native_pods.rb",
@@ -15,13 +14,11 @@ if linkage != nil
 end
 
 target 'OpenTelemetryExample' do
-  # Autolinking links only the Nitro pod; the pure Swift core pod (RNOtel, imported by AppDelegate) is declared here.
   pod 'ReactNativeOpenTelemetryCore', :path => '../..'
   config = use_native_modules!
 
   use_react_native!(
     :path => config[:reactNativePath],
-    # An absolute path to your application root.
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
 
@@ -30,9 +27,7 @@ target 'OpenTelemetryExample' do
       installer,
       config[:reactNativePath],
       :mac_catalyst_enabled => false,
-      # :ccache_enabled => true
     )
-    # Test mode reaches the app target too: AppDelegate reads test-only launch arguments under `#if OTEL_TEST_MODE`.
     if ENV['OTEL_TEST_MODE'] == '1'
       installer.aggregate_targets.each do |t|
         t.xcconfigs.each do |name, xc|
