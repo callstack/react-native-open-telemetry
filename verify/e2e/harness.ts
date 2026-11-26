@@ -86,7 +86,7 @@ export function anyTarget(title: string, body: (f: Fixtures) => Promise<void>) {
   );
 }
 
-/** Steps the failure scenarios (Task 27) add around the tap-and-compare. */
+/** Steps the failure scenarios add around the tap-and-compare. */
 export type ScenarioSteps = {
   /** Replaces the cold start, e.g. to relaunch with launch arguments. */
   launch?: () => Promise<void>;
@@ -121,8 +121,8 @@ export async function expectScenario(
   } finally {
     actual = await collector.end();
   }
-  // every app exports through the native core (bare: native-first init, Expo: JS-fallback init), so android-* compare
-  // to `android` files and ios-* to `ios` (R13): one set of files proves both init paths equivalent (Task 28).
+  // every app exports through the native core (bare: native-first init, Expo: JS-fallback init), so one expected
+  // file per scenario proves both init paths equivalent (R13).
   // VERIFY_E2E_DRAFT=1 writes a missing expected file and still fails (review it, then rerun)
   const r = compareToExpected(name, platformOf(target), actual, {draft: process.env.VERIFY_E2E_DRAFT === '1'});
   if (!r.ok) throw new Error('\n' + r.report);

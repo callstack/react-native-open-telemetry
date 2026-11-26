@@ -2,7 +2,7 @@
   "name": "react-native-test-native",
   "version": "0.0.0",
   "private": true,
-  "description": "Example-only HybridObject: app native code using the public RNOtel helpers (Task 26)",
+  "description": "Example-only HybridObject: app native code using the public RNOtel helpers",
   "scripts": {
     "codegen": "../../../node_modules/.bin/nitrogen"
   }

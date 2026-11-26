@@ -3,7 +3,7 @@ import {scenario} from '../harness/scenario';
 /**
  * Documented exception (§6.1 install order): code holding the `then` captured before the patch ran
  * loses the parent and starts a new root; the patched `then` keeps it.
- * The pre-patch `then` is read from the patch marker (Task 10 stores the originals there).
+ * The pre-patch `then` is read from the patch marker (the patch stores the originals there).
  */
 export default scenario(
   'captured-then',

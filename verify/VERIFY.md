@@ -58,25 +58,25 @@ exports through `startReactNativeSdk` and the Kotlin or Swift core. One file for
 the two init paths are equivalent. A scenario that only one app can run names targets (`android-bare`) instead of
 platforms in `targets`.
 
-**Fixtures by target kind (Task 23).** `harness.ts` has two chains: `test` (device targets: its auto `installed`
+**Fixtures by target kind.** `harness.ts` has two chains: `test` (device targets: its auto `installed`
 fixture and `target` name `device`, so every `test(…)` passes `{platforms: MOBILE}`) and `webTest` (a fresh browser
 context per test; `target` is the platform, `web`). `anyTarget(title, body)` registers one body on both; e2e titles must
 be unique, so the web copy is `web › <title>`.
 
-**TestNative (R25, Task 26).** `cross-*` scenarios call `ctx.native`, the example-only Nitro HybridObject in
+**TestNative (R25).** `cross-*` scenarios call `ctx.native`, the example-only Nitro HybridObject in
 `example/modules/test-native/` (own `nitro.json`, podspec, `build.gradle`; autolinked through
 `example/react-native.config.js`). It uses only the public `RNOtel` helpers. After editing its spec, regenerate with
 `bun run codegen` in that directory (the patched root nitrogen) and commit `nitrogen/generated`.
 
 **iOS pods (R24).** An app's Swift `AppDelegate` cannot `import ReactNativeOpenTelemetry`: the Nitro pod is built with
-C++ interop and the app is not (Task 25 Step 0: `'functional' file not found` while building `NitroModules`). So
+C++ interop and the app is not (`'functional' file not found` while building `NitroModules`). So
 iOS ships two pods: `ReactNativeOpenTelemetryCore` (pure Swift: `ios/Core` + the public `RNOtel` in `ios/RNOtel`) and
 the Nitro adapter `ReactNativeOpenTelemetry` (`ios/Adapter`), which depends on it and reaches the core's `package`
 declarations through one `-package-name`. Autolinking links only the adapter, so the app's Podfile adds
 `pod 'ReactNativeOpenTelemetryCore', :path => '<package dir>'`. Both linkages build: the default static libraries
-(CI) and `USE_FRAMEWORKS=static` (checked locally in Task 25, not a CI job: e2e `ios-bare` 18/18 on that build).
+(CI) and `USE_FRAMEWORKS=static` (checked locally, not a CI job: e2e `ios-bare` 18/18 on that build).
 
-**`performance.timeOrigin` on Hermes (X17, Task 13).** Defined on both platforms (RN 0.88.1 release, Hermes),
+**`performance.timeOrigin` on Hermes (X17).** Defined on both platforms (RN 0.88.1 release, Hermes),
 checked with a one-off `console.log` of `timeOrigin`, `performance.now()` and `Date.now()` at app start:
 Android `timeOrigin + now()` = `Date.now()` within 1 ms; **iOS simulator `timeOrigin + now()` was ~23.9 h behind
 `Date.now()`** (the monotonic clock under `now()` stopped while the host slept; `timeOrigin` stayed at simulator boot).
@@ -87,7 +87,7 @@ an argument) can be off by that skew on iOS.
 
 The fake collector listens on port 4318; the app reaches it at `10.0.2.2` (Android emulator) or `localhost` (iOS simulator).
 
-## Expo app (Task 28)
+## Expo app
 
 `example-expo/`: **Expo SDK 58** (`expo` 58.0.26), **React Native 0.88.1**, React 19.3.0, `react-native-nitro-modules`
 0.37.2, all pinned exactly. SDK 58 is the newest Expo SDK (npm `latest`, 2026-11-24) and bundles the same RN as the bare
@@ -117,7 +117,7 @@ unproven until their first CI run.
 - **Not on Expo:** `native-init-failure` (`targets: ['android-bare', 'ios-bare']`): the bad URL goes to the bare app's
   native init, and the Expo app has none. `fast-refresh-idempotent` runs on the bare dev builds only, locally.
 
-## Web (Task 23)
+## Web
 
 The `web` target is the Expo app's Metro web export (`example-expo`, `expo export -p web`): its `ScenariosScreen`
 through react-native-web 0.21.4 (react-dom 19.3.0). `index.js` inits first with
@@ -146,7 +146,7 @@ HybridObjects: no native `testMode` line, scenarios get no `native`).
   (the native reload; a page reload drops the JS context, a different guarantee), `background-flush` (app
   background; the browser `pagehide` flush is not covered), `fast-refresh-idempotent`, `native test mode reaches initialize`.
 
-## Failure scenarios (Task 27)
+## Failure scenarios
 
 Each has its own e2e file (R10); the ScenariosScreen does not `forceFlush()` after `collector-down`,
 `flush-after-reload` and `background-flush`, so the test decides what exports. Test-mode-only screen controls:
@@ -191,7 +191,7 @@ Each has its own e2e file (R10); the ScenariosScreen does not `forceFlush()` aft
 
   If watchman reports recrawls, restart Metro: a dead watch never delivers the edit.
 
-## Android cold start with `RNOtel.start` (Task 24, 2026-11-24)
+## Android cold start with `RNOtel.start` (2026-11-24)
 
 `adb shell am start -W -n opentelemetry.example/.MainActivity` after `am force-stop`, 6 launches each, Pixel_9
 emulator (API 36, arm64), release test-mode build. `TotalTime` (ms):
@@ -203,31 +203,29 @@ emulator (API 36, arm64), release test-mode build. `TotalTime` (ms):
 
 Emulator noise (±100 ms between runs) is larger than the difference; `RNOtel.start` builds the resource, the
 batch processor and the provider, but no exporter or OkHttp client (built on the first export, on the BSP thread).
-Task 29 measures properly on a device.
 
-## Device capability check (Task 7, 2026-11-23)
+## Device capability check (2026-11-23)
 
-What Task 27 (reload, fast refresh, background flush) needs from agent-device.
+What the failure scenarios (reload, fast refresh, background flush) need from agent-device.
 iOS: iPhone 18 Pro simulator, iOS 27.0, Xcode 27.1, agent-device 0.21.36 (T3 device panel), RN 0.88.1 Debug build + Metro.
 
 | Capability | iOS simulator | Android emulator (Pixel_9) |
 | --- | --- | --- |
-| JS reload | ✓ `agent-device metro reload` (Metro re-bundled; screen state reset). Release: native reload via TestNative (Task 27) | ✓ release: native reload via TestNative, e2e `flush-after-reload` (Task 27). `DevSettings.reload()` is a no-op in release |
-| Fast refresh (dev build) | ✓ editing `ScenariosScreen.tsx` text showed on device with React state kept | ✓ e2e `fast-refresh-idempotent` on `android-dev` (Task 27) |
-| Background and back | ✓ `agent-device home`, then `open opentelemetry.example`: UIKit logged the background task end and `UIApplicationWillEnterForegroundNotification`; state kept. `appstate` still says `runningForeground` after `home` (known iOS quirk, documented by e2e), so check lifecycle in the log, not `appstate` | ✓ `device.home()` in e2e `background-flush` (Task 27) |
-| Read logs | ✓ `agent-device logs start/stop` captures the app's unified log, `NSLog` lines included (`RNOtel handOff …`). The e2e harness reads with `xcrun simctl spawn <udid> log show --predicate 'process == "OpenTelemetryExample" …'` | ✓ via the e2e harness: `adb logcat -d -s RNOtel:I` (tracer-bullet test green; the test was retired in Task 24, R14) |
+| JS reload | ✓ `agent-device metro reload` (Metro re-bundled; screen state reset). Release: native reload via TestNative | ✓ release: native reload via TestNative, e2e `flush-after-reload`. `DevSettings.reload()` is a no-op in release |
+| Fast refresh (dev build) | ✓ editing `ScenariosScreen.tsx` text showed on device with React state kept | ✓ e2e `fast-refresh-idempotent` on `android-dev` |
+| Background and back | ✓ `agent-device home`, then `open opentelemetry.example`: UIKit logged the background task end and `UIApplicationWillEnterForegroundNotification`; state kept. `appstate` still says `runningForeground` after `home` (known iOS quirk, documented by e2e), so check lifecycle in the log, not `appstate` | ✓ `device.home()` in e2e `background-flush` |
+| Read logs | ✓ `agent-device logs start/stop` captures the app's unified log, `NSLog` lines included (`RNOtel handOff …`). The e2e harness reads with `xcrun simctl spawn <udid> log show --predicate 'process == "OpenTelemetryExample" …'` | ✓ via the e2e harness: `adb logcat -d -s RNOtel:I` (tracer-bullet test green; the test was later retired, R14) |
 
 **Blocker (Android, interactive only):** the T3 device panel could not open `Pixel_9`:
 `Failed to allocate an emulator port for Pixel_9 … avdmanager: … Unable to locate a Java Runtime.`
 The T3 host process has no `JAVA_HOME`, so `avdmanager list avd` fails. The emulator itself boots and the e2e runner
-(`@e2e-dev/mobile`, agent-device 0.21.39) drives it fine. Reload / fast refresh / background on Android still need a
-check before Task 27; fix the T3 host's Java (or run the check through an e2e test) and fill in the column. Task 27 filled it in through e2e tests.
+(`@e2e-dev/mobile`, agent-device 0.21.39) drives it fine. The Android column was filled in through e2e tests.
 
 ## Scenarios
 
 One file per guarantee in `verify/scenarios/`, named after it, with one exact `verify/expected/<name>.otlp.json` that
 every platform compares against. It is drafted with `VERIFY_UPDATE=1` (or `VERIFY_E2E_DRAFT=1` for e2e-only scenarios,
-from Android or web) and reviewed by the author. `pending` scenarios report as `todo`; the owning task flips `pending` off.
+from Android or web) and reviewed by the author. `pending` scenarios report as `todo`; un-pend a scenario once it passes.
 
 Every file uses the JS runner's resource, `service.name` only. Native test mode builds the resource from config only and
 the example inits with no `serviceVersion` (R2), so native-first device runs match the same files.

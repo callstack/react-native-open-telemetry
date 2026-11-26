@@ -1,4 +1,4 @@
-# Example-only Nitro module (Task 26, R25): app native code using the public RNOtel API.
+# Example-only Nitro module (R25): app native code using the public RNOtel API.
 Pod::Spec.new do |s|
   s.name         = "TestNative"
   s.version      = "0.0.0"

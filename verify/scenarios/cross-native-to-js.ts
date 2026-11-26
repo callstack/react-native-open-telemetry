@@ -2,7 +2,7 @@ import {context, trace} from '@opentelemetry/api';
 import {scenario} from '../harness/scenario';
 
 /**
- * A JS span started under a native span's context is its child (Task 26).
+ * A JS span started under a native span's context is its child.
  * Steps: at ROOT, `ctx.native.doWork('', …)` starts and ends root `native.work` and returns its traceparent →
  * JS starts `js.after_native` under `trace.wrapSpanContext(<that context>)` (non-remote, spec §4.3).
  * Proof: one trace, `js.after_native` has `native.work` as parent.

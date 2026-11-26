@@ -8,11 +8,11 @@ import {at} from '../../verify/harness/scenario';
 import {allScenarios} from '../../verify/scenarios';
 import type {TestNative} from '../modules/test-native/src/TestNative.nitro';
 
-// Failure scenarios (Task 27) whose e2e test decides when, or whether, anything flushes.
+// Failure scenarios whose e2e test decides when, or whether, anything flushes.
 const NO_FLUSH = new Set(['collector-down', 'flush-after-reload', 'background-flush']);
 const TEST_MODE = process.env.OTEL_TEST_MODE === '1';
 
-// fast-refresh-idempotent (Task 27): the patched functions as first seen; `??=` keeps them across re-evaluations of
+// fast-refresh-idempotent: the patched functions as first seen; `??=` keeps them across re-evaluations of
 // this module, so a refresh that stacked the patch shows `changed`. The e2e edit counts in `__otelRefreshes`.
 const g = globalThis as any;
 g.__otelFirstPatch ??= {then: Promise.prototype.then, setTimeout: g.setTimeout};
@@ -51,7 +51,7 @@ export function ScenariosScreen() {
     ).finally(() => setRunning(null));
   }, [running]);
 
-  // test-mode only (Task 27): each resolved forceFlush shows `flush-done-<n>`, so a wait never matches a stale one
+  // test-mode only: each resolved forceFlush shows `flush-done-<n>`, so a wait never matches a stale one
   const [flushes, setFlushes] = useState(0);
   const flush = () => startReactNativeSdk().forceFlush().then(() => setFlushes(n => n + 1));
 

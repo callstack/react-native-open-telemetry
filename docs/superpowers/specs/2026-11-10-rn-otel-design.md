@@ -192,7 +192,7 @@ class NativeHandOffProcessor implements SpanProcessor {
   - iOS: the core (`ios/Core/*.swift`) takes opentelemetry-swift types only. Nitro's
     generated Swift structs are typealiases of C++ structs, so code using them needs C++
     interop, and the core must not (below): the Nitro adapter pod builds `SpanData` from
-    the seam structs and hands the core `ReadableSpan`s. *(R24, Task 25: the app's non-interop Swift `AppDelegate` cannot import a Nitro C++-interop module, so iOS ships
+    the seam structs and hands the core `ReadableSpan`s. *(R24: the app's non-interop Swift `AppDelegate` cannot import a Nitro C++-interop module, so iOS ships
     two pods: pure-Swift `ReactNativeOpenTelemetryCore` (`ios/Core` + `RNOtel`) and the Nitro adapter pod that
     depends on it. Autolinking links one podspec per package, so apps add `pod 'ReactNativeOpenTelemetryCore',
     :path => '../node_modules/react-native-open-telemetry'` to their Podfile.)*
@@ -574,8 +574,7 @@ Sequencing (from review; council review 2026-11-21 added step 0):
 4. Expected-file goldens and parity check on both platforms.
 5. Web.
 
-Each step is defined by the list of scenario names that must pass (9.3); the implementation
-plan carries those lists.
+Each step is defined by the list of scenario names that must pass (9.3).
 
 ## 9. Verification (decided)
 

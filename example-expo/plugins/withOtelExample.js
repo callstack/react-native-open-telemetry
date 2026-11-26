@@ -11,7 +11,7 @@ tasks.matching { it.name.startsWith("createBundle") }.configureEach {
 `;
 
 /**
- * Example-only (Task 28): what the bare example's native projects carry by hand, applied at `expo prebuild`. The Core
+ * Example-only: what the bare example's native projects carry by hand, applied at `expo prebuild`. The Core
  * pod (R24) comes from the package's own plugin (`react-native-open-telemetry` in app.json), as in a real Expo app.
  */
 module.exports = config => {

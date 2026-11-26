@@ -2,7 +2,7 @@ import {scenario} from '../harness/scenario';
 import nestAfterAwait from './nest-after-await';
 
 /**
- * Fast refresh does not stack the context patch (§6.1.3, Task 27). Stacked wrappers would still give the same
+ * Fast refresh does not stack the context patch (§6.1.3). Stacked wrappers would still give the same
  * parents, so the output alone cannot fail; the proof is:
  * (a) `Promise.prototype.then` and `setTimeout` are the same functions before and after two fast refreshes
  *     (identity read via the `Symbol.for('com.callstack.otel.patched')` marker), and

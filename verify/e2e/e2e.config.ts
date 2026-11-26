@@ -4,7 +4,7 @@ import {web} from '@e2e-dev/web';
 
 const bundleId = 'opentelemetry.example';
 const example = '../../example';
-// Expo prebuild app (JS-fallback init, Task 28): same scenarios, same android/ios expected files
+// Expo prebuild app (JS-fallback init): same scenarios, same expected files
 const expo = '../../example-expo';
 
 export default {
@@ -49,7 +49,7 @@ export default {
         appPath: process.env.E2E_IOS_EXPO_APP ?? `${expo}/ios/build/Build/Products/Release-iphonesimulator/OpenTelemetryExpo.app`,
       },
     },
-    // The Expo app's Metro web export (react-native-web), exporting with the web SDK (Task 23).
+    // The Expo app's Metro web export (react-native-web), exporting with the web SDK.
     // The runner exports it in test mode (lib/ first: `bun run prepare`) and serves it with `expo serve`.
     {
       name: 'web',
@@ -66,7 +66,7 @@ export default {
         },
       },
     },
-    // Dev builds (Debug + Metro), local only: fast-refresh-idempotent (Task 27). See VERIFY.md.
+    // Dev builds (Debug + Metro), local only: fast-refresh-idempotent. See VERIFY.md.
     ...(process.env.E2E_DEV === '1'
       ? [
           {
