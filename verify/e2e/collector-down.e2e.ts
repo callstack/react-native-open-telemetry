@@ -2,7 +2,7 @@ import {anyTarget, expectScenario, platformOf, tapFlush} from './harness';
 
 // Collector down (§9.4): the app does not block, and the span arrives exactly once when the collector is back.
 // Android: otel-java retries a 503 inside the export. iOS: opentelemetry-swift does not retry; it requeues the failed
-// batch in memory and resends it on the next export or flush (X6), so the test flushes until the refusals are used up.
+// batch in memory and resends it on the next export or flush, so the test flushes until the refusals are used up.
 // Web: the OTel JS exporter retries a 503 inside the export (backoff 1 s x1.5, ±20 %): three refusals take up to 5.7 s.
 anyTarget('collector-down', async ({app, screen, collector, target}) => {
   await expectScenario('collector-down', target, {app, screen, collector}, {

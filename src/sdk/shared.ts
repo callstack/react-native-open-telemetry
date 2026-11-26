@@ -8,7 +8,7 @@ import {noopHandle} from './noop';
 
 export const TAG = '[react-native-open-telemetry]';
 
-/** Stamps every tracer (C3), makes `provider` the global one, starts the probe; returns the handle. */
+/** Stamps every tracer, makes `provider` the global one, starts the probe; returns the handle. */
 export function register(provider: TracerProvider): SdkHandle {
   const getTracer = provider.getTracer.bind(provider);
   provider.getTracer = (name, version, options) => stampScope(getTracer(name, version, options));

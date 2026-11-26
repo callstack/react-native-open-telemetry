@@ -192,7 +192,7 @@ class NativeHandOffProcessor implements SpanProcessor {
   - iOS: the core (`ios/Core/*.swift`) takes opentelemetry-swift types only. Nitro's
     generated Swift structs are typealiases of C++ structs, so code using them needs C++
     interop, and the core must not (below): the Nitro adapter pod builds `SpanData` from
-    the seam structs and hands the core `ReadableSpan`s. *(R24: the app's non-interop Swift `AppDelegate` cannot import a Nitro C++-interop module, so iOS ships
+    the seam structs and hands the core `ReadableSpan`s. *(The app's non-interop Swift `AppDelegate` cannot import a Nitro C++-interop module, so iOS ships
     two pods: pure-Swift `ReactNativeOpenTelemetryCore` (`ios/Core` + `RNOtel`) and the Nitro adapter pod that
     depends on it. Autolinking links one podspec per package, so apps add `pod 'ReactNativeOpenTelemetryCore',
     :path => '../node_modules/react-native-open-telemetry'` to their Podfile.)*
@@ -514,7 +514,7 @@ ships TC39 AsyncContext (Stage 2).
 ## 7. Web (decided)
 
 Same `@opentelemetry/api` surface and the same ContextManager; spans live in the JS SDK and
-export directly from JS. **Changed in v0 implementation (R7, pending author review):** web
+export directly from JS. **Changed in v0 implementation:** web
 builds its own `sdk-trace` `TracerProvider` + `BatchSpanProcessor` + upstream
 `@opentelemetry/exporter-trace-otlp-proto` (fetch), not `startBrowserSdk`. Why:
 browser-sdk 0.9.1 takes no `idGenerator` (no `0a` test-mode IDs, so no exact web goldens),
@@ -565,8 +565,8 @@ Sequencing (from review; council review 2026-11-21 added step 0):
    `nest-after-await` e2e test per platform. Proves the seam compiles, the native SDKs link,
    and the e2e tooling can drive the app, before parallel work builds on it.
 1. **First milestone: the context patch in a real RN app** (real Hermes, RN's timers,
-   Promise, scheduler, `InteractionManager`) with real `sdk-trace` spans. Scenarios include
-   React batching, `InteractionManager`, intervals, thrown errors in callbacks, EventEmitter
+   Promise, scheduler) with real `sdk-trace` spans. Scenarios include
+   React batching, intervals, thrown errors in callbacks, EventEmitter
    listeners. The spike only used a stand-in Hermes host.
 2. JS-only slice asserting on output with the fake collector.
 3. The seam on one platform, with shared payload fixtures and an early device e2e; then
@@ -601,7 +601,7 @@ tests: they don't care about internals, so internals can be rewritten freely.
   - **explicit timestamps**: v0 scenarios create all spans themselves, so they pass
     `startTime` / `end(t)` explicitly (JS and native), in whole microseconds. iOS cannot
     represent them exactly: opentelemetry-swift exports `Date`, a ~238–256 ns grid, so iOS times
-    are compared within 256 ns (R22, measured floor in verify/VERIFY.md). Clock stubs (Java `setClock`/`TestClock` in test source sets
+    are compared within 256 ns (measured floor in verify/VERIFY.md). Clock stubs (Java `setClock`/`TestClock` in test source sets
     only; Swift `with(clock:)`) are only a fallback for implicit reads.
   - sequential test ID generators, namespaced per side (JS `0a…01`, native `0b…01`) via
     upstream hooks: JS `sdk-trace` `idGenerator`, Java `setIdGenerator`, Swift
@@ -755,10 +755,8 @@ Two apps cover both init paths: the bare example inits natively in
 fallback (also the Expo-managed path the spec promises). Both produce the same expected
 files, which proves the paths are equivalent.
 
-**PR time budget:** the PR pipeline (stages 1–4) gets a fixed wall-clock budget, set from
-the first full green run plus headroom, enforced with GitHub's `timeout-minutes` per job and
-one final `needs:` job that checks total wall-clock time. When a PR run exceeds it, the fix is an agent task
-(cache native builds, shard targets, trim slow scenarios), never dropping a target: the full
+**PR time:** each job has a `timeout-minutes`. When PR runs get slow, the fix is caching
+native builds, sharding targets or trimming slow scenarios, never dropping a target: the full
 matrix on every PR is decided.
 
 **Releases:** manual with changesets (`bun run version`, then `bun run publish`), from `main`
@@ -840,7 +838,7 @@ Left out until needed:
   pre-`async_hooks`).
 - Upstream code reuse estimate: ~4% of running code is ours (~3.7k of ~89k lines).
 - Review: builder check + council (OTel-upstream, RN/native, skeptic) on 2026-11-10.
-- CI shape (pre-commit static checks, PR time budget, release only from fully green
+- CI shape (pre-commit static checks, release only from fully green
   commits, staged release) adapted from
   [Kun Chen on validation categories](https://x.com/kunchenguid/status/2122391325081579618)
   (2026-11-16); the full device matrix stays on every PR by decision.
@@ -892,7 +890,7 @@ direct precedent was found; treat those as the highest-risk parts.
 | P11 | Links instead of parents for batched/multi-cause work; interval ticks as new roots (5, 6.2) | OTel spec: links represent batched operations; React notes it can't attribute batched updates without AsyncContext | [Spec: Links between spans](https://github.com/open-telemetry/opentelemetry-specification/blob/a03fa4e26b3982da42aa0010aaebcd9f694cb037/specification/overview.md#L207-L214) · [React `ReactFiberAsyncAction.js`](https://github.com/facebook/react/blob/fe719f77ba3e4b5fb3ebe13787bfbd0ed911da19/packages/react-reconciler/src/ReactFiberAsyncAction.js#L42) |
 | P12 | *(removed: the staleness rule was cut in council review, see 6.2)* | | |
 | P13 | *(removed: the pre-init buffer was cut in council review, see 4.3)* | | |
-| P14 | *(Superseded by R8: upstream timing kept, no offset.)* Clock offset `Date.now() - performance.now()`, recomputed on foreground (4.3) | OTel JS derives span times from `performance.timeOrigin` + `performance.now()`; Sentry RN guards an unreliable `performance.timeOrigin` | [Sentry `timeOrigin` guard](https://github.com/getsentry/sentry-react-native/blob/794a52a9e80ca0a7c4ee005264cd9cd3ee1533de/packages/core/src/js/sdk.tsx#L76-L80) |
+| P14 | *(Superseded: upstream timing kept, no offset.)* Clock offset `Date.now() - performance.now()`, recomputed on foreground (4.3) | OTel JS derives span times from `performance.timeOrigin` + `performance.now()`; Sentry RN guards an unreliable `performance.timeOrigin` | [Sentry `timeOrigin` guard](https://github.com/getsentry/sentry-react-native/blob/794a52a9e80ca0a7c4ee005264cd9cd3ee1533de/packages/core/src/js/sdk.tsx#L76-L80) |
 | P15 | Custom names under a reverse-domain prefix, never `otel.*` (4.5) | OTel naming guidance | [naming.md: app developers](https://github.com/open-telemetry/semantic-conventions/blob/2d91ead21027a8a58fbb7488b12d80238e7c0ac5/docs/general/naming.md#L183-L187) · [`otel.*` reserved](https://github.com/open-telemetry/semantic-conventions/blob/2d91ead21027a8a58fbb7488b12d80238e7c0ac5/docs/general/naming.md#L217-L227) |
 | P16 | Option names mirror `startBrowserSdk`; invalid config returns a no-op SDK instead of throwing (4.4) | OTel Browser SIG browser SDK | [browser-sdk README](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/sdk) |
 | P17 | Exact expected-output files (goldens) for traces (9.1) | OTel Collector tests compare traces against golden files | [collector-contrib `pkg/golden`](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/c64840337cf400792cb684037ed998428b268197/pkg/golden) · [`ptracetest` compare options](https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/c64840337cf400792cb684037ed998428b268197/pkg/pdatatest/ptracetest/options.go#L102-L149) |

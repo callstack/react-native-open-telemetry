@@ -1,4 +1,4 @@
-// Example-only Nitro module (R25). Versions follow the app (rootProject.ext), as autolinked libraries do.
+// Example-only Nitro module. Versions follow the app (rootProject.ext), as autolinked libraries do.
 apply plugin: "com.android.library"
 apply plugin: "org.jetbrains.kotlin.android"
 apply from: "../nitrogen/generated/android/TestNative+autolinking.gradle"

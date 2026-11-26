@@ -25,7 +25,7 @@ func attributes(of list: [SeamAttribute]) -> [String: AttributeValue] {
   return out
 }
 
-/// OTel HrTime `[seconds, nanos]`; missing elements read as 0 (C4). R22: `Date` holds a Double of seconds, so whole µs
+/// OTel HrTime `[seconds, nanos]`; missing elements read as 0. `Date` holds a Double of seconds, so whole µs
 /// come back on a ~256 ns grid (verify/VERIFY.md).
 private func date(_ t: [Double]) -> Date {
   Date(timeIntervalSince1970: (t.count > 0 ? t[0] : 0) + (t.count > 1 ? t[1] : 0) / 1e9)
@@ -72,7 +72,7 @@ private final class FixedClock: Clock {
 }
 
 /**
- * A finished JS span handed over the seam (R19): the frozen `ReadableSpan` the native BatchSpanProcessor queues. It
+ * A finished JS span handed over the seam: the frozen `ReadableSpan` the native BatchSpanProcessor queues. It
  * keeps Nitro's struct; only the span context is built on the JS thread (onEnd checks `sampled`), `toSpanData()` runs
  * on the BSP worker. SpanData has no public initializer, so it is built through the SDK's own `SpanSdk`, the public
  * factory upstream uses.
