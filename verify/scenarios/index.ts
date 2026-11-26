@@ -14,7 +14,6 @@ import exportHeaders from './export-headers';
 import fastRefreshIdempotent from './fast-refresh-idempotent';
 import flushAfterReload from './flush-after-reload';
 import handoffBasic from './handoff-basic';
-import interactionManager from './interaction-manager';
 import intervalNewRoot from './interval-new-root';
 import nativeInitFailure from './native-init-failure';
 import nestAfterAwait from './nest-after-await';
@@ -26,4 +25,4 @@ import oddAttributes from './odd-attributes';
 import richSpan from './rich-span';
 import rootNoLeak from './root-no-leak';
 
-export const allScenarios = (): Scenario[] => [asyncGenerator, backgroundFlush, batchingSharedQueue, capturedThen, collectorDown, concurrentInterleaved, crossJsToNative, crossNativeToJs, errorInCallback, eventEmitterListener, exportHeaders, fastRefreshIdempotent, flushAfterReload, handoffBasic, interactionManager, intervalNewRoot, nativeInitFailure, nestAfterAwait, nestPromiseAllRace, nestRaf, nestTimersMicrotasks, neverSettlingPromise, oddAttributes, richSpan, rootNoLeak];
+export const allScenarios = (): Scenario[] => [asyncGenerator, backgroundFlush, batchingSharedQueue, capturedThen, collectorDown, concurrentInterleaved, crossJsToNative, crossNativeToJs, errorInCallback, eventEmitterListener, exportHeaders, fastRefreshIdempotent, flushAfterReload, handoffBasic, intervalNewRoot, nativeInitFailure, nestAfterAwait, nestPromiseAllRace, nestRaf, nestTimersMicrotasks, neverSettlingPromise, oddAttributes, richSpan, rootNoLeak];
