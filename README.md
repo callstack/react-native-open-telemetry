@@ -1,144 +1,56 @@
 # react-native-open-telemetry
 
-OpenTelemetry tracing for React Native (iOS, Android) and web. JS spans and native spans share one trace and
-export together over OTLP/HTTP to any OTLP backend.
+Best in class observability brought to React Native.
 
-v0 is tracing only. If you used 0.x, read [MIGRATION.md](MIGRATION.md) first.
+* **OpenTelemetry** is a collection of APIs, SDKs, and tools developed by [OpenTelemetry](https://github.com/open-telemetry) to instrument, generate, collect, and export telemetry data. See [What is OpenTelemetry](https://opentelemetry.io/docs/what-is-opentelemetry/) for more information.
+* **react-native-open-telemetry** is a library that allows you to easily use **OpenTelemetry's** JS and Native bindings inside your React Native app.
 
-## Requirements
+## Features
 
-- React Native **0.88+** (0.88.1 is verified on every PR), New Architecture, Hermes
-- `react-native-nitro-modules` **~0.37**
-- iOS: Xcode **27.0+** (verified; Xcode 16.4 fails on the Swift packages' tools versions, Xcode 26 is untested)
-- Android: minSdk **26**
+* **Telemetry without lock-in**. Send to **any OTLP compliant backend** including [vendors](https://opentelemetry.io/ecosystem/vendors/)
+* [**Tracing** API](https://opentelemetry.io/docs/specs/otel/trace/api/)
+* **One trace across JS and Native**, exported together
+* Context carried through `await`, promises and timers
+* **Web**, **Android** and **iOS** support
 
-## Install
+## Platform support
+
+| Platform | Support |
+| --- | --- |
+| **web** | ☑️ Stable |
+| **android** | ☑️ Stable JS and Native |
+| **ios** | ☑️ Stable JS and Native |
+
+Requires React Native **0.88+** (New Architecture, Hermes), Xcode **27+** and Android minSdk **26**.
+
+## Installation
 
 ```sh
 npm install react-native-open-telemetry react-native-nitro-modules
 ```
 
-### iOS (bare)
-
-Autolinking links only the Nitro adapter pod. Add the core pod to your app target in `ios/Podfile` yourself, then run
-`pod install`:
+**iOS** — add the core pod to your app target in `ios/Podfile`, then run `pod install`:
 
 ```ruby
-target 'MyApp' do
-  pod 'ReactNativeOpenTelemetryCore', :path => '../node_modules/react-native-open-telemetry'
-  # ...
-end
+pod 'ReactNativeOpenTelemetryCore', :path => '../node_modules/react-native-open-telemetry'
 ```
 
-### Expo (prebuild / CNG)
-
-Expo regenerates the Podfile, so the package ships a config plugin that adds that one line:
+**Expo** — use the config plugin instead, it adds that line for you:
 
 ```json
 { "expo": { "plugins": ["react-native-open-telemetry"] } }
 ```
 
-That is all the plugin does. Expo apps usually init from JS (below).
-
-### Android
-
-Nothing to add. The library's R8 consumer rules ship with it and apply automatically.
-
-## Init
-
-### Native-first (preferred)
-
-Start the SDK in native code, before React Native, so you can trace from the very start of the app. On Android it
-does nothing outside the main process. It never throws: on bad config it logs one error and telemetry stays off.
-
-```kotlin
-// android: MainApplication.onCreate, before loadReactNative(this)
-import com.callstack.otel.RNOtel
-
-RNOtel.start(this) {
-  serviceName = "shop"
-  serviceVersion = BuildConfig.VERSION_NAME
-  resourceAttributes = mapOf("deployment.environment.name" to "prod")
-  export {
-    url = "https://collector.example.com:4318/v1/traces"
-    headers = mapOf("x-api-key" to KEY)
-  }
-}
-```
-
-```swift
-// ios: AppDelegate, application(_:didFinishLaunchingWithOptions:), before React Native starts
-import ReactNativeOpenTelemetryCore
-
-RNOtel.start { c in
-  c.serviceName = "shop"
-  c.serviceVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
-  c.export = .init(url: "https://collector.example.com:4318/v1/traces", headers: ["x-api-key": KEY])
-}
-```
-
-Then call `startReactNativeSdk()` in JS too. It attaches to the native SDK. If you pass an `exportConfig`, it is
-ignored and you get one warning.
-
-### JS (fallback on mobile, the only init on web)
-
-If no native init ran, as in an Expo app without native code, `startReactNativeSdk` starts native itself. You lose
-only the spans from before JS starts.
-
-```ts
-// index.js, before the app is registered
-import {startReactNativeSdk} from 'react-native-open-telemetry';
-
-const {tracerProvider, forceFlush, shutdown} = startReactNativeSdk({
-  serviceName: 'shop',
-  serviceVersion: '1.4.0',
-  resourceAttributes: {'deployment.environment.name': 'prod'},
-  exportConfig: {url: 'https://collector.example.com:4318/v1/traces', headers: {'x-api-key': KEY}},
-  spanProcessors: [/* stock @opentelemetry/sdk-trace SpanProcessors, optional */],
-});
-```
-
-The returned `tracerProvider` is registered globally, so `trace.getTracer(...)` from `@opentelemetry/api` works. On
-mobile, `shutdown()` stops only the JS provider, never the native one. A missing or invalid config logs one error
-and returns a no-op handle. The SDK never throws into your app.
-
-### Endpoint
-
-`url` (`exportConfig.url` in JS, `export.url` natively) is the OTLP/HTTP traces endpoint, used as given, for example
-`https://host:4318/v1/traces`. No path is appended. It works the same on Android, iOS and web.
-
-### Try it with the official Collector
-
-```sh
-docker compose -f example/collector/docker-compose.yaml up
-```
-
-This runs the OpenTelemetry Collector with OTLP/HTTP on port 4318 and Jaeger at http://localhost:16686. Point `url` at
-`http://localhost:4318/v1/traces` (the Android emulator reaches the host at `10.0.2.2`). The Collector also prints
-every span it receives.
-
-## Metro helper
-
-The context patch must run before any app module. Web bundles also must not use native `async`, which the patch cannot
-see through.
-
-**Metro** (`metro.config.js`): wrap the **merged** config. If you wrap only your own config, React Native's default
-`InitializeCore` entry is dropped.
+**Metro** — wrap the merged config, so context tracking starts before any of your code:
 
 ```js
 const {getDefaultConfig, mergeConfig} = require('@react-native/metro-config'); // Expo: expo/metro-config
 const {withOtel} = require('react-native-open-telemetry/metro');
 
-const config = {/* yours */};
-module.exports = withOtel(mergeConfig(getDefaultConfig(__dirname), config));
+module.exports = withOtel(mergeConfig(getDefaultConfig(__dirname), {}));
 ```
 
-Metro's `withOtel` only orders the setup: it runs the patch before any app module. React Native's Babel preset already
-compiles `async` down. Without the helper, the patch still installs when your code imports the package. Only code
-that ran before that import, such as React's scheduler capturing timers, loses its parent.
-
-**Web (Expo web, Metro).** Use the same Metro `withOtel`. `babel-preset-expo` keeps native `async` on web, so lower
-it there in `babel.config.js`:
+On **Expo web**, also lower `async` in `babel.config.js`, otherwise spans lose their parent after `await`:
 
 ```js
 module.exports = api => {
@@ -150,86 +62,126 @@ module.exports = api => {
 };
 ```
 
-Without it, the startup probe logs an error (`console.error`) and marks the JS tracers with
-`com.callstack.context.degraded=true`. Parents are then lost after `await`, but never wrong.
+## Usage
 
-## Native helpers and crossing the boundary
+### 1. Start the native SDK (recommended)
 
-Both platforms expose the same small API next to `start`:
+Start in native code, before React Native, so you can trace from the very start of the app. It never throws: on bad config it logs an error and telemetry stays off.
 
-| | Android (`com.callstack.otel.RNOtel`) | iOS (`RNOtel`) |
-| --- | --- | --- |
-| Tracer on the native provider (no-op before init) | `RNOtel.tracer(name, version?)` | `RNOtel.tracer(name, version:)` |
-| W3C `traceparent` → parent (invalid → root) | `RNOtel.contextFrom(traceparent)` → `Context` | `RNOtel.contextFrom(traceparent:)` → `SpanContext?` |
-| Span → `traceparent` | `RNOtel.traceparentOf(span)` | `RNOtel.traceparentOf(span)` |
+See OpenTelemetry's [Java](https://opentelemetry.io/docs/languages/java/api/#tracerprovider) and [Swift](https://opentelemetry.io/docs/languages/swift/) documentation for more information on available APIs.
 
-JS → native: pass the active span's `traceparent` to your native module, and parent the native span with
-`contextFrom`:
+**Android**
+
+```kt
+import com.callstack.otel.RNOtel
+
+class MainApplication : Application(), ReactApplication {
+    override fun onCreate() {
+        super.onCreate()
+
+        // Start the SDK, before loadReactNative(this)
+        RNOtel.start(this) {
+            serviceName = "my-app"
+            serviceVersion = "1.0.0"
+            resourceAttributes = mapOf("deployment.environment.name" to "production")
+            export {
+                url = "https://my-collector.com:4318/v1/traces"
+                headers = mapOf("x-api-key" to KEY)
+            }
+        }
+
+        // Use available APIs
+        val span = RNOtel.tracer("native-scope-name").spanBuilder("native-work").startSpan()
+        span.end()
+    }
+}
+```
+
+**iOS**
+
+```swift
+import ReactNativeOpenTelemetryCore
+
+// AppDelegate, application(_:didFinishLaunchingWithOptions:), before React Native starts
+RNOtel.start { c in
+  c.serviceName = "my-app"
+  c.serviceVersion = "1.0.0"
+  c.export = .init(url: "https://my-collector.com:4318/v1/traces", headers: ["x-api-key": KEY])
+}
+```
+
+### 2. Start the JS SDK
+
+Call it in `index.js`, before the app is registered. When native already started, it attaches to it and `exportConfig` is ignored. Otherwise (web, or an Expo app without native code) it starts everything itself.
+
+See OpenTelemetry's JS documentation on [Traces](https://opentelemetry.io/docs/languages/js/instrumentation/#acquiring-a-tracer) for more information on available APIs.
+
+```js
+import { trace } from '@opentelemetry/api';
+import { startReactNativeSdk } from 'react-native-open-telemetry';
+
+// Start the SDK
+startReactNativeSdk({
+  serviceName: 'my-app',
+  serviceVersion: '1.0.0',
+  resourceAttributes: { 'deployment.environment.name': 'production' },
+  exportConfig: { url: 'https://my-collector.com:4318/v1/traces', headers: { 'x-api-key': KEY } },
+});
+
+// Use available APIs
+const tracer = trace.getTracer('my-js-tracer', '1.0');
+
+function App() {
+  async function onPress() {
+    await tracer.startActiveSpan('promo-press', async span => {
+      await fetchPromo(); // spans started in here keep their parent
+      span.end();
+    });
+  }
+
+  return <Button title="Press me" onPress={onPress} />
+}
+```
+
+`url` is the OTLP/HTTP traces endpoint, used as given (no path is appended).
+
+### 3. Connect JS and Native spans (optional)
+
+Pass a W3C `traceparent` across your own native module. Parent the native span with `RNOtel.contextFrom(traceparent)`, or return `RNOtel.traceparentOf(span)` to JS to continue from native.
 
 ```ts
-const {traceId, spanId, traceFlags} = span.spanContext();
+const { traceId, spanId, traceFlags } = span.spanContext();
 MyNative.doWork(`00-${traceId}-${spanId}-${traceFlags.toString(16).padStart(2, '0')}`);
 ```
 
-```kotlin
+```kt
 RNOtel.tracer("my.module").spanBuilder("native.work").setParent(RNOtel.contextFrom(traceparent)).startSpan()
 ```
 
-```swift
-let b = RNOtel.tracer("my.module").spanBuilder(spanName: "native.work")
-if let parent = RNOtel.contextFrom(traceparent: traceparent) { b.setParent(parent) } else { b.setNoParent() }
+## Try it locally
+
+Run the official OpenTelemetry Collector with Jaeger:
+
+```sh
+docker compose -f example/collector/docker-compose.yaml up
 ```
 
-Native → JS: return `RNOtel.traceparentOf(span)`, and start the JS span under it:
+Point `url` at `http://localhost:4318/v1/traces` (`10.0.2.2` on the Android emulator) and open Jaeger at http://localhost:16686.
 
-```ts
-const [, traceId, spanId, flags] = MyNative.doWork().split('-');
-const parent = trace.wrapSpanContext({traceId, spanId, traceFlags: parseInt(flags, 16), isRemote: false});
-context.with(trace.setSpan(context.active(), parent), () => tracer.startSpan('js.after_native').end());
-```
+## Known limitations
 
-## Context guarantees
-
-The active context carries through `await`, promise chains (`then`/`catch`/`finally`), `setTimeout`,
-`setImmediate`, `queueMicrotask` and `requestAnimationFrame`. **No span gets a wrong parent through `await`, promise
-or timer flows.** A callback that runs after its parent ended is still attached to that parent.
-
-Documented exceptions:
-
-- **Shared queues.** A queue that is flushed once runs everyone's work in the context of whoever enqueued first:
-  React's scheduler and batching, debounce/throttle helpers, store notifiers. Those spans can get the wrong parent.
-  Bind the context yourself with `context.bind(ctx, fn)` or `context.with(...)` from `@opentelemetry/api`.
-- **`setInterval`.** Ticks run in `ROOT_CONTEXT`, so each tick's spans start a new trace. They do not join the trace
-  that registered the interval, and v0 adds no link back to it.
-- **Code that captured `Promise.prototype.then` before the patch ran** (without the Metro helper, code that runs before the package import) runs
-  at ROOT and loses its parent. It never gets a wrong one.
-- **Native `async`** (a web bundle without the Babel plugins above, a future Hermes that keeps `async`) loses parents after
-  `await`. The startup probe detects this and sets `com.callstack.context.degraded=true` on the JS tracers' scope.
-
-## Known limits (v0)
-
-- **iOS OTLP:** the opentelemetry-swift encoder never writes span `flags`, span `traceState`, link `flags`/`traceState`
-  or the scope `schemaUrl`.
-- **iOS times** are quantized to about 240 ns, because opentelemetry-swift stores them as `Date`.
-- **iOS `TRACEPARENT`:** opentelemetry-swift reads a `TRACEPARENT` environment variable and makes it the parent of
-  every root span. Do not launch the app with it set.
-- `requestIdleCallback` is not patched.
-- `InteractionManager` has no coverage: React Native 0.88 removed it.
-- **Web:** the flush on browser `pagehide` is not tested.
-
-## Releasing
-
-Maintainers: see [CONTRIBUTING.md](CONTRIBUTING.md#publishing-to-npm).
-
-## Verification
-
-Every guarantee above is a scenario with expected OTLP output, checked on Android, iOS and web. See
-[verify/VERIFY.md](verify/VERIFY.md).
+* Work batched through a shared queue (React's scheduler, debounce/throttle helpers) can get the wrong parent. Bind it yourself with `context.with(...)`.
+* `setInterval` ticks start a new trace.
+* **iOS** doesn't export span/link `flags`, `traceState` and the scope `schemaUrl`, and times are rounded to ~240 ns. Both come from [opentelemetry-swift](https://github.com/open-telemetry/opentelemetry-swift).
 
 ## Contributing
 
-See the [contributing guide](CONTRIBUTING.md).
+See the [contributing guide](CONTRIBUTING.md) to learn how to contribute to the repository and the development workflow.
 
 ## License
 
 MIT
+
+---
+
+Made with [create-react-native-library](https://github.com/callstack/react-native-builder-bob)
