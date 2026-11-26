@@ -9,95 +9,170 @@ Best in class observability brought to React Native.
 
 * **Telemetry without lock-in**. Send to **any OTLP compliant backend** including [vendors](https://opentelemetry.io/ecosystem/vendors/)
 * [**Tracing** API](https://opentelemetry.io/docs/specs/otel/trace/api/)
-* [**Metrics** API](https://opentelemetry.io/docs/specs/otel/metrics/api/)
-* **Web**, **Android** (experimental) support with **iOS** coming soon
-* Automatic **fetch instrumentation**
-* Automatic **session tagging**
+* **One trace across JS and Native**, exported together
+* Context carried through `await`, promises and timers
+* **Web**, **Android** and **iOS** support
 
 ## Platform support
 
 | Platform | Support |
 | --- | --- |
 | **web** | ☑️ Stable |
-| **android** | ☑️ Stable JS with experimental Native 🏗️ |
-| **ios** | ☑️ Stable JS with planned Native 👀 |
+| **android** | ☑️ Stable JS and Native |
+| **ios** | ☑️ Stable JS and Native |
+
+Requires React Native **0.88+** (New Architecture, Hermes), Xcode **27+** and Android minSdk **26**.
 
 ## Installation
 
 ```sh
-npm install react-native-open-telemetry
+npm install react-native-open-telemetry react-native-nitro-modules
+```
+
+**iOS** — add the core pod to your app target in `ios/Podfile`, then run `pod install`:
+
+```ruby
+pod 'ReactNativeOpenTelemetryCore', :path => '../node_modules/react-native-open-telemetry'
+```
+
+**Expo** — use the config plugin instead, it adds that line for you:
+
+```json
+{ "expo": { "plugins": ["react-native-open-telemetry"] } }
+```
+
+**Metro** — wrap the merged config, so context tracking starts before any of your code:
+
+```js
+const {getDefaultConfig, mergeConfig} = require('@react-native/metro-config'); // Expo: expo/metro-config
+const {withOtel} = require('react-native-open-telemetry/metro');
+
+module.exports = withOtel(mergeConfig(getDefaultConfig(__dirname), {}));
+```
+
+On **Expo web**, also lower `async` in `babel.config.js`, otherwise spans lose their parent after `await`:
+
+```js
+module.exports = api => {
+  const web = api.caller(c => c?.platform === 'web');
+  return {
+    presets: ['babel-preset-expo'],
+    plugins: web ? ['@babel/plugin-transform-async-generator-functions', '@babel/plugin-transform-async-to-generator'] : [],
+  };
+};
 ```
 
 ## Usage
 
-### 1. Start the JS SDK
+### 1. Start the native SDK (recommended)
 
-See OpenTelemetry's JS documentation on [Traces](https://opentelemetry.io/docs/languages/js/instrumentation/#acquiring-a-tracer) and [Metrics](https://opentelemetry.io/docs/languages/js/instrumentation/#acquiring-a-meter) for more information on available APIs.
+Start in native code, before React Native, so you can trace from the very start of the app. It never throws: on bad config it logs an error and telemetry stays off.
+
+See OpenTelemetry's [Java](https://opentelemetry.io/docs/languages/java/api/#tracerprovider) and [Swift](https://opentelemetry.io/docs/languages/swift/) documentation for more information on available APIs.
+
+**Android**
+
+```kt
+import com.callstack.otel.RNOtel
+
+class MainApplication : Application(), ReactApplication {
+    override fun onCreate() {
+        super.onCreate()
+
+        // Start the SDK, before loadReactNative(this)
+        RNOtel.start(this) {
+            serviceName = "my-app"
+            serviceVersion = "1.0.0"
+            resourceAttributes = mapOf("deployment.environment.name" to "production")
+            export {
+                url = "https://my-collector.com:4318/v1/traces"
+                headers = mapOf("x-api-key" to KEY)
+            }
+        }
+
+        // Use available APIs
+        val span = RNOtel.tracer("native-scope-name").spanBuilder("native-work").startSpan()
+        span.end()
+    }
+}
+```
+
+**iOS**
+
+```swift
+import ReactNativeOpenTelemetryCore
+
+// AppDelegate, application(_:didFinishLaunchingWithOptions:), before React Native starts
+RNOtel.start { c in
+  c.serviceName = "my-app"
+  c.serviceVersion = "1.0.0"
+  c.export = .init(url: "https://my-collector.com:4318/v1/traces", headers: ["x-api-key": KEY])
+}
+```
+
+### 2. Start the JS SDK
+
+Call it in `index.js`, before the app is registered. When native already started, it attaches to it and `exportConfig` is ignored. Otherwise (web, or an Expo app without native code) it starts everything itself.
+
+See OpenTelemetry's JS documentation on [Traces](https://opentelemetry.io/docs/languages/js/instrumentation/#acquiring-a-tracer) for more information on available APIs.
 
 ```js
-import { openTelemetrySDK } from 'react-native-open-telemetry';
+import { trace } from '@opentelemetry/api';
+import { startReactNativeSdk } from 'react-native-open-telemetry';
 
 // Start the SDK
-const sdk = openTelemetrySDK({
-  debug: true,
-  url: "https://my-collector.com:4317",
-  name: "my-app",
-  version: "1.0.0-alpha",
-  environment: "development",
+startReactNativeSdk({
+  serviceName: 'my-app',
+  serviceVersion: '1.0.0',
+  resourceAttributes: { 'deployment.environment.name': 'production' },
+  exportConfig: { url: 'https://my-collector.com:4318/v1/traces', headers: { 'x-api-key': KEY } },
 });
 
 // Use available APIs
-const meter = sdk.metrics.getMeter("my-js-meter", "1.0");
-
-const promoCounter = meter.createCounter("my-promo-counter", {
-  description: "A counter metric for my promo section"
-});
+const tracer = trace.getTracer('my-js-tracer', '1.0');
 
 function App() {
-  function onPress() {
-    promoCounter.add(1);
+  async function onPress() {
+    await tracer.startActiveSpan('promo-press', async span => {
+      await fetchPromo(); // spans started in here keep their parent
+      span.end();
+    });
   }
 
   return <Button title="Press me" onPress={onPress} />
 }
 ```
 
-### 2. Start the native SDK (optional) 🚧
+`url` is the OTLP/HTTP traces endpoint, used as given (no path is appended).
 
-> [!IMPORTANT]
-> This section is considered **highly experimental**.
-> There's currently no support for bidirectional JS/Native communication and the `native` feature flag only marks an API that will become available.
+### 3. Connect JS and Native spans (optional)
 
-**Android**
+Pass a W3C `traceparent` across your own native module. Parent the native span with `RNOtel.contextFrom(traceparent)`, or return `RNOtel.traceparentOf(span)` to JS to continue from native.
 
-See OpenTelemetry's Android documentation on [Traces](https://opentelemetry.io/docs/languages/java/api/#tracerprovider) and [Metrics](https://opentelemetry.io/docs/languages/java/api/#meterprovider) for more information on available APIs.
+```ts
+const { traceId, spanId, traceFlags } = span.spanContext();
+MyNative.doWork(`00-${traceId}-${spanId}-${traceFlags.toString(16).padStart(2, '0')}`);
+```
 
 ```kt
-import com.opentelemetry.OpenTelemetry
-
-class MainApplication : Application(), ReactApplication {
-    override fun onCreate() {
-        super.onCreate()
-
-        // Start the SDK
-        OpenTelemetry.init(this) {
-            debug = true
-            url = "https://my-collector.com:4317"
-            name = "my-app"
-            version = "1.0.0"
-            environment = "production"
-        }
-
-        // ..
-
-        // Use available APIs
-        val sdk = OpenTelemetry.get()
-        val meter = sdk.getMeter("native-scope-name")
-        val counter = meter.counterBuilder("native-counter").build()
-        counter.add(14)
-    }
-}
+RNOtel.tracer("my.module").spanBuilder("native.work").setParent(RNOtel.contextFrom(traceparent)).startSpan()
 ```
+
+## Try it locally
+
+Run the official OpenTelemetry Collector with Jaeger:
+
+```sh
+docker compose -f example/collector/docker-compose.yaml up
+```
+
+Point `url` at `http://localhost:4318/v1/traces` (`10.0.2.2` on the Android emulator) and open Jaeger at http://localhost:16686.
+
+## Known limitations
+
+* Work batched through a shared queue (React's scheduler, debounce/throttle helpers) can get the wrong parent. Bind it yourself with `context.with(...)`.
+* `setInterval` ticks start a new trace.
+* **iOS** doesn't export span/link `flags`, `traceState` and the scope `schemaUrl`, and times are rounded to ~240 ns. Both come from [opentelemetry-swift](https://github.com/open-telemetry/opentelemetry-swift).
 
 ## Contributing
 

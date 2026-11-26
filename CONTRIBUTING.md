@@ -77,9 +77,14 @@ We follow the [conventional commits specification](https://www.conventionalcommi
 
 We use [TypeScript](https://www.typescriptlang.org/) for type checking and [OXLint](https://oxc.rs/docs/guide/usage/linter.html) for linting and formatting the code.
 
-### Publishing to npm 🚧
+### Publishing to npm
 
-We use [changesets](https://github.com/changesets/changesets) for managing versions, though this is a manual process for now in the experimental phase.
+We use [changesets](https://github.com/changesets/changesets). Releases are manual:
+
+1. Add a changeset (`bunx changeset`) in your PR.
+2. To release, check that CI is green on `main`, then run `bun run version` on `main`
+   (bumps `package.json` and writes `CHANGELOG.md`), review and commit it.
+3. `bun run publish` (`changeset publish`) builds through `prepare` and publishes to npm.
 
 ### Scripts
 

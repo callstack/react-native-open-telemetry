@@ -1,6 +1,4 @@
 import type {Stage} from '../run';
-import fs from 'node:fs';
-import path from 'node:path';
 import {packContents, REQUIRED} from '../static/packContents';
 
 const stage: Stage = {
@@ -10,9 +8,8 @@ const stage: Stage = {
   run({sh}) {
     sh(['bunx', 'tsc', '--noEmit']);
     sh(['bun', 'run', 'codegen']);
-    sh(['bun', 'run', '--cwd', 'example/modules/test-native', 'codegen']); // the example's TestNative module (Task 26)
+    sh(['bun', 'run', '--cwd', 'example/modules/test-native', 'codegen']);
     const generated = ['nitrogen/', 'example/modules/test-native/nitrogen/'];
-    // git diff ignores untracked files, so list them too.
     sh(['git', 'diff', '--exit-code', ...generated]);
     if (sh(['git', 'ls-files', '--others', '--exclude-standard', ...generated]).trim()) {
       throw new Error('nitrogen/generated is out of date: run `bun run codegen` and commit');
@@ -22,11 +19,6 @@ const stage: Stage = {
     const list: string[] = JSON.parse(out)[0].files.map((f: {path: string}) => f.path);
     const missing = packContents(list, REQUIRED);
     if (missing.length) throw new Error(`npm pack is missing: ${missing.join(', ')}`);
-    // iOS has no build-time access to package.json (Android reads it in Gradle): the Swift constant must match.
-    const root = path.join(import.meta.dirname, '..', '..');
-    const {version} = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-    if (!fs.readFileSync(path.join(root, 'ios', 'RNOtel', 'RNOtel.swift'), 'utf8').includes(`let packageVersion = "${version}"`))
-      throw new Error(`ios/RNOtel/RNOtel.swift: set packageVersion to "${version}" (package.json)`);
     sh(['bunx', 'jest', '--selectProjects', 'harness']);
   },
 };

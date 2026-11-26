@@ -89,3 +89,5 @@ android/generated
 .superpowers/
 verify/artifacts/
 verify/e2e/.e2e/
+
+ios/RNOtel/PackageVersion.swift
