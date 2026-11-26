@@ -5,24 +5,17 @@ export const MARKER = Symbol.for('com.callstack.otel.patched');
 const TIMERS = ['setTimeout', 'setImmediate', 'queueMicrotask', 'requestAnimationFrame'] as const;
 type Fn = (...args: any[]) => any;
 
-/** Holds the pre-patch functions and the singleton, so a second install (fast refresh, a second SDK copy) is a no-op. */
 export type PatchMarker = {
   then: typeof Promise.prototype.then;
   setInterval: Fn;
   contextManager: RNContextManager;
 } & Partial<Record<(typeof TIMERS)[number], Fn>>;
 
-/**
- * Carries the active context from where a callback is scheduled to where it runs (§6.1).
- * At ROOT the original is called unwrapped (every wrapper restores in `finally`, so jobs start at ROOT).
- * `setInterval` ticks run in ROOT_CONTEXT (§6.2).
- */
 export function installContextPatch(cm: RNContextManager): void {
   const g = globalThis as any;
   if (g[MARKER]) return;
   const marker: PatchMarker = {then: Promise.prototype.then, setInterval: g.setInterval, contextManager: cm};
 
-  // fixed arity: `then` callbacks take one argument
   const wrap = (ctx: Context, fn: Fn) =>
     function (this: unknown, v: unknown) {
       const prev = cm.swap(ctx);
@@ -32,7 +25,6 @@ export function installContextPatch(cm: RNContextManager): void {
         cm.swap(prev);
       }
     };
-  // timers forward extra arguments
   const wrapArgs = (ctx: Context, fn: Fn) =>
     function (this: unknown, ...args: unknown[]) {
       const prev = cm.swap(ctx);
@@ -56,7 +48,7 @@ export function installContextPatch(cm: RNContextManager): void {
 
   for (const name of TIMERS) {
     const orig: Fn | undefined = g[name];
-    if (typeof orig !== 'function') continue; // rAF is absent in Node, setImmediate on web
+    if (typeof orig !== 'function') continue;
     marker[name] = orig;
     g[name] = function (cb: unknown, ...rest: unknown[]) {
       const ctx = cm.active();

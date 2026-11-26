@@ -3,7 +3,6 @@ import OpenTelemetryApi
 import OpenTelemetryProtocolExporterHttp
 import OpenTelemetrySdk
 
-/// Test mode: `0b…` IDs, the native counterpart of JS `sequentialIds('0a')`.
 private final class SequentialIds: IdGenerator, @unchecked Sendable {
   private let lock = NSLock()
   private var t = 0
@@ -15,7 +14,6 @@ private final class SequentialIds: IdGenerator, @unchecked Sendable {
 
 let distroName = "react-native-open-telemetry"
 
-/// Built on first export (the export queue), so init on the main thread never constructs an HTTP client.
 private final class LazyExporter: SpanExporter, @unchecked Sendable {
   private let lock = NSLock()
   private var built: OtlpHttpTraceExporter?
@@ -37,9 +35,7 @@ private final class LazyExporter: SpanExporter, @unchecked Sendable {
 }
 
 package final class OtelCore {
-  /// The one resource of the app; in test mode built from config only (no `telemetry.*`).
   package let resource: Resource
-  /// The native TracerProvider; JS spans join its batch processor.
   let tracerProvider: TracerProviderSdk
   private let bsp: BatchSpanProcessor
   private let exporter: LazyExporter
@@ -54,29 +50,20 @@ package final class OtelCore {
     }
     resource = testMode ? Resource(attributes: attrs) : Resource().merging(other: Resource(attributes: attrs))
 
-    // Upstream sends `envVarHeaders ?? config headers`: passing ours there (even empty) means exactly these headers,
-    // never OTEL_EXPORTER_OTLP_HEADERS. Upstream's default gzip stays on.
     exporter = LazyExporter {
       URL(string: config.exportUrl).map {
         OtlpHttpTraceExporter(endpoint: $0, envVarHeaders: config.exportHeaders.map { ($0.key, $0.value) })
       }
     }
-    // test mode: no timed export within a device test, so only flush and background export send
-    bsp = BatchSpanProcessor(spanExporter: exporter, scheduleDelay: testMode ? 120 : 5) // 5 s: upstream's default
+    bsp = BatchSpanProcessor(spanExporter: exporter, scheduleDelay: testMode ? 120 : 5)
     let b = TracerProviderBuilder().with(resource: resource).add(spanProcessor: bsp)
     tracerProvider = (testMode ? b.with(idGenerator: SequentialIds()) : b).build()
   }
 
-  /// JS-thread work: enqueue finished spans; the adapter's wrappers build SpanData on the export queue.
   package func handOff(_ spans: [ReadableSpan]) {
     for s in spans { bsp.onEnd(span: s) }
   }
 
-  /// Blocks the caller up to `timeoutMs`. True when nothing is left unsent: the exporter requeues a failed batch,
-  /// and its `flush` retries it.
-  // ponytail: upstream BatchWorker race: if its timer thread has just taken the queue but not yet scheduled the
-  // export, forceFlush finds nothing and returns before that batch is sent (true while in flight). TracerProviderSdk
-  // forceFlush goes through the same worker; fix upstream or track in-flight spans if flush-after-reload needs it.
   package func flush(timeoutMs: Double) -> Bool {
     let deadline = Date().addingTimeInterval(timeoutMs / 1000)
     bsp.forceFlush(timeout: timeoutMs / 1000)
@@ -87,8 +74,6 @@ package final class OtelCore {
   private static var state: InitResult?
   package private(set) static var instance: OtelCore?
 
-  /// Idempotent. The first result sticks, a failed one too: later calls never retry. A call without config
-  /// before any init is an error but is not remembered, so the real init can still follow.
   @discardableResult
   package static func initialize(_ config: CoreConfig?, testMode: Bool = false, distroVersion: String = "unknown") -> InitResult {
     lock.withLock {

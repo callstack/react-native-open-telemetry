@@ -10,7 +10,6 @@ import type {SdkConfig, SdkHandle} from './config';
 import {noopHandle} from './noop';
 import {register, startOnce, TAG} from './shared';
 
-/** Undefined unless there is enough to initialize native; native then reports the missing config. */
 function toSeamConfig(c: SdkConfig): SeamConfig | undefined {
   if (!c.serviceName || !c.exportConfig?.url) return undefined;
   return {
@@ -37,7 +36,6 @@ function start(config: SdkConfig | undefined): SdkHandle {
   const seam = config && toSeamConfig(config);
   const result = native.initialize(seam);
   if (result.error) {
-    // alreadyInitialized: a failed native-first init sticks and native already reported it, once
     if (result.alreadyInitialized) return noopHandle();
     if (config && !seam) {
       console.error(`${TAG} serviceName and exportConfig.url are required to initialize native; telemetry is off.`);
@@ -50,7 +48,6 @@ function start(config: SdkConfig | undefined): SdkHandle {
     console.warn(`${TAG} native was initialized first; the JS exportConfig is ignored.`);
   }
 
-  // Resource is empty: native owns it. Sampler: upstream default ParentBased(AlwaysOn). Timing: upstream (§4.3 Clock).
   const provider = new TracerProvider({
     resource: emptyResource(),
     ...(result.testMode ? {idGenerator: sequentialIds('0a')} : {}),
@@ -59,5 +56,4 @@ function start(config: SdkConfig | undefined): SdkHandle {
   return register(provider);
 }
 
-/** Attaches to native, or initializes it from `config` (§4.4). Never throws: failures give one error and a no-op handle. */
 export const startReactNativeSdk = (config?: SdkConfig): SdkHandle => startOnce(start, config);

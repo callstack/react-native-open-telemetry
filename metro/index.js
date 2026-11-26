@@ -1,17 +1,8 @@
 const PACKAGE = 'react-native-open-telemetry';
 
-/**
- * Metro helper: runs the SDK's setup (context patch) before the app.
- * Appending to `getModulesRunBeforeMainModule` puts it after RN's InitializeCore and before any app module.
- * Metro only runs such an entry if it is already in the bundle graph; `src/index.ts` imports `./setup` for that.
- * The package is also excluded from inline requires (`nonInlinedRequires`): an inlined import whose only use is
- * platform-dead code (e.g. inside `Platform.OS === 'android'` on iOS) would otherwise drop the package, and setup,
- * from a release graph.
- */
 function withOtel(config, {setupPath = require.resolve('react-native-open-telemetry/setup')} = {}) {
   const serializer = config.serializer ?? {};
   const original = serializer.getModulesRunBeforeMainModule;
-  // without it Metro would run only our setup before the app, and drop RN's InitializeCore
   if (typeof original !== 'function') {
     throw new Error(
       `${PACKAGE}/metro: apply withOtel to the merged config: withOtel(mergeConfig(getDefaultConfig(__dirname), config))`,

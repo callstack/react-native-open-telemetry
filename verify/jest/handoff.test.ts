@@ -33,7 +33,6 @@ describe('NativeHandOffProcessor', () => {
     const calls: SeamSpan[][] = [];
     const native = {handOff: (s: SeamSpan[]) => void calls.push(s)} as unknown as Otel;
     const provider = new TracerProvider({
-      // recorded (so processors see it) but traceFlags stay 0
       sampler: {shouldSample: () => ({decision: SamplingDecision.RECORD}), toString: () => 'record-only'},
       spanProcessors: [new NativeHandOffProcessor(native)],
     });

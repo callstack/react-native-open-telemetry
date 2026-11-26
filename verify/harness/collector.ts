@@ -10,7 +10,6 @@ export type Collector = {
   begin(scenario: string, platform: string): void;
   end(): Promise<OtlpJson>;
   refuse(status: number, count: number): void;
-  /** Export requests accepted since `begin`. */
   received(): number;
   close(): Promise<void>;
 };
@@ -41,7 +40,6 @@ export async function startCollector(
         res.end(payload === undefined ? undefined : JSON.stringify(payload));
       };
       try {
-        // opentelemetry-swift gzips by default; the raw/ files keep the decoded body
         if (req.headers['content-encoding'] === 'gzip') body = zlib.gunzipSync(body);
         const route = `${req.method} ${req.url?.split('?')[0]}`;
         if (req.method === 'OPTIONS') return send(204);

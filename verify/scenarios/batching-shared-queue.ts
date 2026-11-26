@@ -1,9 +1,5 @@
 import {scenario} from '../harness/scenario';
 
-/**
- * Documented exception (§6.2): a shared queue flushed once runs everyone's work in the context of the first
- * enqueuer. `h2.work` is recorded under `h1` (the spike's `h_batching`); this file pins that wrong parent.
- */
 export default scenario(
   'batching-shared-queue',
   async ({tracer, at}) => {

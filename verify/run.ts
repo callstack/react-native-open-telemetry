@@ -26,7 +26,6 @@ const ctx: Ctx = {
 
 if (ctx.update) process.env.VERIFY_UPDATE = '1';
 
-// generate verify/scenarios/index.ts from the folder
 const sc = readdirSync(join(import.meta.dirname, 'scenarios')).filter(f => f.endsWith('.ts') && f !== 'index.ts').sort();
 const id = (f: string) => f.slice(0, -3).replace(/-(.)/g, (_, c) => c.toUpperCase());
 const indexFile = join(import.meta.dirname, 'scenarios', 'index.ts');

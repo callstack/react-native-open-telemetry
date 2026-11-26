@@ -2,7 +2,6 @@ import {ROOT_CONTEXT, createContextKey} from '@opentelemetry/api';
 import {RNContextManager} from '../RNContextManager';
 import {installContextPatch} from '../patch';
 
-// Spy installed before the patch: it stands in for the original `then` and records what reaches it.
 const realThen = Promise.prototype.then;
 const seen: unknown[] = [];
 Promise.prototype.then = function (this: Promise<unknown>, ok?: any, err?: any) {

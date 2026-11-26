@@ -49,7 +49,7 @@ test('attaches when native is initialized', () => {
   const {calls, spans} = fakeOtel({initialized: true});
   const h = startReactNativeSdk(CONFIG);
   expect(calls).toHaveLength(1);
-  expect(warn).toHaveBeenCalledTimes(1); // exportConfig ignored
+  expect(warn).toHaveBeenCalledTimes(1);
   h.tracerProvider.getTracer('t').startSpan('s').end();
   expect(spans.map(s => s.name)).toEqual(['s']);
   expect(err).not.toHaveBeenCalled();
@@ -133,7 +133,6 @@ test('second call returns the first handle with one warning', () => {
   expect(startReactNativeSdk()).toBe(h);
   expect(startReactNativeSdk()).toBe(h);
   expect(warn).toHaveBeenCalledTimes(1);
-  // a fast-refresh re-evaluation of the SDK module still returns it
   jest.isolateModules(() => expect(require('../start').startReactNativeSdk()).toBe(h));
 });
 

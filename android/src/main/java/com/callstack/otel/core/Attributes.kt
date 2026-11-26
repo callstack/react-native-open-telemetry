@@ -5,10 +5,8 @@ import com.margelo.nitro.callstack.otel.SeamAttribute
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 
-// Number.isInteger(v): whole and finite (-0 included). Long.MAX_VALUE as Double is 2^63, hence the exclusive bound.
 private fun isLong(v: Double) = v == Math.rint(v) && v >= -9.223372036854775807E18 && v < 9.223372036854775807E18
 
-/** JS numbers become `long` iff Number.isInteger (and they fit), else `double`; the same rule on JS, Kotlin, Swift. */
 fun attributesOf(list: Array<SeamAttribute>): Attributes {
   val b = Attributes.builder()
   for (a in list) {
@@ -27,5 +25,4 @@ fun attributesOf(list: Array<SeamAttribute>): Attributes {
   return b.build()
 }
 
-/** An `HrTime` `[seconds, nanos]` as epoch nanos. Never throws on the JS thread: missing elements read as 0. */
 fun epochNanos(t: DoubleArray): Long = t.getOrElse(0) { 0.0 }.toLong() * 1_000_000_000L + t.getOrElse(1) { 0.0 }.toLong()
