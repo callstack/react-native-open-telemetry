@@ -585,11 +585,12 @@ tests: they don't care about internals, so internals can be rewritten freely.
 
 ### 9.1 Scenarios and expected files are the spec
 - **One scenario per guarantee, named after it.** `verify/scenarios/nest-after-await.ts`
-  pairs with `verify/expected/nest-after-await.<platform>.otlp.json`. The file name is the
+  pairs with `verify/expected/nest-after-await.otlp.json`. The file name is the
   guarantee's ID; no separate registry or coverage check.
 - Expected files are the exact **OTLP/JSON** payload (OTLP's JSON encoding: hex trace/span
   IDs, not the generic protobuf JSON base64 mapping). Plain equality; valid OTLP that can be
-  POSTed to a collector or viewed in Jaeger as-is. Per-platform files are accepted.
+  POSTed to a collector or viewed in Jaeger as-is. **One file per scenario for every platform**
+  (JS, web, Android, iOS): OTLP is standardized and every platform must report the same.
   Prior art: Collector goldens, upstream test hooks (§14 P17–P19).
 - **Spec first:** the expected file is written (agent drafts, human reviews) before the code
   that makes it pass. With explicit timestamps and sequential IDs, exact values are
@@ -600,8 +601,8 @@ tests: they don't care about internals, so internals can be rewritten freely.
   flag for the bare and Expo apps; no test fields in the public API or the seam config:
   - **explicit timestamps**: v0 scenarios create all spans themselves, so they pass
     `startTime` / `end(t)` explicitly (JS and native), in whole microseconds. iOS cannot
-    represent them exactly: opentelemetry-swift exports `Date`, a ~238–256 ns grid, so the `ios`
-    files record the quantized values (R22, measured floor in verify/VERIFY.md). Clock stubs (Java `setClock`/`TestClock` in test source sets
+    represent them exactly: opentelemetry-swift exports `Date`, a ~238–256 ns grid, so iOS times
+    are compared within 256 ns (R22, measured floor in verify/VERIFY.md). Clock stubs (Java `setClock`/`TestClock` in test source sets
     only; Swift `with(clock:)`) are only a fallback for implicit reads.
   - sequential test ID generators, namespaced per side (JS `0a…01`, native `0b…01`) via
     upstream hooks: JS `sdk-trace` `idGenerator`, Java `setIdGenerator`, Swift
@@ -611,15 +612,13 @@ tests: they don't care about internals, so internals can be rewritten freely.
     is random). Reorders, never rewrites.
   - concurrency scenarios are serialized deterministically (JS is single-threaded; native
     spans in scenarios are started synchronously from JS).
-- **Shape files and parity**: each scenario has one hand-written, reviewed
-  `verify/expected/<scenario>.shape.json` (trace partitions, span names, kinds, parent
-  links, link targets, status, attribute keys and types; no IDs or times). Every platform's
-  output is reduced to a shape and must equal it, so all platforms agree with each other by
-  construction. Shapes are written first; exact per-platform files are then drafted with
-  `--update` and reviewed (council review: hand-writing 30+ exact OTLP trees puts the bugs
-  in the expected files). Known v0 gap, accepted: opentelemetry-swift 2.6's OTLP encoder never
-  writes span/link `flags`, span/link `traceState` or the scope `schemaUrl`, so the `ios` files
-  lack them (shapes don't cover them; no encoder reimplementation, see verify/VERIFY.md).
+- **Parity by construction**: every platform compares against the same file, so they agree
+  with each other. Files are drafted with `--update` and reviewed (council review:
+  hand-writing 30+ exact OTLP trees puts the bugs in the expected files). The one exception
+  is iOS, in a single function of the compare step: opentelemetry-swift 2.6 rounds times
+  (above) and its OTLP encoder never writes span/link `flags`, span/link `traceState` or the
+  scope `schemaUrl`, so those are not compared on iOS (no encoder reimplementation, see
+  verify/VERIFY.md). iOS never writes the shared file.
 
 A scenario and its expected file, roughly:
 
@@ -636,7 +635,7 @@ export default scenario('nest-after-await', async ({ tracer, at }) => {   // at(
 ```
 
 ```json
-// verify/expected/nest-after-await.android.otlp.json (excerpt)
+// verify/expected/nest-after-await.otlp.json (excerpt)
 { "resourceSpans": [{
   "resource": { "attributes": [{ "key": "service.name", "value": { "stringValue": "verify" } }] },
   "scopeSpans": [{
@@ -656,7 +655,7 @@ A failure, as an agent sees it:
 ```
 ✗ nest-after-await [android]  span 0a00000000000002 "after_await"
     parentSpanId  expected 0a00000000000001  got (none)
-  expected: verify/expected/nest-after-await.android.otlp.json
+  expected: verify/expected/nest-after-await.otlp.json
   actual:   verify/artifacts/nest-after-await.android.otlp.json
   scenario: verify/scenarios/nest-after-await.ts
 ```
@@ -697,14 +696,14 @@ flowchart LR
   sc --> e2e["e2e: iOS / Android / web<br/>(every PR)"]
   js --> fc
   e2e --> fc
-  fc[("Fake collector<br/>OTLP → OTLP/JSON")] --> cmp{"exact compare<br/>+ parity shape"}
+  fc[("Fake collector<br/>OTLP → OTLP/JSON")] --> cmp{"exact compare<br/>(one file, all platforms)"}
   exp[("verify/expected<br/>(CODEOWNERS)")] --> cmp
   cmp --> out["structured diff<br/>+ verify/artifacts"]
 ```
 
 - **Native cores are proven on devices:** the Kotlin and Swift cores have no host-side test
   runs. The device e2e runs every scenario through the real seam and native core and compares
-  against the same `*.android` / `*.ios` expected files.
+  against the same expected file as JS and web.
 - **Fake collector**: a small Node OTLP/HTTP receiver decoding protobuf with the official
   `opentelemetry-proto` definitions and producing OTLP/JSON (GitHub macOS runners can't run
   Docker, so no Collector image).
@@ -868,7 +867,7 @@ Left out until needed:
 13. Trace-model rules: links for multi-cause renders, marked heuristic attribution (5).
 14. Sequencing, with the real-RN-app context milestone first (8).
 15. Test mode as a build flag; explicit whole-µs timestamps in scenarios; attribute/event
-    sorting; parity shape (9.1).
+    sorting; one expected file for all platforms (9.1).
 16. Native cores proven by device e2e against the same expected files (9.2).
 17. One endpoint meaning on every platform (the traces endpoint, used as given); returned handle `{ tracerProvider, forceFlush, shutdown }` (4.4).
 18. No performance or compliance jobs in CI: the upstream OTLP exporters own the wire format; `example/collector/` runs the official Collector by hand (9.4).

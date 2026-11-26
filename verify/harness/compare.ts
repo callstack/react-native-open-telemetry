@@ -1,25 +1,20 @@
 import fs from 'fs';
 import path from 'path';
-import {compareShape} from './shape';
 import type {OtlpJson} from './otlpJson';
 
 export type Platform = 'js' | 'android' | 'ios' | 'web';
 export type Diff = {spanId?: string; spanName?: string; path: string; expected: unknown; actual: unknown};
 
-/** Scenarios not implemented yet; runners turn these into test.todo. */
 export const pendingScenarios = new Set<string>();
 export const pending = (scenario: string) => void pendingScenarios.add(scenario);
 
-// VERIFY_DIR overrides the verify/ root (tests use temp dirs)
 const root = () => process.env.VERIFY_DIR ?? path.join(__dirname, '..');
 const rel = (sub: string, scenario: string, suffix: string) => `verify/${sub}/${scenario}.${suffix}`;
 const abs = (sub: string, scenario: string, suffix: string) => path.join(root(), sub, `${scenario}.${suffix}`);
 
-export const expectedPath = (scenario: string, platform: Platform | 'shape'): string =>
-  abs('expected', scenario, platform === 'shape' ? 'shape.json' : `${platform}.otlp.json`);
+export const expectedPath = (scenario: string): string => abs('expected', scenario, 'otlp.json');
 
 const isObj = (v: unknown): v is Record<string, any> => !!v && typeof v === 'object' && !Array.isArray(v);
-// arrays of {key,...} (attributes) diff by key, not by index
 const byKey = (v: unknown) =>
   Array.isArray(v) && v.length && v.every(x => isObj(x) && typeof x.key === 'string')
     ? Object.fromEntries(v.map(x => [x.key, x]))
@@ -39,7 +34,6 @@ export function diffValues(e: unknown, a: unknown, p = ''): Diff[] {
   return JSON.stringify(e) === JSON.stringify(a) ? [] : [{path: p, expected: e, actual: a}];
 }
 
-// one record per span, with its resource and scope attached
 function spansOf(o: OtlpJson): Map<string, any> {
   const m = new Map<string, any>();
   for (const rs of o.resourceSpans ?? [])
@@ -55,17 +49,41 @@ function spansOf(o: OtlpJson): Map<string, any> {
   return m;
 }
 
-export function diffOtlp(expected: OtlpJson, actual: OtlpJson): Diff[] {
+const IOS_TIME_STEP_NS = 256n;
+const TIME_KEYS = ['startTimeUnixNano', 'endTimeUnixNano'] as const;
+const snapTime = (e: any, a: any, k: string) => {
+  if (typeof e?.[k] !== 'string' || typeof a?.[k] !== 'string') return;
+  const d = BigInt(e[k]) - BigInt(a[k]);
+  if (d >= -IOS_TIME_STEP_NS && d <= IOS_TIME_STEP_NS) a[k] = e[k];
+};
+
+function iosView(e: any, a: any): [any, any] {
+  e = structuredClone(e);
+  a = structuredClone(a);
+  delete e.flags;
+  delete e.traceState;
+  delete e.scopeSchemaUrl;
+  for (const l of e.links ?? []) {
+    delete l.flags;
+    delete l.traceState;
+  }
+  for (const k of TIME_KEYS) snapTime(e, a, k);
+  (e.events ?? []).forEach((ev: any, i: number) => snapTime(ev, a.events?.[i], 'timeUnixNano'));
+  return [e, a];
+}
+
+export function diffOtlp(expected: OtlpJson, actual: OtlpJson, platform?: Platform): Diff[] {
   const e = spansOf(expected);
   const a = spansOf(actual);
   const out: Diff[] = [];
   for (const id of new Set([...e.keys(), ...a.keys()])) {
-    const [x, y] = [e.get(id), a.get(id)];
+    let [x, y] = [e.get(id), a.get(id)];
     const spanName = (x ?? y).name;
     if (!x || !y) {
       out.push({spanId: id, spanName, path: 'span', expected: x ? 'present' : undefined, actual: y ? 'present' : undefined});
       continue;
     }
+    if (platform === 'ios') [x, y] = iosView(x, y);
     for (const d of diffValues(x, y)) out.push({spanId: id, spanName, ...d});
   }
   return out;
@@ -73,7 +91,7 @@ export function diffOtlp(expected: OtlpJson, actual: OtlpJson): Diff[] {
 
 const show = (v: unknown) => (v === undefined ? '(none)' : JSON.stringify(v));
 
-export function formatReport(scenario: string, platform: Platform, diffs: Diff[], expectedFile = rel('expected', scenario, `${platform}.otlp.json`)): string {
+export function formatReport(scenario: string, platform: Platform, diffs: Diff[], expectedFile = rel('expected', scenario, 'otlp.json')): string {
   const lines: string[] = [];
   let last: string | undefined | null = null;
   for (const d of diffs) {
@@ -96,32 +114,27 @@ const write = (f: string, o: unknown) => {
   fs.writeFileSync(f, JSON.stringify(o, null, 2) + '\n');
 };
 
-/**
- * `draft` (e2e only, `VERIFY_E2E_DRAFT=1`): a missing expected file is written from `actual` and the compare still
- * fails, so a draft never passes unreviewed. An existing file is never overwritten.
- */
 export function compareToExpected(
   scenario: string,
   platform: Platform,
   actual: OtlpJson,
   {draft = false}: {draft?: boolean} = {},
 ): {ok: boolean; report: string} {
-  const fail = (diffs: Diff[], expectedFile?: string) => {
+  const f = expectedPath(scenario);
+  const fail = (diffs: Diff[]) => {
     write(abs('artifacts', scenario, `${platform}.otlp.json`), actual);
-    return {ok: false, report: formatReport(scenario, platform, diffs, expectedFile)};
+    return {ok: false, report: formatReport(scenario, platform, diffs)};
   };
-  const shape = compareShape(scenario, actual);
-  if (shape.length) return fail(shape, rel('expected', scenario, 'shape.json'));
-  const f = expectedPath(scenario, platform);
-  if (process.env.VERIFY_UPDATE === '1') {
+  const writes = platform !== 'ios';
+  if (process.env.VERIFY_UPDATE === '1' && writes) {
     write(f, actual);
     return {ok: true, report: `updated ${f}`};
   }
   if (!fs.existsSync(f)) {
-    if (!draft) return fail([{path: 'file', expected: f, actual: undefined}]);
+    if (!draft || !writes) return fail([{path: 'file', expected: f, actual: undefined}]);
     write(f, actual);
-    return {ok: false, report: `drafted ${rel('expected', scenario, `${platform}.otlp.json`)}, review it`};
+    return {ok: false, report: `drafted ${rel('expected', scenario, 'otlp.json')}, review it`};
   }
-  const diffs = diffOtlp(JSON.parse(fs.readFileSync(f, 'utf8')), actual);
+  const diffs = diffOtlp(JSON.parse(fs.readFileSync(f, 'utf8')), actual, platform);
   return diffs.length ? fail(diffs) : {ok: true, report: ''};
 }
