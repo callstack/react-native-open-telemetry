@@ -39,7 +39,7 @@ nesting**, to a collector — on iOS, Android and web.
 - React-specific APIs (hooks, providers, `trace()` helpers, `'use trace'`).
 - Sessions, sampling config, disk buffering, runtime header updates, enable/consent switch.
 - Cross-platform data-shaping processors (`attributes`, `filter`, `redaction`).
-- Logs and metrics signals. Old architecture (New Architecture only).
+- Logs. Metrics are designed in §4.6 (proposed, built after v0). Old architecture (New Architecture only).
 
 **Anti-goals** (would make this a failure even if it technically works)
 - A span attached to the **wrong parent** through `await`, promise or timer flows. Losing a
@@ -318,16 +318,34 @@ OTel data model.
   apps without a config plugin; it loses only pre-JS capture. Prior art: §12 P7.
 - When native init did happen, `startReactNativeSdk({...})` attaches; JS export config is
   ignored with one warning.
-- Returns `{ tracerProvider, forceFlush(), shutdown() }`, the names OTel JS uses on every
-  provider and SDK. On mobile `shutdown` stops only the JS provider, never the native
-  singleton. The returned `tracerProvider` is the one registered globally.
+- Returns `{ tracerProvider, meterProvider, forceFlush(), shutdown() }`, the names OTel JS
+  uses on every provider and SDK. On mobile `shutdown` stops only the JS provider, never the
+  native singleton. The returned providers are the ones registered globally. `forceFlush`
+  flushes both signals (on mobile the JS meter provider, then native `flush` for spans and
+  native metrics). *(`meterProvider`: proposed with metrics, §4.6.)*
 - Missing or invalid config logs one error and returns a no-op handle (as browser-sdk does
   with `invalidConfig`); it never throws.
-- **Endpoint (`exportConfig.url` / native `url`)** means the same on every platform: the
-  OTLP/HTTP traces endpoint (e.g. `https://collector:4318/v1/traces`), used as given. No path
-  is appended.
+- **Endpoints, one URL per signal (proposed with metrics, §4.6; replaces v0's single
+  `exportConfig.url`).** `exportConfig.traces.url` and `exportConfig.metrics.url` (natively
+  `export.traces.url` / `export.metrics.url`) are the OTLP/HTTP endpoints of their signal
+  (e.g. `https://collector:4318/v1/traces`, `…/v1/metrics`), used as given on every platform.
+  No path is appended; v0's rule, and what all three upstream HTTP exporters do with an
+  explicit URL (otel-java `setEndpoint` "include the full HTTP path"; JS `url`;
+  opentelemetry-swift `endpoint: URL`).
+  - **A signal is on when its URL is set.** Neither set is the existing "missing config"
+    case: one error, no-op handle. Traces only, metrics only and both are all valid.
+  - **Headers:** `exportConfig.headers` go to every signal; `traces.headers` /
+    `metrics.headers` are merged over them, the signal's value winning on the same key. The
+    same precedence as OTel's `OTEL_EXPORTER_OTLP_HEADERS` vs
+    `OTEL_EXPORTER_OTLP_<SIGNAL>_HEADERS`. Why per signal at all: some backends need a header
+    on one signal only (e.g. a metrics dataset header); one shared map covers the common
+    case.
+  - **`metrics.temporalityPreference`**: `'cumulative'` (default) or `'delta'`, applied to JS and native metrics (§4.6.4).
+    The JS exporter's option name; the declarative config calls it `temporality_preference`.
+  - v0 is unreleased, so the old `exportConfig.url` is replaced, not aliased.
 - **Web**: the same call takes exporter options, mirroring `startBrowserSdk`'s option names
-  (`serviceName`, `serviceVersion`, `resourceAttributes`, `exportConfig: { url, headers }`,
+  (`serviceName`, `serviceVersion`, `resourceAttributes`,
+  `exportConfig: { headers, traces: { url, headers }, metrics: { url, headers, temporalityPreference } }`,
   `instrumentations`, …).
 - Option names mirror upstream (`startBrowserSdk`, declarative config schema) wherever
   upstream has a name. Rejected: OTel declarative config YAML (not supported by
@@ -341,7 +359,11 @@ Usage, roughly (names are placeholders):
 // android: MainApplication.onCreate — preferred, native-first
 RNOtel.start(this) {
   serviceName = "shop"; serviceVersion = BuildConfig.VERSION_NAME
-  export { url = "https://collector.example.com:4318/v1/traces"; headers = mapOf("x-api-key" to KEY) }
+  export {
+    headers = mapOf("x-api-key" to KEY)
+    traces { url = "https://collector.example.com:4318/v1/traces" }
+    metrics { url = "https://collector.example.com:4318/v1/metrics"; temporalityPreference = Temporality.DELTA }
+  }
   resourceAttributes = mapOf("deployment.environment.name" to "prod")
 }
 ```
@@ -350,7 +372,9 @@ RNOtel.start(this) {
 // ios: AppDelegate — preferred, native-first
 RNOtel.start { c in
   c.serviceName = "shop"; c.serviceVersion = Bundle.main.version
-  c.export = .init(url: "https://collector.example.com:4318/v1/traces", headers: ["x-api-key": KEY])
+  c.export = .init(headers: ["x-api-key": KEY],
+                   traces: .init(url: "https://collector.example.com:4318/v1/traces"),
+                   metrics: .init(url: "https://collector.example.com:4318/v1/metrics", temporalityPreference: .delta))
 }
 ```
 
@@ -360,10 +384,20 @@ import { startReactNativeSdk } from 'react-native-open-telemetry';
 startReactNativeSdk({
   // only needed on web, or as the mobile fallback when no native init ran:
   serviceName: 'shop',
-  exportConfig: { url: 'https://collector.example.com:4318/v1/traces', headers: { 'x-api-key': KEY } },
+  exportConfig: {
+    headers: { 'x-api-key': KEY },
+    traces: { url: 'https://collector.example.com:4318/v1/traces' },
+    metrics: { url: 'https://collector.example.com:4318/v1/metrics' },
+  },
   spanProcessors: [/* stock sdk-trace SpanProcessors, unchanged */],
 });
 ```
+
+The seam config follows the same shape: `SeamConfig` loses `exportUrl`/`exportHeaders` and
+gains `exportHeaders: SeamAttribute[]`, `traces?: SeamSignal`, `metrics?: SeamMetrics`
+with `SeamSignal { url: string; headers: SeamAttribute[] }` and `SeamMetrics` the same plus
+`delta: boolean` (Nitro needs named interfaces, 4.3). Header
+merging happens in each native core (native-first init never passes through JS).
 
 ```js
 // metro.config.js: installs the context patch before any app module
@@ -381,6 +415,209 @@ module.exports = withOtel(getDefaultConfig(__dirname));
 
 Package name: `react-native-open-telemetry` (subpath `/metro`). Entry function:
 `startReactNativeSdk`, on web too.
+
+### 4.6 Metrics (proposed, built after v0)
+
+Status: design only, nothing implemented. The published 0.2 had metrics (JS `sdk-metrics`
+over OTLP/HTTP JSON; a separate otel-java `SdkMeterProvider` over gRPC on Android; nothing
+on iOS). v0 removed them. This section brings them back with **two independent pipelines
+from one config**, each built only from stock OTel types. Upstream versions checked:
+otel-java 1.68.0, opentelemetry-swift 2.6.0 (core + exporters), `@opentelemetry/sdk-metrics`
+3.1.1 with `@opentelemetry/exporter-metrics-otlp-proto` 0.301.2, spec at `4e01937`.
+
+Metrics are best effort next to spans (JS background flush, reloads: 4.6.4, 4.6.6). Spans and traces stay the priority.
+
+#### 4.6.1 Model: JS metrics in JS, native metrics in native
+- **JS metrics live in the stock JS SDK on every platform.** `startReactNativeSdk` builds
+  `MeterProvider` + `PeriodicExportingMetricReader` + `OTLPMetricExporter`
+  (`exporter-metrics-otlp-proto`) on Android, iOS and web: the same code as web today builds
+  for spans. JS exports metrics itself; nothing crosses the seam per measurement.
+- **Native metrics live in the native SDK.** The native core builds `SdkMeterProvider`
+  (otel-java) / `MeterProviderSdk` (opentelemetry-swift) + `PeriodicMetricReader` +
+  `OtlpHttpMetricExporter` next to the tracer provider, with the same resource. App native
+  code gets meters from `RNOtel.meter`.
+- **One config.** Both pipelines read `exportConfig.metrics` (4.4). On mobile the config
+  usually lives in native init, so native hands JS what JS needs (4.6.3).
+- **No shared instruments.** A JS instrument and a native instrument are never the same
+  instrument. To increment a native metric from JS, the app calls its own native module,
+  which records on its `RNOtel.meter` instrument (the same pattern as `doWork` in 4.3).
+- **No idle traffic.** All three readers skip the export when there is nothing to send:
+  otel-java `PeriodicMetricReader` (`metricData.isEmpty()`, line 290), opentelemetry-swift
+  `PeriodicMetricReaderSdk` (`metricData.isEmpty`, line 91), JS
+  `PeriodicExportingMetricReader` (`scopeMetrics.length === 0`, line 197). An app that
+  records only in JS never sends a native metrics request, and the reverse.
+
+```mermaid
+flowchart LR
+  subgraph mobile["Mobile"]
+    jsapp["JS: metrics.getMeter(...)"] --> jsmp["sdk-metrics MeterProvider<br/>PeriodicExportingMetricReader"] --> jsexp["OTLPMetricExporter (proto, JS)"]
+    nat["app native code: RNOtel.meter(...)"] --> nmp["native MeterProvider<br/>PeriodicMetricReader"] --> nexp["OtlpHttpMetricExporter"]
+    core["native core"] -. "initialize(): resource + metrics config" .-> jsmp
+  end
+  subgraph web["Web"]
+    jsw["JS: metrics.getMeter(...)"] --> wmp["sdk-metrics MeterProvider"] --> wexp["OTLPMetricExporter (proto)"]
+  end
+  jsexp --> col[("collector /v1/metrics")]
+  nexp --> col
+  wexp --> col
+```
+
+App code, the same file on every platform:
+
+```ts
+// index.js: first line, before the app is imported (4.6.6)
+startReactNativeSdk();
+
+// src/cart.ts
+const adds = metrics.getMeter('shop.cart').createCounter('cart.adds', { unit: '{item}' });
+adds.add(1, { screen: 'checkout' });
+```
+
+```kotlin
+// app native code
+val taps = RNOtel.meter("shop.native").counterBuilder("native.taps").build()
+taps.add(1)
+```
+
+#### 4.6.2 Single writer
+The metrics data model (Stable): *"All metric data streams within OTLP MUST have one logical
+writer"*
+([data-model.md#single-writer](https://github.com/open-telemetry/opentelemetry-specification/blob/4e01937ed7d734e5f4feb8ffba89f1b6b960ab59/specification/metrics/data-model.md#single-writer)).
+A stream is identified by resource, scope, metric name (+ kind, unit) and attributes. JS and
+native share the resource, so each side must write its own scopes:
+- **Rule (documented):** don't create an instrument with the same name in the same meter
+  scope from JS and from native. If an app does, the backend sees two writers of one stream.
+  We don't detect it.
+- **Multiple JS runtimes** each build their own `MeterProvider`, so the same JS instrument in
+  two runtimes is two writers. Rare; documented, as per-runtime attributes are out of scope
+  (4.3).
+- **A fleet** is many writers too: every install sends the same resource. 0.2 had the same
+  problem. See open question 1.
+
+#### 4.6.3 What crosses the seam
+Nothing per measurement. Only `initialize`'s result grows, so a JS-only pipeline can export
+with native's identity and config:
+
+```ts
+// illustrative additions to Otel.nitro.ts
+interface SeamResource { attributes: SeamAttribute[]; schemaUrl?: string }
+interface SeamInitResult {
+  alreadyInitialized: boolean; testMode: boolean; error?: string;
+  resource: SeamResource;   // native's resource, exactly as native exports it
+  metrics?: SeamMetrics;    // 4.4's struct: url, headers (already merged), delta; absent = metrics off
+}
+```
+
+- **Resource:** JS builds its `Resource` from these attributes and adds nothing, so JS and
+  native metrics, and all spans, carry one resource (4.3 "Resource identity"). Its
+  `telemetry.sdk.*` values are otel-java's or opentelemetry-swift's, as on JS spans.
+- **Metrics config:** native merges the headers (4.4) and returns the result. JS passes `url`
+  and `headers` to `OTLPMetricExporter` and maps `delta` to
+  `temporalityPreference: AggregationTemporalityPreference.DELTA`.
+- **The same path for both init routes.** With JS-fallback init, JS sends its config to
+  native and reads it back from the result; there is one code path, not two.
+- **Trade-off: the metrics headers reach JS memory.** With native-first init they used to
+  stay native. The per-signal headers of 4.4 let an app give metrics a key of its own.
+
+#### 4.6.4 JS pipeline
+| Setting | Choice | Why |
+|---|---|---|
+| Packages | `@opentelemetry/sdk-metrics` 3.1.1, `@opentelemetry/exporter-metrics-otlp-proto` 0.301.2, pinned exactly | Same release train as the pinned `sdk-trace` 3.1.1 and `exporter-trace-otlp-proto` 0.301.2. |
+| Temporality | **cumulative** default; `delta` option | The spec default. `delta` is JS `DELTA`, otel-java and Swift `deltaPreferred()`: the same mapping on all three (up-down counters stay cumulative). |
+| Export interval | **60 s**, not configurable yet | The JS default. Test mode: 120 s, so only `forceFlush` exports (9.6). |
+| Background | mobile: an `AppState` `'background'` listener calls `meterProvider.forceFlush()` | Best effort: the JS thread and its `fetch` can be suspended on iOS before the request finishes. Accepted; spans keep the native background task. |
+| Views, cardinality | stock `sdk-metrics` defaults, views not exposed | Upstream. Add a views option when someone asks. |
+| Global | registered with `metrics.setGlobalMeterProvider` and returned as `handle.meterProvider` | As for the tracer provider. |
+
+- **Every JS instrument works**, including observables and `addBatchObservableCallback`:
+  callbacks run in JS at collection time; nothing calls JS from native.
+- **Mobile and web are the same code.** Web reads the config from `startReactNativeSdk`;
+  mobile reads it from the `initialize` result.
+- **Build check:** that `exporter-metrics-otlp-proto` resolves its browser entry under Metro
+  and Hermes and exports with `fetch` (RN has no `sendBeacon`). 0.2 shipped the JSON variant
+  in RN.
+
+#### 4.6.5 Native pipeline
+Both cores build it next to the tracer provider when `metrics.url` is set:
+
+| Setting | Choice | Why |
+|---|---|---|
+| Exporter | `OtlpHttpMetricExporter`, URL as given, merged headers, built lazily | The same code path as the span exporter: otel-java's span and metric exporters wrap the same internal `HttpExporterBuilder` (retry on by default); Swift's wrap `OtlpHttpExporterBase` (no retry; `requeueOnFailure: true`). |
+| Temporality | from config, as in 4.6.4 | One mapping on all three platforms. |
+| Export interval | **60 s** | otel-java's default. Swift's `PeriodicMetricReaderBuilder` defaults to **1 s**, so iOS sets it. Test mode: 120 s. |
+| Background flush | the existing hooks also call `meterProvider.forceFlush()` | Android: queued on the reader's worker, never joined on the main thread. iOS: blocks up to the export timeout, so it runs on the global queue inside the existing background task. |
+| Exemplars | **off** (otel-java `ExemplarFilter.alwaysOff()`, Swift `AlwaysOffFilter()`) | Swift's default is `AlwaysOn` (an exemplar on every point). Off on both keeps them alike; v1 option in §10. |
+| Cardinality, views | SDK defaults, not exposed | otel-java: 2,000 attribute sets, then an overflow series. Swift: a hard 2,000, then new sets are dropped. Documented. |
+
+opentelemetry-swift 2.6 has everything this needs: all sync and observable instruments with
+long and double, scope version and `schemaUrl`, bucket advice, resource, temporality selector,
+exemplar filter, and the OTLP/HTTP protobuf exporter. Its gaps, documented and not patched:
+the 1 s default interval, the cardinality drop, `AlwaysOn` exemplars, a cumulative start time
+taken from `Date()` instead of the builder clock, and no `ScopeMetrics.schemaUrl` in the
+encoder (the same gap as for spans, §9.1).
+
+Native public API, next to `RNOtel.tracer`, same no-op rule:
+
+| | Android (`com.callstack.otel.RNOtel`) | iOS (`RNOtel`) |
+|---|---|---|
+| Meter on the native provider (no-op before init or without `metrics.url`) | `RNOtel.meter(name, version?)` → `io.opentelemetry.api.metrics.Meter` | `RNOtel.meter(name, version:)` → `any Meter` |
+
+Builder check: that `any Meter` (an associated-type protocol in opentelemetry-swift 2.6) is
+usable from app Swift code without casts; otherwise return the concrete `MeterSdk` with a
+`DefaultMeter` fallback.
+
+#### 4.6.6 Lifecycle and failures
+- **Before `startReactNativeSdk`:** `metrics.getMeter()` returns the API's no-op meter and its
+  instruments stay no-op forever: `@opentelemetry/api` has no proxy meter provider (unlike
+  tracing's `ProxyTracerProvider`). The same on web; upstream behavior. Documented:
+  `startReactNativeSdk()` is the first line of `index.js`.
+- **Native code before native init:** `RNOtel.meter` returns the no-op meter, as
+  `RNOtel.tracer` does.
+- **No `metrics.url`, failed init or a missing native module:** neither side builds a meter
+  provider; `handle.meterProvider` is the API's no-op and no global is registered. Metrics
+  being off is not an error; init failure is still reported once (4.3).
+- **JS reload:** the new runtime builds a new `MeterProvider`. Points recorded since the last
+  export are lost (up to 60 s), and JS cumulative series restart with a new start time, which
+  the data model treats as a reset. Native metrics are unaffected.
+- **Crash or kill:** each side loses what it hasn't exported yet. The same as any OTel SDK.
+- **`forceFlush()`** on the handle flushes the JS meter provider and calls native `flush`,
+  which now flushes the native meter provider too. `shutdown()` on mobile shuts down only the
+  JS providers.
+- **Never throws:** JS export failures are `sdk-metrics`' own (`diag`); native ones the
+  native exporter's.
+
+#### 4.6.7 Rejected
+- **Native as the only writer, JS a thin shim** (each `add`/`record` a synchronous Nitro call
+  into a native instrument, aggregation native). It kept native-only sending and survived
+  reloads, but cost a JSI call per measurement and two seam calls with a handle table. JS
+  observables couldn't work without native→JS callbacks, and mobile JS would behave unlike
+  web. It also had a silent identity trap: JS instruments default to DOUBLE and native
+  counters to long, so a "shared" counter split into two streams unless the types matched.
+- **JS aggregates, native exports** (like span hand-off). The native exporters accept only
+  SDK data objects. otel-java has public `create` factories for `MetricData` and its points,
+  but in opentelemetry-swift 2.6 the initializers of `MetricData`, its point types and the
+  `create*` helpers are all `internal`. iOS would need a `Codable` decode that depends on the
+  internal key layout, or a custom HTTP POST of JS-encoded bytes. Neither is built from OTel
+  primitives.
+- **Two SDKs as in 0.2** differed in transport (JSON vs gRPC), resource and config, and had
+  no iOS. This design keeps two pipelines but gives them one config, one resource and one
+  protocol.
+
+#### 4.6.8 Build order
+Metrics are built separately, after v0, and don't block 0.3.0. Their only effect on v0's
+surface is additive: new fields in `initialize`'s result and a new native API. The
+per-signal `exportConfig` shape (4.4) is the one breaking change, so it should land in 0.3.0
+even if metrics come later.
+
+#### 4.6.9 Open questions (for the author)
+1. Fleet identity (4.6.2): should native add `service.instance.id` (a random UUID v4 per
+   process start, the semantic conventions' suggestion when none is given) unless the app
+   sets one, or only document it and recommend `delta` for fleets? It changes the v0
+   resource (spans too). Check the attribute's semconv stability first.
+2. Expose the export interval now (`metrics.exportIntervalMillis`, the JS reader's name), or
+   wait for a request? Proposed: wait.
+3. Keep `temporalityPreference`, or cumulative only until asked? Proposed: keep; it is one
+   enum, and mobile fleets often need delta.
 
 ## 5. Trace model
 
@@ -758,6 +995,49 @@ Left out until needed:
 | Release gate on real telemetry (a dogfood app reporting through the SDK) | a real app uses the SDK |
 | `unstable_preserveAsync` device build | a Hermes release ships commit `a9d054c8c9` |
 
+### 9.6 Metrics verification (proposed with §4.6)
+Verify **our** code (both pipelines' wiring, the config and resource handed to JS, the
+background hooks), not upstream aggregation or OTLP encoding.
+
+- **Fake collector:** a `POST /v1/metrics` route next to `/v1/traces`, decoding with the
+  vendored `metrics/v1/metrics.proto` and `collector/metrics/v1/metrics_service.proto` (same
+  proto `VERSION` as today). Requests are kept per signal; `end()` writes
+  `verify/artifacts/<scenario>.<platform>.otlp.json` (traces, unchanged) and
+  `…<platform>.metrics.otlp.json`.
+- **Expected files:** `verify/expected/<name>.metrics.otlp.json`, an
+  `ExportMetricsServiceRequest` in OTLP/JSON, one file per scenario for every platform (9.1).
+  **A scenario without a metrics file must export no metrics**, so every trace scenario also
+  asserts "no stray metrics", and `native-init-failure` covers metrics for free.
+- **Normalizer:** merges requests by resource → scope → metric (JS and native send separate
+  requests); sorts metrics by name, data points by their sorted attribute set, and
+  attributes. **One documented rewrite:** data-point `startTimeUnixNano` and `timeUnixNano`
+  are removed. None of our code sets or computes a metric time, and a deterministic clock
+  isn't uniformly possible: `sdk-metrics` has no clock option, and opentelemetry-swift takes
+  the cumulative start time from `Date()`.
+- **Determinism:** test mode sets both export intervals to 120 s, so a scenario exports once,
+  on `forceFlush()`. Each e2e test cold-starts the app; metric names are namespaced per
+  scenario (`verify.<scenario>.*`).
+- **iOS exception:** `iosView` also skips `ScopeMetrics.schemaUrl` on native metrics (4.6.5).
+- **Runners:** e2e only. Jest would only exercise stock `sdk-metrics`.
+- **`TestNative`** gains `count(meter, name, value, attrs)` →
+  `RNOtel.meter(meter).counterBuilder(name).build().add(value, attrs)`, using only the public
+  helper.
+- **Test apps** configure both URLs: the bare app in `RNOtel.start`, the Expo app and web in
+  `startReactNativeSdk`, so both init routes are proven for metrics.
+- **`ScenarioCtx`** gains `meter` (`handle.meterProvider.getMeter('verify')`).
+
+| Scenario | Guarantee | Targets |
+|---|---|---|
+| `metrics-js` | counter, up-down counter, histogram with bucket advice, gauge and one observable gauge from JS; unit, description, scope version; exported under **native's resource** on mobile | android, ios, web |
+| `metrics-native` | a counter from `TestNative.count` exports under the same resource, in its own scope | android, ios |
+| `metrics-headers` | the metrics request carries the shared header and the metrics-only header, the trace request only the shared one | android, ios, web |
+| `metrics-off` | no `metrics.url`: spans export, no metrics request from either side, no error | android, ios, web |
+| `background-flush` (extended) | a native counter added before backgrounding is exported without `forceFlush()` | android, ios |
+
+Not covered: the JS `AppState` flush (best effort, iOS may suspend it), delta temporality (one
+mapping line per platform; a second config means a second app), cardinality and views
+(upstream), JS reload loss (documented behavior).
+
 ## 10. v1 backlog
 - Spike: Nitro call cost on Android, Kotlin vs C++ HybridObject; context patch overhead on a
   low-end Android device (spike numbers are from an M-series Mac).
@@ -778,7 +1058,10 @@ Left out until needed:
 - Opt-in "swap" Babel plugin for apps that can't downlevel async.
 - Links from interval ticks to the context that registered them; webpack helper.
 - Native in-memory exporter readable from JS for app teams' tests.
-- Expo config plugin (optional, thin, for native-first init), errors/crashes, logs, metrics.
+- Expo config plugin (optional, thin, for native-first init), errors/crashes, logs.
+- Metrics: the design is §4.6 (proposed), with verification in §9.6. Follow-ups after it
+  ships: a views option; native exemplars; a configurable export interval and cardinality
+  limit; a more reliable JS background flush if best effort proves too lossy.
 - Native → JS callbacks (avoided in v0 because of Nitro reload hazards).
 
 ## 11. Research and evidence
