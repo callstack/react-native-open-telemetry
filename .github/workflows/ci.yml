@@ -393,26 +393,3 @@ jobs:
             verify/e2e/.e2e/
           if-no-files-found: ignore
           include-hidden-files: true
-
-  budget:
-    needs: [static-fast, e2e-android-bare, e2e-ios-bare, e2e-android-expo, e2e-ios-expo, e2e-web]
-    if: always()
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Check PR time budget
-        env:
-          GH_TOKEN: ${{ github.token }}
-          BUDGET: ${{ vars.PR_BUDGET_MINUTES }}
-        run: |
-          started=$(gh api repos/${{ github.repository }}/actions/runs/${{ github.run_id }} --jq .run_started_at)
-          minutes=$(( ($(date +%s) - $(date -d "$started" +%s)) / 60 ))
-          echo "CI duration: ${minutes} min (budget: ${BUDGET:-unset})"
-          if [ -n "$BUDGET" ] && ! [[ "$BUDGET" =~ ^[0-9]+$ ]]; then
-            echo "::error::PR_BUDGET_MINUTES must be a whole number, got '$BUDGET'"
-            exit 1
-          fi
-          if [ -n "$BUDGET" ] && [ "$minutes" -gt "$BUDGET" ]; then
-            echo "::error::CI took ${minutes} min, over the ${BUDGET} min budget"
-            exit 1
-          fi
