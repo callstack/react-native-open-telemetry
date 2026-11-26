@@ -3,13 +3,10 @@ import NitroModules
 import OpenTelemetryApi
 import OpenTelemetrySdk
 
-/// Never traps on the JS thread (Int(Double) does on NaN or out of range).
 func int(_ d: Double) -> Int { Int(exactly: d.rounded(.towardZero)) ?? 0 }
 
-// Number.isInteger(v): whole and finite (-0 included). Int64.max as Double is 2^63, hence the exclusive bound.
 private func isLong(_ v: Double) -> Bool { v == v.rounded() && v >= -9.223372036854775807E18 && v < 9.223372036854775807E18 }
 
-/// JS numbers become `int` iff Number.isInteger (and they fit), else `double`; the same rule on JS and Kotlin.
 func attributes(of list: [SeamAttribute]) -> [String: AttributeValue] {
   var out = [String: AttributeValue](minimumCapacity: list.count)
   for a in list {
@@ -25,13 +22,10 @@ func attributes(of list: [SeamAttribute]) -> [String: AttributeValue] {
   return out
 }
 
-/// OTel HrTime `[seconds, nanos]`; missing elements read as 0. `Date` holds a Double of seconds, so whole µs
-/// come back on a ~256 ns grid (verify/VERIFY.md).
 private func date(_ t: [Double]) -> Date {
   Date(timeIntervalSince1970: (t.count > 0 ? t[0] : 0) + (t.count > 1 ? t[1] : 0) / 1e9)
 }
 
-/// R21/C5: Swift's SpanKind cases are not in API order, so map the API value explicitly. Unknown -> INTERNAL.
 private func spanKind(_ k: Int) -> SpanKind {
   switch k {
   case 1: return .server
@@ -42,7 +36,6 @@ private func spanKind(_ k: Int) -> SpanKind {
   }
 }
 
-/// API SpanStatusCode (UNSET 0, OK 1, ERROR 2). Unknown -> UNSET.
 private func statusOf(_ s: SeamStatus) -> Status {
   switch int(s.code) {
   case 1: return .ok
@@ -65,18 +58,11 @@ private func spanContext(_ c: SeamSpanContext) -> SpanContext {
                      traceFlags: TraceFlags(fromByte: UInt8(truncatingIfNeeded: int(c.traceFlags))), traceState: traceState(c.traceState))
 }
 
-/// Fixed clock: a JS span is already over, nothing here may read the wall clock.
 private final class FixedClock: Clock {
   let now: Date
   init(now: Date) { self.now = now }
 }
 
-/**
- * A finished JS span handed over the seam: the frozen `ReadableSpan` the native BatchSpanProcessor queues. It
- * keeps Nitro's struct; only the span context is built on the JS thread (onEnd checks `sampled`), `toSpanData()` runs
- * on the BSP worker. SpanData has no public initializer, so it is built through the SDK's own `SpanSdk`, the public
- * factory upstream uses.
- */
 final class JsReadableSpan: ReadableSpan, @unchecked Sendable {
   private let span: SeamSpan
   private let resource: Resource
@@ -93,7 +79,6 @@ final class JsReadableSpan: ReadableSpan, @unchecked Sendable {
   var hasEnded: Bool { true }
   var latency: TimeInterval { date(span.end).timeIntervalSince(date(span.start)) }
   var description: String { "JsReadableSpan{\(span.name)}" }
-  // frozen: setters and mutators are no-ops
   var name: String { get { span.name } set {} }
   var status: Status { get { statusOf(span.status) } set {} }
   var instrumentationScopeInfo: InstrumentationScopeInfo {

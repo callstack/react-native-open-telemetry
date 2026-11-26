@@ -10,8 +10,6 @@ import com.margelo.nitro.core.Promise
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 
-/** The seam: the core reads Nitro's structs directly. */
-// Constructed from JNI by name (ReactNativeOpenTelemetryOnLoad.cpp): keep it through R8.
 @DoNotStrip
 @Keep
 class HybridOtel : HybridOtelSpec() {
@@ -28,12 +26,10 @@ class HybridOtel : HybridOtelSpec() {
     return SeamInitResult(r.alreadyInitialized, r.testMode, r.error)
   }
 
-  /** JS thread: enqueue only; SpanData is built on the export thread. */
   override fun handOff(spans: Array<SeamSpan>) {
     OtelCore.instance?.handOff(spans)
   }
 
-  // Off the JS and main threads (the join blocks, so on IO); resolves even when native never initialized.
   override fun flush(timeoutMs: Double): Promise<Unit> = Promise.async(io) {
     OtelCore.instance?.flush(timeoutMs.toLong())
     Unit

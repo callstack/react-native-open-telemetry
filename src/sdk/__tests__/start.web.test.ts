@@ -1,6 +1,3 @@
-/**
- * @jest-environment jsdom
- */
 import {context, ROOT_CONTEXT, trace, type ProxyTracerProvider} from '@opentelemetry/api';
 import {InMemorySpanExporter, SimpleSpanProcessor} from '@opentelemetry/sdk-trace';
 import {MARKER} from '../../context/patch';
@@ -10,10 +7,8 @@ import {startReactNativeSdk} from '../start.web';
 
 const CONFIG = {serviceName: 'shop', exportConfig: {url: 'https://c.example.com:4318/v1/traces', headers: {'x-api-key': 'k'}}};
 
-// jsdom lacks TextEncoder (every browser has it); the proto serializer needs it.
 (globalThis as any).TextEncoder ??= require('util').TextEncoder;
 
-// Jest 30 always adds the `node` condition to require(); load the exporter's browser (fetch) build as a web bundler would.
 jest.mock('@opentelemetry/exporter-trace-otlp-proto', () =>
   jest.requireActual(require.resolve('@opentelemetry/exporter-trace-otlp-proto').replace(/index\.cjs$/, 'platform/browser/index.cjs')),
 );

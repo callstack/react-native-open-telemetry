@@ -12,7 +12,6 @@ import io.opentelemetry.sdk.trace.export.BatchSpanProcessor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
-/** Test mode: `0b…` IDs, the native counterpart of JS `sequentialIds('0a')`. */
 private class SequentialIds : IdGenerator {
   private val t = AtomicLong()
   private val s = AtomicLong()
@@ -22,7 +21,6 @@ private class SequentialIds : IdGenerator {
 
 const val DISTRO_NAME = "react-native-open-telemetry"
 
-/** Built on first export (the export thread), so init on the main thread never constructs an HTTP client. */
 private class LazyExporter(private val build: () -> SpanExporter) : SpanExporter {
   private val d by lazy(build)
   override fun export(spans: Collection<SpanData>) = d.export(spans)
@@ -31,7 +29,6 @@ private class LazyExporter(private val build: () -> SpanExporter) : SpanExporter
 }
 
 class OtelCore(config: CoreConfig, testMode: Boolean = false, distroVersion: String = "unknown") {
-  /** The one resource of the app; in test mode built from config only (no `telemetry.*`). */
   val resource: Resource = (if (testMode) Resource.empty() else Resource.getDefault()).merge(
     Resource.create(
       config.resourceAttributes.toBuilder()
@@ -52,17 +49,14 @@ class OtelCore(config: CoreConfig, testMode: Boolean = false, distroVersion: Str
       OtlpHttpSpanExporter.builder().setEndpoint(config.exportUrl)
         .apply { config.exportHeaders.forEach { (k, v) -> addHeader(k, v) } }.build()
     },
-  // test mode: no timed export within a device test, so only flush and background export send
   ).apply { if (testMode) setScheduleDelay(120, TimeUnit.SECONDS) }.build()
 
-  /** The native TracerProvider; JS spans join its batch processor. */
   val tracerProvider: SdkTracerProvider = SdkTracerProvider.builder()
     .setResource(resource)
     .addSpanProcessor(bsp)
     .apply { if (testMode) setIdGenerator(SequentialIds()) }
     .build()
 
-  /** JS-thread work: wrap and enqueue only; SpanData is built on the export thread. */
   fun handOff(spans: Array<SeamSpan>) {
     for (s in spans) bsp.onEnd(JsSpanData(s, resource))
   }
@@ -74,10 +68,6 @@ class OtelCore(config: CoreConfig, testMode: Boolean = false, distroVersion: Str
     @Volatile var instance: OtelCore? = null
       private set
 
-    /**
-     * Idempotent. The first result sticks, a failed one too: later calls never retry. A call without config
-     * before any init is an error but is not remembered, so the real init can still follow.
-     */
     @Synchronized fun initialize(config: CoreConfig?, testMode: Boolean = false, distroVersion: String = "unknown"): InitResult {
       state?.let { return it.copy(alreadyInitialized = true) }
       if (config == null) return InitResult(false, testMode, "not initialized: no config")

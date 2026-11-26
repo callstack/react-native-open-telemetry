@@ -4,7 +4,6 @@ package struct CoreConfig {
   var serviceName: String
   var serviceVersion: String? = nil
   var resourceAttributes: [String: AttributeValue] = [:]
-  /// The OTLP/HTTP traces endpoint, used as given.
   var exportUrl: String
   var exportHeaders: [String: String] = [:]
   package init(serviceName: String, serviceVersion: String? = nil, resourceAttributes: [String: AttributeValue] = [:],
@@ -14,7 +13,6 @@ package struct CoreConfig {
   }
 }
 
-/// Mirrors the seam's `SeamInitResult`.
 package struct InitResult: Equatable {
   package var alreadyInitialized: Bool
   package var testMode: Bool

@@ -1,6 +1,5 @@
 import type {OtlpJson} from './otlpJson';
 
-// key-order independent: attributes sorted by key before comparing
 const canon = (x: any) =>
   JSON.stringify(
     x && x.attributes
@@ -41,7 +40,6 @@ function sortSpan(s: any) {
   return o;
 }
 
-/** Merge equal resources/scopes, sort for determinism. Values are never changed. */
 export function normalize(requests: OtlpJson[]): OtlpJson {
   const resources: any[] = [];
   for (const req of requests)

@@ -1,9 +1,5 @@
 import {scenario} from '../harness/scenario';
 
-/**
- * Once a span's async work is done, nothing after it inherits that span: work at ROOT starts new roots,
- * including callbacks registered at ROOT that take the unwrapped fast path (§6.1 ROOT fast path).
- */
 export default scenario(
   'root-no-leak',
   async ({tracer, at}) => {

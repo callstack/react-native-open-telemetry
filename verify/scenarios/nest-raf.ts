@@ -1,6 +1,5 @@
 import {scenario} from '../harness/scenario';
 
-/** A `requestAnimationFrame` callback runs in the context it was scheduled in (§6.1). Node has no rAF: e2e only. */
 export default scenario(
   'nest-raf',
   async ({tracer, at}) => {

@@ -1,7 +1,5 @@
 import {scenario} from '../harness/scenario';
 
-/** Two async jobs interleaving on the same queues keep their own parents; neither leaks into the other (§6.1, §6.2);
- * work after the join is a new root. */
 export default scenario(
   'concurrent-interleaved',
   async ({tracer, at}) => {
@@ -15,7 +13,6 @@ export default scenario(
         span.end(at(t + 30));
       });
     await Promise.all([job('a', 0), job('b', 1)]);
-    // back at ROOT after the join: guards the ROOT fast path (§6.1)
     tracer.startSpan('after.all', {startTime: at(40)}).end(at(41));
   },
 );

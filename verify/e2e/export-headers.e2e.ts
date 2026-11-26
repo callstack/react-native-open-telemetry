@@ -3,7 +3,6 @@ import path from 'node:path';
 import {expect} from 'e2e';
 import {anyTarget, expectScenario} from './harness';
 
-// the app's init headers (x-api-key: test) reach the collector on every export request.
 anyTarget('export-headers', async ({app, screen, collector, target}) => {
   await expectScenario('export-headers', target, {app, screen, collector});
   const raw = path.join(import.meta.dirname, '..', 'artifacts', 'raw', `export-headers.${target.split('-')[0]}`);

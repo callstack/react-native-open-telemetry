@@ -1,6 +1,5 @@
 const {withOtel} = require('..');
 
-// Stubbed so the test does not depend on a built lib/ (self-reference via `exports`).
 const SETUP = '/pkg/lib/module/setup.js';
 const run = config => withOtel(config, {setupPath: SETUP}).serializer.getModulesRunBeforeMainModule('/app/index.js');
 const CORE = '/rn/Libraries/Core/InitializeCore.js';

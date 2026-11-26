@@ -1,6 +1,5 @@
 import {scenario} from '../harness/scenario';
 
-/** A promise that never settles inside a span does not leak that span into later work (§9.2). */
 export default scenario(
   'never-settling-promise',
   async ({tracer, at}) => {

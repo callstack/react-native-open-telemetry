@@ -4,18 +4,16 @@ import {web} from '@e2e-dev/web';
 
 const bundleId = 'opentelemetry.example';
 const example = '../../example';
-// Expo prebuild app (JS-fallback init): same scenarios, same expected files
 const expo = '../../example-expo';
 
 export default {
   projectId: 'react-native-open-telemetry',
   tests: '*.e2e.ts',
-  // one collector port: targets must not run at once
   workers: 1,
-  retries: process.env.VERIFY_E2E_DRAFT === '1' ? 0 : 1, // a retry would pass against its own fresh draft
+  retries: process.env.VERIFY_E2E_DRAFT === '1' ? 0 : 1,
   timeout: 180_000,
   launchTimeout: 120_000,
-  actionTimeout: 90_000, // CI simulators answer installs and taps slowly
+  actionTimeout: 90_000,
   targets: [
     {
       name: 'android-bare',
@@ -49,8 +47,6 @@ export default {
         appPath: process.env.E2E_IOS_EXPO_APP ?? `${expo}/ios/build/Build/Products/Release-iphonesimulator/OpenTelemetryExpo.app`,
       },
     },
-    // The Expo app's Metro web export (react-native-web), exporting with the web SDK.
-    // The runner exports it in test mode (lib/ first: `bun run prepare`) and serves it with `expo serve`.
     {
       name: 'web',
       engine: web({browser: 'chromium'}),
@@ -66,7 +62,6 @@ export default {
         },
       },
     },
-    // Dev builds (Debug + Metro), local only: fast-refresh-idempotent. See VERIFY.md.
     ...(process.env.E2E_DEV === '1'
       ? [
           {

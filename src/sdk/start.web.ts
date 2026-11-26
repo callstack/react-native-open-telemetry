@@ -8,7 +8,6 @@ import type {SdkConfig, SdkHandle} from './config';
 import {noopHandle} from './noop';
 import {register, startOnce, TAG} from './shared';
 
-/** Eager check, like native's: http(s) scheme and a host. */
 function isHttpUrl(url: string): boolean {
   try {
     const u = new URL(url);
@@ -29,7 +28,6 @@ function start(config: SdkConfig | undefined): SdkHandle {
   }
   const testMode = isTestModeBuild();
   const {serviceName, serviceVersion, resourceAttributes, exportConfig, spanProcessors = []} = config;
-  // JS owns the resource on web: no telemetry.sdk.* (§4.3), distro only outside test mode (goldens).
   const resource = resourceFromAttributes({
     ...resourceAttributes,
     'service.name': serviceName,
@@ -46,5 +44,4 @@ function start(config: SdkConfig | undefined): SdkHandle {
   );
 }
 
-/** Web: spans export straight from JS over OTLP/proto (§7). Never throws: failures give one error and a no-op handle. */
 export const startReactNativeSdk = (config?: SdkConfig): SdkHandle => startOnce(start, config);

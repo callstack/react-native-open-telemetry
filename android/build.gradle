@@ -16,9 +16,7 @@ def getExtOrIntegerDefault(name) {
   return getExtOrDefault(name).toInteger()
 }
 
-// Test mode is a build flag, never API: -PotelTestMode=true (or otelTestMode=true in the app's gradle.properties).
 def otelTestMode = (findProperty("otelTestMode") ?: "false").toString() == "true"
-// telemetry.distro.version = the npm package version
 def otelDistroVersion = new groovy.json.JsonSlurper().parse(file("../package.json")).version
 
 android {
@@ -32,7 +30,6 @@ android {
     targetSdkVersion getExtOrIntegerDefault("targetSdkVersion")
     buildConfigField "boolean", "OTEL_TEST_MODE", otelTestMode.toString()
     buildConfigField "String", "OTEL_DISTRO_VERSION", "\"${otelDistroVersion}\""
-    // apps that minify (Expo's release default) need these
     consumerProguardFiles "consumer-rules.pro"
 
     externalNativeBuild {
@@ -100,15 +97,11 @@ repositories {
 dependencies {
   implementation "com.facebook.react:react-android"
   implementation project(":react-native-nitro-modules")
-  // ProcessLifecycleOwner: background flush on ON_STOP (same version React Native already resolves)
   implementation "androidx.lifecycle:lifecycle-process:2.6.2"
 
-  // RNOtel's public signatures expose Tracer, Span and Context: the API is part of ours
   api platform("io.opentelemetry:opentelemetry-bom:1.68.0")
   api "io.opentelemetry:opentelemetry-api"
   implementation "io.opentelemetry:opentelemetry-sdk"
-  // The OkHttp sender runs on React Native's own OkHttp (every okhttp3 member the 1.68 sender uses exists in 4.9.2);
-  // excluding it keeps otel-java from pulling the app up to OkHttp 5.
   implementation("io.opentelemetry:opentelemetry-exporter-otlp") {
     exclude group: "com.squareup.okhttp3", module: "okhttp"
   }

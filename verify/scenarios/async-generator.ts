@@ -1,6 +1,5 @@
 import {scenario} from '../harness/scenario';
 
-/** Async generator bodies and the `for await` loop consuming them stay children of the active span (§6.1). */
 export default scenario(
   'async-generator',
   async ({tracer, at}) => {

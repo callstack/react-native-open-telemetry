@@ -1,4 +1,3 @@
-// Example-only Nitro module. Versions follow the app (rootProject.ext), as autolinked libraries do.
 apply plugin: "com.android.library"
 apply plugin: "org.jetbrains.kotlin.android"
 apply from: "../nitrogen/generated/android/TestNative+autolinking.gradle"
@@ -26,7 +25,6 @@ android {
     cmake { path "CMakeLists.txt" }
   }
 
-  // the app and react-native-nitro-modules ship these
   packagingOptions {
     excludes = ["META-INF", "META-INF/**", "**/libc++_shared.so", "**/libNitroModules.so", "**/libfbjni.so",
                 "**/libjsi.so", "**/libreactnative.so"]
@@ -44,6 +42,5 @@ android {
 dependencies {
   implementation "com.facebook.react:react-android"
   implementation project(":react-native-nitro-modules")
-  // RNOtel (and, through it, the otel API)
   implementation project(":react-native-open-telemetry")
 }

@@ -17,7 +17,6 @@ export const decodeRequest = (buf: Uint8Array): ExportTraceServiceRequest =>
 
 const ID_KEYS = ['traceId', 'spanId', 'parentSpanId'];
 
-// Hex id strings (OTLP/JSON) -> bytes, so fromObject does not base64-decode them.
 function idsToBytes(v: any): any {
   if (Array.isArray(v)) return v.map(idsToBytes);
   if (v && typeof v === 'object' && !(v instanceof Uint8Array)) {
@@ -35,7 +34,6 @@ function idsToBytes(v: any): any {
 function format(v: any, key?: string): any {
   if (Array.isArray(v)) return v.map(x => format(x));
   if (v instanceof Uint8Array) {
-    // ids are hex, any other bytes (AnyValue.bytesValue) are base64 per proto3 JSON
     if (key && ID_KEYS.includes(key))
       return v.length ? Buffer.from(v).toString('hex') : undefined;
     return Buffer.from(v).toString('base64');
@@ -53,11 +51,6 @@ function format(v: any, key?: string): any {
   return v;
 }
 
-/**
- * Proto3 JSON: hex ids, int64 as decimal strings, enums as numbers, defaults omitted,
- * NaN/Infinity as strings. Accepts protobuf-decoded objects or OTLP/JSON (hex ids).
- * -0 stays -0 in the returned object; JSON.stringify writes it as 0.
- */
 export function toOtlpJson(req: ExportTraceServiceRequest): OtlpJson {
   const obj = Req.toObject(Req.fromObject(idsToBytes(req)), {
     longs: String,
