@@ -87,7 +87,7 @@ package final class OtelCore {
   private static var state: InitResult?
   package private(set) static var instance: OtelCore?
 
-  /// Idempotent. The first result sticks, a failed one too (R16): later calls never retry. A call without config
+  /// Idempotent. The first result sticks, a failed one too: later calls never retry. A call without config
   /// before any init is an error but is not remembered, so the real init can still follow.
   @discardableResult
   package static func initialize(_ config: CoreConfig?, testMode: Bool = false, distroVersion: String = "unknown") -> InitResult {

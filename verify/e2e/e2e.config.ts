@@ -12,7 +12,7 @@ export default {
   tests: '*.e2e.ts',
   // one collector port: targets must not run at once
   workers: 1,
-  retries: process.env.VERIFY_E2E_DRAFT === '1' ? 0 : 1, // a retry would pass against its own fresh draft (R1)
+  retries: process.env.VERIFY_E2E_DRAFT === '1' ? 0 : 1, // a retry would pass against its own fresh draft
   timeout: 180_000,
   launchTimeout: 120_000,
   actionTimeout: 90_000, // CI simulators answer installs and taps slowly

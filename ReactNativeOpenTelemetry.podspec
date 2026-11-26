@@ -2,7 +2,7 @@ require "json"
 
 package = JSON.parse(File.read(File.join(__dir__, "package.json")))
 
-# The Nitro adapter (Swift with C++ interop) over the pure Swift core pod (R24, spec §4.2).
+# The Nitro adapter (Swift with C++ interop) over the pure Swift core pod (spec §4.2).
 Pod::Spec.new do |s|
   s.name         = "ReactNativeOpenTelemetry"
   s.version      = package["version"]

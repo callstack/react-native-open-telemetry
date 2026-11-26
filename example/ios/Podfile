@@ -15,7 +15,7 @@ if linkage != nil
 end
 
 target 'OpenTelemetryExample' do
-  # Autolinking links only the Nitro pod; the pure Swift core pod (RNOtel, imported by AppDelegate) is declared here (R24).
+  # Autolinking links only the Nitro pod; the pure Swift core pod (RNOtel, imported by AppDelegate) is declared here.
   pod 'ReactNativeOpenTelemetryCore', :path => '../..'
   config = use_native_modules!
 

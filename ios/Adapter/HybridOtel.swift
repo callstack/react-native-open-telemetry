@@ -3,7 +3,7 @@ import NitroModules
 import ReactNativeOpenTelemetryCore
 
 /// The seam: JS spans are wrapped as otel `ReadableSpan`s here and queued in the core (pod `ReactNativeOpenTelemetryCore`,
-/// R24). The core stays free of Nitro's C++-backed types, so the app's AppDelegate can import it without C++ interop.
+/// spec §4.2). The core stays free of Nitro's C++-backed types, so the app's AppDelegate can import it without C++ interop.
 class HybridOtel: HybridOtelSpec {
   func initialize(config: SeamConfig?) throws -> SeamInitResult {
     let r = RNOtel.initialize(config.map {

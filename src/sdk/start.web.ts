@@ -46,5 +46,5 @@ function start(config: SdkConfig | undefined): SdkHandle {
   );
 }
 
-/** Web: spans export straight from JS over OTLP/proto (§7, R7). Never throws: failures give one error and a no-op handle. */
+/** Web: spans export straight from JS over OTLP/proto (§7). Never throws: failures give one error and a no-op handle. */
 export const startReactNativeSdk = (config?: SdkConfig): SdkHandle => startOnce(start, config);

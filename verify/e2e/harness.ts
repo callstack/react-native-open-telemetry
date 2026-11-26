@@ -108,7 +108,7 @@ export async function expectScenario(
   const s = allScenarios().find(x => x.name === name);
   if (!s) throw new Error(`unknown scenario ${name}`);
   test.skip(!s.targets.includes(platformOf(target)) && !s.targets.includes(target as Target), `${name} does not run on ${target}`);
-  // cold start per scenario (R5): no SDK state or ID counters carried over
+  // cold start per scenario: no SDK state or ID counters carried over
   await (steps.launch ? steps.launch() : app.restart());
 
   collector.begin(name, platformOf(target));
@@ -122,7 +122,7 @@ export async function expectScenario(
     actual = await collector.end();
   }
   // every app exports through the native core (bare: native-first init, Expo: JS-fallback init), so one expected
-  // file per scenario proves both init paths equivalent (R13).
+  // file per scenario proves both init paths equivalent.
   // VERIFY_E2E_DRAFT=1 writes a missing expected file and still fails (review it, then rerun)
   const r = compareToExpected(name, platformOf(target), actual, {draft: process.env.VERIFY_E2E_DRAFT === '1'});
   if (!r.ok) throw new Error('\n' + r.report);

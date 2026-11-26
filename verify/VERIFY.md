@@ -3,7 +3,7 @@
 `bun verify [stage…] [--e2e] [--update]` runs the stages in `verify/stages/`. `--e2e` adds the device stage
 (`e2e`), which needs release builds of `example/` in test mode:
 
-The example bundles the package through `exports` → `lib/` (R4), so build `lib/` first: the release builds embed
+The example bundles the package through `exports` → `lib/`, so build `lib/` first: the release builds embed
 the JS bundle, and the e2e stage cannot rebuild it.
 
 ```sh
@@ -34,7 +34,7 @@ through the real seam and native core and compares against the scenario's one `<
 **One expected file per scenario.** JS, web, Android and iOS report the same OTLP, so each scenario has one
 `verify/expected/<name>.otlp.json`. iOS differs only by two opentelemetry-swift 2.6 gaps, which the compare step
 (`iosView` in `harness/compare.ts`) accepts on `ios` and nowhere else:
-- **Times (R22):** opentelemetry-swift keeps times as `Date` and exports `UInt64(timeIntervalSince1970 * 1e9)`, so
+- **Times:** opentelemetry-swift keeps times as `Date` and exports `UInt64(timeIntervalSince1970 * 1e9)`, so
   whole-µs seam times come back rounded to a ~238–256 ns grid, either way (measured once over `at(0…10_000)` and
   `at(1_000_000_000)`: max |error| 240 ns, 314 of 10 002 exact). iOS times may be off by up to 256 ns.
 - **Fields its OTLP encoder (`SpanAdapter`) never writes:** span `flags` (257), span `traceState`, link `flags`, link
@@ -47,7 +47,7 @@ construction and makes it the parent of every root span, even with `setNoParent(
 it (Xcode scheme, `SIMCTL_CHILD_TRACEPARENT`).
 
 `verify/e2e/scenarios.e2e.ts` runs one test per scenario with runner `e2e`, not `pending`, on each target it lists,
-except the scenarios with their own e2e file. Each test cold-starts the app (R5). e2e is compare-only;
+except the scenarios with their own e2e file. Each test cold-starts the app. e2e is compare-only;
 On web, `forceFlush` latency follows the OTLP exporter's own retries (about 10 s worst case), not a native flush timeout; `collector-down` allows 10 s there.
 
 `VERIFY_E2E_DRAFT=1` writes a **missing** `<name>.otlp.json` from the run (never from iOS) and still fails the test
@@ -63,12 +63,12 @@ fixture and `target` name `device`, so every `test(…)` passes `{platforms: MOB
 context per test; `target` is the platform, `web`). `anyTarget(title, body)` registers one body on both; e2e titles must
 be unique, so the web copy is `web › <title>`.
 
-**TestNative (R25).** `cross-*` scenarios call `ctx.native`, the example-only Nitro HybridObject in
+**TestNative.** `cross-*` scenarios call `ctx.native`, the example-only Nitro HybridObject in
 `example/modules/test-native/` (own `nitro.json`, podspec, `build.gradle`; autolinked through
 `example/react-native.config.js`). It uses only the public `RNOtel` helpers. After editing its spec, regenerate with
 `bun run codegen` in that directory (the patched root nitrogen) and commit `nitrogen/generated`.
 
-**iOS pods (R24).** An app's Swift `AppDelegate` cannot `import ReactNativeOpenTelemetry`: the Nitro pod is built with
+**iOS pods.** An app's Swift `AppDelegate` cannot `import ReactNativeOpenTelemetry`: the Nitro pod is built with
 C++ interop and the app is not (`'functional' file not found` while building `NitroModules`). So
 iOS ships two pods: `ReactNativeOpenTelemetryCore` (pure Swift: `ios/Core` + the public `RNOtel` in `ios/RNOtel`) and
 the Nitro adapter `ReactNativeOpenTelemetry` (`ios/Adapter`), which depends on it and reaches the core's `package`
@@ -76,7 +76,7 @@ declarations through one `-package-name`. Autolinking links only the adapter, so
 `pod 'ReactNativeOpenTelemetryCore', :path => '<package dir>'`. Both linkages build: the default static libraries
 (CI) and `USE_FRAMEWORKS=static` (checked locally, not a CI job: e2e `ios-bare` 18/18 on that build).
 
-**`performance.timeOrigin` on Hermes (X17).** Defined on both platforms (RN 0.88.1 release, Hermes),
+**`performance.timeOrigin` on Hermes.** Defined on both platforms (RN 0.88.1 release, Hermes),
 checked with a one-off `console.log` of `timeOrigin`, `performance.now()` and `Date.now()` at app start:
 Android `timeOrigin + now()` = `Date.now()` within 1 ms; **iOS simulator `timeOrigin + now()` was ~23.9 h behind
 `Date.now()`** (the monotonic clock under `now()` stopped while the host slept; `timeOrigin` stayed at simulator boot).
@@ -95,7 +95,7 @@ app. Built locally with Xcode 27.1; the CI jobs `e2e-android-expo` / `e2e-ios-ex
 unproven until their first CI run.
 
 - **Init: JS fallback.** No native init. `index.js` calls `startReactNativeSdk({serviceName: 'verify', exportConfig:
-  {url, headers: {'x-api-key': 'test'}}})` (no `serviceVersion`, R2) before registering the bare example's
+  {url, headers: {'x-api-key': 'test'}}})` (no `serviceVersion`) before registering the bare example's
   `ScenariosScreen`, whose later `startReactNativeSdk()` calls get that first handle. Native reports `testMode` from its
   build flag; the config has no test fields.
 - **Metro:** `withOtel(mergeConfig(getDefaultConfig(__dirname), …))` with Expo's `getDefaultConfig`; same single-copy
@@ -104,7 +104,7 @@ unproven until their first CI run.
 - **Autolinking:** Expo autolinking reads `example-expo/react-native.config.js`, which points at the repo root and at
   the bare example's TestNative, so the `cross-*` scenarios run on Expo too.
 - **Config plugins** (`app.json`): the package's own `react-native-open-telemetry` (`app.plugin.js`) adds
-  `pod 'ReactNativeOpenTelemetryCore', :path => '../..'` to the Podfile (R24), as in any Expo app. Expo resolves it by
+  `pod 'ReactNativeOpenTelemetryCore', :path => '../..'` to the Podfile, as in any Expo app. Expo resolves it by
   package name: `example-expo`'s `postinstall` links `node_modules/react-native-open-telemetry` to the repo root (bun
   cannot install the root as a `file:` dependency: it looks for the root's `patches/` relative to the app). Then the
   example-only `example-expo/plugins/withOtelExample.js` sets `usesCleartextTraffic` (the collector is plain HTTP), adds
@@ -123,7 +123,7 @@ The `web` target is the Expo app's Metro web export (`example-expo`, `expo expor
 through react-native-web 0.21.4 (react-dom 19.3.0). `index.js` inits first with
 `startReactNativeSdk({serviceName: 'verify', exportConfig: {url: 'http://localhost:4318/v1/traces', headers: {'x-api-key':
 'test'}}})`, so every scenario runs through the **web SDK** (own `TracerProvider`, `BatchSpanProcessor`, OTLP/proto
-exporter, R7), not a harness provider. Metro resolves the package through its `exports` (`browser` →
+exporter), not a harness provider. Metro resolves the package through its `exports` (`browser` →
 `lib/module/index.web.js`); on web, `metro.config.js` maps `react-native-nitro-modules` to `nitro-stub.web.ts` (no
 HybridObjects: no native `testMode` line, scenarios get no `native`).
 
@@ -132,7 +132,7 @@ HybridObjects: no native `testMode` line, scenarios get no `native`).
   `process` both see. The e2e config builds with `OTEL_TEST_MODE=1`.
 - **Runner:** the `web` target (`web({browser: 'chromium'})`) starts `bun run web:e2e` in `example-expo/`
   (`expo export -p web` + `expo serve` on `localhost:4173`); its log is `verify/e2e/.e2e/logs/web.log`. `app.restart()`
-  opens a new page, the cold start (R5). The collector answers CORS (`OPTIONS` 204, `allow-headers: *`).
+  opens a new page, the cold start. The collector answers CORS (`OPTIONS` 204, `allow-headers: *`).
 - **Probe:** `babel-preset-expo` keeps native `async` on web; `example-expo/babel.config.js` adds the two async
   plugins for the web platform, so the bundle has no native `async`/`for await`; no `com.callstack.context.degraded`
   scope attribute in any web file.
@@ -148,7 +148,7 @@ HybridObjects: no native `testMode` line, scenarios get no `native`).
 
 ## Failure scenarios
 
-Each has its own e2e file (R10); the ScenariosScreen does not `forceFlush()` after `collector-down`,
+Each has its own e2e file; the ScenariosScreen does not `forceFlush()` after `collector-down`,
 `flush-after-reload` and `background-flush`, so the test decides what exports. Test-mode-only screen controls:
 `flush` (a JS `forceFlush()`, shows `flush-done-<n>`), `reload` (`TestNative.reload()`) and `patch-identity`.
 
@@ -157,11 +157,11 @@ Each has its own e2e file (R10); the ScenariosScreen does not `forceFlush()` aft
   `background-flush` and `flush-after-reload` would pass on the timer alone.
 - `collector-down`: `refuse(503, 3)` after `begin`, `scenario-done` within 2 s, then three `flush` taps (each
   resolves while the collector refuses); the span arrives once. Android: otel-java retries a 503 inside the export.
-  **iOS (X6):** opentelemetry-swift 2.6's `OtlpHttpTraceExporter` does not retry; with its default
+  **iOS:** opentelemetry-swift 2.6's `OtlpHttpTraceExporter` does not retry; with its default
   `requeueOnFailure: true` it keeps a failed batch in memory and resends it on the next `export` or `flush` (our core
   flush calls both). So on iOS the span arrives on the first flush after the collector is back, not by itself; its
   batch processor never exports an empty queue. No exception needed, no hand-rolled retry.
-- `native-init-failure`: the example's native init gets `exportUrl = "not a url"`, in test-mode builds only (R26).
+- `native-init-failure`: the example's native init gets `exportUrl = "not a url"`, in test-mode builds only.
   iOS: launch argument `--otel-export-url=not a url` (AppDelegate, `#if OTEL_TEST_MODE`; the Podfile adds the
   condition to the app target). Android: `Application.onCreate` cannot see launch arguments (they reach the
   Activity), so the test writes `/sdcard/Android/data/opentelemetry.example/files/otel-export-url` (mode 644, removed
@@ -214,7 +214,7 @@ iOS: iPhone 18 Pro simulator, iOS 27.0, Xcode 27.1, agent-device 0.21.36 (T3 dev
 | JS reload | ✓ `agent-device metro reload` (Metro re-bundled; screen state reset). Release: native reload via TestNative | ✓ release: native reload via TestNative, e2e `flush-after-reload`. `DevSettings.reload()` is a no-op in release |
 | Fast refresh (dev build) | ✓ editing `ScenariosScreen.tsx` text showed on device with React state kept | ✓ e2e `fast-refresh-idempotent` on `android-dev` |
 | Background and back | ✓ `agent-device home`, then `open opentelemetry.example`: UIKit logged the background task end and `UIApplicationWillEnterForegroundNotification`; state kept. `appstate` still says `runningForeground` after `home` (known iOS quirk, documented by e2e), so check lifecycle in the log, not `appstate` | ✓ `device.home()` in e2e `background-flush` |
-| Read logs | ✓ `agent-device logs start/stop` captures the app's unified log, `NSLog` lines included (`RNOtel handOff …`). The e2e harness reads with `xcrun simctl spawn <udid> log show --predicate 'process == "OpenTelemetryExample" …'` | ✓ via the e2e harness: `adb logcat -d -s RNOtel:I` (tracer-bullet test green; the test was later retired, R14) |
+| Read logs | ✓ `agent-device logs start/stop` captures the app's unified log, `NSLog` lines included (`RNOtel handOff …`). The e2e harness reads with `xcrun simctl spawn <udid> log show --predicate 'process == "OpenTelemetryExample" …'` | ✓ via the e2e harness: `adb logcat -d -s RNOtel:I` (tracer-bullet test green; the test was later retired) |
 
 **Blocker (Android, interactive only):** the T3 device panel could not open `Pixel_9`:
 `Failed to allocate an emulator port for Pixel_9 … avdmanager: … Unable to locate a Java Runtime.`
@@ -228,7 +228,7 @@ every platform compares against. It is drafted with `VERIFY_UPDATE=1` (or `VERIF
 from Android or web) and reviewed by the author. `pending` scenarios report as `todo`; un-pend a scenario once it passes.
 
 Every file uses the JS runner's resource, `service.name` only. Native test mode builds the resource from config only and
-the example inits with no `serviceVersion` (R2), so native-first device runs match the same files.
+the example inits with no `serviceVersion`, so native-first device runs match the same files.
 
 e2e targets are android, ios and web unless the Runners column names them.
 
@@ -245,7 +245,6 @@ e2e targets are android, ios and web unless the Runners column names them.
 | `never-settling-promise` | a never-settling promise does not leak its span into later work | 10 | jest, e2e | passing |
 | `interval-new-root` | exception: each `setInterval` tick is a new root | 10 | jest, e2e | passing |
 | `batching-shared-queue` | exception: a shared queue runs work as its first enqueuer (pinned wrong parent) | 10 | jest, e2e | passing |
-| `interaction-manager` | `runAfterInteractions` callback is a child of the caller's span | 13 | e2e | pending: RN 0.88 removed `InteractionManager` |
 | `nest-raf` | a `requestAnimationFrame` callback keeps its scheduling context | 13 | e2e | passing |
 | `event-emitter-listener` | a synchronous `DeviceEventEmitter` listener is a child of the emitter's span | 13 | e2e (android, ios) | passing |
 | `handoff-basic` | a span crosses the seam intact | 8, 15, 18 | e2e | passing |

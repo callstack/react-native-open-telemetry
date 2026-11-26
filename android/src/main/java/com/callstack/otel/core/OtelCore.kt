@@ -75,7 +75,7 @@ class OtelCore(config: CoreConfig, testMode: Boolean = false, distroVersion: Str
       private set
 
     /**
-     * Idempotent. The first result sticks, a failed one too (R16): later calls never retry. A call without config
+     * Idempotent. The first result sticks, a failed one too: later calls never retry. A call without config
      * before any init is an error but is not remembered, so the real init can still follow.
      */
     @Synchronized fun initialize(config: CoreConfig?, testMode: Boolean = false, distroVersion: String = "unknown"): InitResult {

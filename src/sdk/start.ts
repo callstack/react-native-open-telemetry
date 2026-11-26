@@ -37,7 +37,7 @@ function start(config: SdkConfig | undefined): SdkHandle {
   const seam = config && toSeamConfig(config);
   const result = native.initialize(seam);
   if (result.error) {
-    // alreadyInitialized: a failed native-first init sticks (R16) and native already reported it, once
+    // alreadyInitialized: a failed native-first init sticks and native already reported it, once
     if (result.alreadyInitialized) return noopHandle();
     if (config && !seam) {
       console.error(`${TAG} serviceName and exportConfig.url are required to initialize native; telemetry is off.`);
